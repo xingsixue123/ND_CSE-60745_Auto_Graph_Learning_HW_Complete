@@ -27,6 +27,39 @@ PLAYGROUND, OUTPUT = ROOT / "playground", ROOT / "output"
 FORBIDDEN = [r"\\documentclass", r"\\usepackage", r"\\begin\{document\}",
              r"\\end\{document\}"]
 
+# Macro -> the package that defines it.  A worker that uses a macro without declaring
+# its package ships a fragment that does not compile on its own, and the failure is
+# invisible whenever a sibling problem happens to declare the same package: the
+# assembled document builds, and the latent defect surfaces only when that sibling
+# changes.  Checking each fragment against its OWN preamble.txt is the point.
+MACRO_PACKAGE = [
+    (r"\\text\s*\{", "amsmath"),          # \text{} -- not \textbf/\textit/\texttt
+    (r"\\dfrac|\\binom|\\substack|\\eqref|\\DeclareMathOperator", "amsmath"),
+    (r"\\begin\{(align|gather|multline|cases|split|equation\*)\}", "amsmath"),
+    (r"\\mathbb|\\mathfrak|\\therefore|\\because|\\lesssim|\\gtrsim", "amssymb"),
+    (r"\\includegraphics|\\resizebox|\\scalebox|\\rotatebox", "graphicx"),
+    (r"\\toprule|\\midrule|\\bottomrule|\\cmidrule", "booktabs"),
+    (r"\\begin\{tikzpicture\}", "tikz"),
+    (r"\\begin\{axis\}|\\addplot", "pgfplots"),
+    (r"\\begin\{algorithm\}", "algorithm"),
+    (r"\\State|\\Procedure|\\EndWhile|\\algorithmicx", "algpseudocode"),
+    (r"\\SI\s*\{|\\si\s*\{|\\num\s*\{", "siunitx"),
+    (r"\\begin\{tcolorbox\}", "tcolorbox"),
+    (r"\\textcolor|\\definecolor|\\colorbox|\\rowcolor", "xcolor"),
+    (r"\\url\s*\{|\\href\s*\{", "hyperref"),
+    (r"\\begin\{longtable\}", "longtable"),
+    (r"\\multirow", "multirow"),
+    (r"\\begin\{subfigure\}", "subcaption"),
+    (r"\\sout|\\uline|\\uwave", "ulem"),
+    (r"\\cancel|\\cancelto", "cancel"),
+    (r"\\coloneqq|\\DeclarePairedDelimiter|\\mathclap|\\prescript", "mathtools"),
+    (r"\\begin\{lstlisting\}|\\lstinline", "listings"),
+    (r"\\begin\{(figure|table)\}\[[^\]]*H", "float"),
+    (r"\\begin\{(enumerate|itemize)\}\s*\[", "enumitem"),
+    (r"\\bm\s*\{", "bm"),
+    (r"\\wrapfigure", "wrapfig"),
+]
+
 
 def latest_job() -> str:
     jobs = sorted((p for p in PLAYGROUND.iterdir()
@@ -66,10 +99,21 @@ def main():
     # ---------- points coverage ----------
     if problems:
         total = sum(p.get("points", 0) for p in problems)
-        print(f"points declared across {len(problems)} problem(s): {total}")
-        if total != 100:
-            warnings.append(f"points sum to {total}, not 100 -- confirm against the "
-                            "assignment's stated total")
+        unc = json.loads(pj.read_text()).get("uncovered", [])
+        # `uncovered` may hold either strings (prose notes) or problem-shaped dicts
+        # carrying their own point value, as it does when the user asks for a skip.
+        skipped = sum(u.get("points", 0) for u in unc if isinstance(u, dict))
+        print(f"points declared across {len(problems)} problem(s): {total}"
+              + (f"  (+{skipped} deliberately uncovered = {total + skipped})"
+                 if skipped else ""))
+        if total + skipped != 100:
+            warnings.append(
+                f"assigned {total} + uncovered {skipped} = {total + skipped}, not 100 "
+                "-- confirm against the assignment's stated total")
+        for u in unc:
+            if isinstance(u, dict):
+                print(f"  deliberately uncovered: {u.get('id')} "
+                      f"({u.get('points')} pts) -- {u.get('title','')[:60]}")
 
     # ---------- per-problem fragment checks ----------
     labels = defaultdict(list)      # label -> [pid, ...]
@@ -105,10 +149,23 @@ def main():
             numbers[pid].add(norm_num(m.group(0)))
 
         pre = out / pid / "preamble.txt"
+        declared = set()
         if pre.is_file():
             for line in pre.read_text().splitlines():
                 if line.strip():
                     preamble[line.strip()].append(pid)
+                for m in re.finditer(r"\\usepackage(?:\[[^\]]*\])?\{([^}]*)\}", line):
+                    declared.update(x.strip() for x in m.group(1).split(","))
+
+        # base LaTeX provides these without any package
+        declared |= {"latex-base"}
+        for pat, pkg in MACRO_PACKAGE:
+            if re.search(pat, body) and pkg not in declared:
+                blocking.append(
+                    f"{pid}: answer.tex uses a macro from `{pkg}` but preamble.txt "
+                    f"does not declare it -- the fragment does not compile on its own. "
+                    f"(It may still build once assembled, if another problem happens "
+                    f"to declare {pkg}; that is luck, not correctness.)")
 
     # ---------- label collisions ----------
     dupes = {k: v for k, v in labels.items() if len(v) > 1}
