@@ -1,0 +1,8 @@
+{
+  "model": "claude-opus-5[1m]",
+  "effort": "xhigh",
+  "max_worker_rounds": 5,
+  "max_master_rounds": 5,
+  "agent_timeout_seconds": 7200,
+  "heartbeat_seconds": 600
+}

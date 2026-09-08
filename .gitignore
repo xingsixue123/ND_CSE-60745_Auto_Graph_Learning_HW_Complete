@@ -1,0 +1,27 @@
+# Agent session state: private CLAUDE_CONFIG_DIR per agent.
+# Contains full conversation transcripts (~20 MB) and the mount point for the
+# credentials file (bind-mounted read-only at runtime, always 0 bytes on disk).
+**/.claudecfg/
+
+# Caches and environments created inside playgrounds
+**/.pipcache/
+**/.venv/
+**/venv/
+**/.mplcache/
+**/.loprofile/
+**/__pycache__/
+*.pyc
+
+# LaTeX build artefacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.out
+
+# Run-local scratch
+playground/*.log
+playground/*.pid
+.last_run.pid
+**/.session_id

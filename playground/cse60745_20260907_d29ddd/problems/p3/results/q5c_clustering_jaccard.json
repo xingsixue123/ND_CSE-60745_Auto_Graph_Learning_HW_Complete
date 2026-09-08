@@ -1,0 +1,15 @@
+{
+  "n": 26728,
+  "m": 26377,
+  "avg_clustering_nx": 0.10053915193944206,
+  "avg_clustering_mine": 0.10053915193944186,
+  "n_degree_lt_2": 13942,
+  "n_triangles": 1926,
+  "mean_clustering_deg_ge_2": 0.21016818809928103,
+  "avg_jaccard_nx": 0.041304224564987634,
+  "avg_jaccard_mine": 0.04130422456498827,
+  "n_edges_scored": 26377,
+  "n_jaccard_zero": 21167,
+  "max_jaccard": 0.6666666666666666,
+  "avg_jaccard_endpoints_excluded": 0.08430478182435501
+}

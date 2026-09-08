@@ -1,0 +1,9 @@
+CSE 60745 (Fall 2026) – Graph Basics and Properties
+10
+edge (both endpoints of degree 1) has |N(u) ∩N(v)| = 0 and scores J = 0 rather than being
+undefined. Under this convention
+¯J = 0.041304.
+The value is small because 21,167 of the 26,377 edges (80.3%) join two nodes with no common
+neighbour and therefore score exactly 0; the largest value attained by any edge is 2/3. (For
+contrast, excluding the two endpoints from each other’s neighbour sets would give 0.084305;
+the number reported above is the NetworkX convention stated in the formula.)

@@ -1,0 +1,32 @@
+     
+  CSE 60745 (Fall 202
+ 
+ 6  ) – Graph Basics and Properties
+ 
+  
+* This assignment contains 100 points. You are encouraged to finish independently. Any submitted 
+work that it copied from any source or too similar to be an independent write-up will not be given 
+credit. Please submit this homework (as a PDF or Word file including the cover page) to ND 
+Canvas by 11:59pm on 
+ 
+ Mon
+ 
+ day, 
+ 
+ 09/1
+ 
+ 4  /202
+ 
+ 6  . 
+Part A – Graph Creation and Modification (30 pts)
+In this part, you will learn “Graph Creation and Modification”. 
+Note: You may use NetworkX, a python library for studying graphs and answering below questions. 
+The NetworkX Tutorial can help you start working with NetworkX.
+Q1: Graph Creation (15 pts)
+Create the following undirected graph and show visualization of this graph. (Note: You may read 
+NetworkX tutorial to facilitate your solutions.)
+Q2: Graph Modification (15 pts)
+Based on graph created in Q1, remove node 1, edge (0, 4) and edge (0, 5). List remaining 
+components and visualize remaining graph. (Note: You may use NetworkX to facilitate your 
+solutions.)
+Page 1 of 4

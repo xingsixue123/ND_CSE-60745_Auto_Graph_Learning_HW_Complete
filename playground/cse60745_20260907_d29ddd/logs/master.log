@@ -1,0 +1,238 @@
+=== MASTER LOG — job cse60745_20260907_d29ddd ===
+
+[ingest] Assignment: "CSE 60745_Fall 2026_HW1.doc" + data file "graph-1.txt".
+  Ingest produced 3 rendered pages. Read all three channels:
+    - alltext.txt / page_00N.txt  (text)
+    - page_00N.png                (whole-page render)
+    - page_002_fig_01.jpeg        (the only embedded figure, 428x588 native)
+  Cross-check: the document footer says "Page 1 of 4" / "Page 2 of 4", which
+  conflicts with the 3-page render. Re-converted the .doc myself with LibreOffice
+  -> also 3 pages. Points also reconcile: Q1 15 + Q2 15 + Q3 10 + Q4 30 + Q5 30
+  = 100 pts, matching the stated "This assignment contains 100 points".
+  Conclusion: the footer is a stale Word field; nothing is missing. Trusted the
+  render + point total over the footer.
+
+[figure] Rendered page 2 contains the Q1 graph as an embedded image. The text
+  channel drops it entirely ("Create the following undirected graph" followed by
+  nothing), so the figure file is the ONLY channel carrying it.
+  Read it at native resolution, at 4x LANCZOS, and as 6x quadrant crops, then
+  measured it programmatically:
+    1. segmented the blue node discs -> 10 components, bbox centres recovered;
+    2. for each node, scanned rings at r = 24, 32, 42, 55 px and grouped the
+       angular positions of dark pixels into line-departure bearings;
+    3. a bearing that is CONSTANT in r = a true incident edge; a bearing that
+       DRIFTS with r = a straight line passing near, not through, that centre.
+  This mattered: a naive centre-to-centre darkness test claimed edges (4,5),
+  (4,8), (0,6), (0,9). The ring analysis shows all four are artifacts of
+  near-collinear triples. The real edges are (5,8) [drawn straight through the
+  disc of node 4], (0,4) and (0,1).
+  Final reading, 15 edges:
+    (0,1)(0,4)(0,5)(1,2)(1,6)(2,3)(2,7)(3,4)(3,8)(4,9)(5,7)(5,8)(6,8)(6,9)(7,9)
+  Corroboration (2 independent checks):
+    a) every node has degree exactly 3 -> 3-regular on 10 nodes, 15 edges. Almost
+       certainly nx.random_regular_graph(3,10). A misread would essentially never
+       land on perfect regularity.
+    b) Q2's text says "remove node 1, edge (0,4) and edge (0,5)" -> the text
+       independently confirms (0,4) and (0,5) are edges. They are.
+  Recorded all of this in p1's brief, including the two traps, so the worker
+  re-checks rather than rediscovers.
+
+[data] graph-1.txt: 26377 tab-separated integer pairs. Verified no self-loops, no
+  duplicate edges in either orientation, no header. As nx.Graph:
+  26728 nodes, 26377 edges, 4104 connected components,
+  component sizes 13903, 69, 30, 30, 29, 26, ...
+  NOTE the assignment calls the file "graph.txt"; the attached file is
+  "graph-1.txt". Same file. Flagged in both Part B briefs.
+  NOTE the tie at 30/30 for THIRD place -- second place (69) is unique, but the
+  p2 brief warns about the ordering so the worker states its selection rule.
+
+[cut] 3 problems. Cut on independence, not on numbering:
+  p1 = Q1+Q2 (30 pts). MERGED: Q2 says "Based on graph created in Q1". If split,
+       two workers would each transcribe the figure independently and could
+       produce contradictory edge lists -- the exact failure mode the merge rule
+       exists to prevent.
+  p2 = Q3+Q4 (40 pts). MERGED: Q4 says "Based on the created graph in Q3" and
+       Q4's component questions continue Q3's component count directly.
+  p3 = Q5   (30 pts). SPLIT from p2: Q5 also says "based on the created graph in
+       Q3", but the only thing it inherits is the graph itself, which is fully
+       determined by a plain edge-list file -- deterministic, no judgement calls,
+       so no divergence risk. Not merged into p2 because a single worker holding
+       Q3+Q4+Q5 (70 pts, 7 deliverables incl. 2 figures + 2 top-10 tables) does
+       all of them worse. Mitigation: the graph construction convention and the
+       reference counts (26728/26377/4104) are pinned IDENTICALLY in both briefs.
+  uncovered: cover page (p.1) and the administrative preamble on p.2 -- no
+       questions there. Cover page handled by me at assembly time.
+
+[cut] Wrote problems.json and problems/{p1,p2,p3}/problem.md.
+
+[p1] spawn-worker p1 -> worker round 1, validator round 1 -> PASS. Done in 1 round.
+  Reviewed the deliverable myself:
+  - answer.tex is a clean fragment, labels namespaced p1:fig:q1 / p1:fig:q2,
+    figures fig_p1_q1_graph.pdf / fig_p1_q2_graph.pdf referenced by bare name.
+  - The worker independently reproduced my edge list AND went one better: it
+    checked nx.is_isomorphic against nx.petersen_graph() and got True. I
+    re-verified this myself: 10 nodes, 15 edges, all degrees 3, girth 5,
+    isomorphic to the Petersen graph. That is a far stronger confirmation of the
+    figure transcription than my 3-regularity check alone -- the Petersen graph
+    is THE canonical 3-regular girth-5 graph on 10 vertices, and a misread edge
+    would break the isomorphism. The (5,8)-through-node-4 trap is resolved
+    correctly and explained in the answer.
+  - Q2 verified independently: 9 nodes, 10 edges, components [{0}, {2..9}].
+  - Both figures render correctly; the worker reused the assignment's own vertex
+    placement across both figures and bowed edge (5,8) so it visibly clears
+    node 4. Good call -- it makes the answer self-evidently right.
+  Accepted as-is.
+
+[p2] spawning.
+
+[p2] spawn-worker p2 -> worker round 1, validator round 1 -> PASS. Done in 1 round.
+  Independently re-verified EVERY reported number against the data file myself:
+    nodes 26728, edges 26377, components 4104            -> match
+    component sizes 13903,69,30,30,29,26,23,21,21,20     -> match
+    LCC 13903 nodes / 16695 edges                        -> match
+    2nd component 69 nodes / 80 edges, diameter 17       -> match
+    degree min 1 / max 59 / mean 1.9737 / 37 distinct    -> match
+    N(k=1)=13942, N(k=2)=7423, argmax-degree node 22777  -> match
+    cyclomatic number m-n+c = 3753                       -> match
+  Both figures render correctly. Degree distribution is a two-panel linear +
+  log-log, which is the right call (the linear panel alone is a single spike).
+  Second-component drawing is legible; the worker justified omitting the
+  five-digit node labels rather than silently dropping them, and stated its
+  selection rule and the absence of a tie at second place explicitly, as briefed.
+  p2's Q3 counts agree exactly with the numbers pinned in p3's brief, so the two
+  Part B workers cannot contradict each other.
+  Accepted as-is.
+  NOTE FOR ASSEMBLY: p2 opens with \section{...} (numbered) while p1 opens with
+  \section*{...} (unnumbered). Must normalise at assembly time so the final
+  document does not mix numbered and unnumbered top-level headings.
+
+[p3] spawning.
+
+[p3] spawn-worker p3 -> worker round 1, validator round 1 -> PASS. Done in 1 round.
+  I had computed my OWN reference answers for Q5 in parallel (scratch/q5_check.py,
+  py311 + networkx 3.3 + scipy) before p3 returned, specifically so I could check
+  it rather than trust it. Line-by-line comparison:
+    eigenvector, DEFAULT params, top10 values
+      16485 0.491844 / 22777 0.419863 / 14618 0.177656 / 21928 0.139183 /
+      2884 0.133813 / 1197 0.133186 / 9068 0.111138 / 17902 0.109219 /
+      1324 0.100115 / 25747 0.094368                    -> exact match
+    eigenvector, exact (_numpy) column                   -> exact match
+    katz top10 order and values (16485 .2116, 22777 .1755, 9068 .1095, ...)
+                                                         -> exact match
+    average clustering 0.100539  (mine 0.1005391519)     -> match
+    average Jaccard   0.041304  (mine 0.0413042246)      -> match
+    lambda_max 8.762217, 1/lambda_max 0.114126           -> match
+  My brief warned that eigenvector_centrality might not converge on a graph with
+  4104 components. It DOES converge here; the worker checked rather than assuming,
+  said so, and reported the default-parameter result as the headline answer -- 
+  exactly right, since the question says "use default parameters".
+  Better still, it independently noticed and explained the one thing I had spotted
+  and not told it about: the default power iteration and the exact _numpy solver
+  disagree on the ORDER of ranks 7 and 8 (9068 vs 17902). It traced this to
+  NetworkX's stopping rule (L1 change < n*tol = 2.67e-2, a loose absolute bound on
+  a unit vector), reported the residual, and showed that tightening tol reproduces
+  the exact column. That is the correct diagnosis.
+  Also correctly handled: alpha=0.1 admissibility vs 1/lambda_max=0.1141 (tight but
+  valid); the raw-neighbour-set Jaccard convention, with the alternative
+  convention's value (0.084305) given for contrast instead of being silently
+  chosen; the degree<2 => c_u=0 clustering convention.
+  Accepted as-is.
+  NOTE FOR ASSEMBLY: p3 uses numbered \section/\subsection; its two tables carry
+  \label but no \caption. Normalise headings and add captions at assembly.
+
+[assemble] All 3 problems done, each PASSED by its validator on round 1.
+
+[assemble] Built output/.../final/:
+  main.tex (cover page reproducing the assignment's own cover: ND / Dept of CSE /
+  CSE 60745 / Graph Learning: Techn & Apps, plus the Assignment Date / Sumission
+  Date / Student Name table -- the assignment explicitly requires "including the
+  cover page". Submission Date filled as 09/14/2026 from the stated deadline;
+  Assignment Date and Student Name left blank as in the template, since neither
+  the assignment nor specs.md supplies them. Kept the source's own spelling
+  "Sumission Date" so the cover matches the template.)
+  p1.tex p2.tex p3.tex, preamble.tex (union of the 3 worker preamble.txt files,
+  de-duplicated: amsmath, booktabs, float, graphicx), 4 fig_*.pdf.
+
+  Normalisations applied at assembly (presentation only, no content changed):
+   - p2 and p3 opened with NUMBERED \section/\subsection while p1 used starred
+     forms. Made all three \section*/\subsection* so the document does not mix
+     numbered and unnumbered headings. Retitled p2/p3's top-level headings to
+     "Part B -- Graph Essentials and Measures (70 pts): Q3 and Q4" / ": Q5" so
+     the Part A / Part B structure of the assignment is visible.
+   - p3's two tables carried \label but no \caption; added captions.
+   - p1's two figures were [htbp] at 0.62\textwidth and floated onto pages of
+     their own, leaving two near-empty pages. Repinned [H] at 0.52\textwidth.
+     Document went 11 -> 10 pages and the figures now sit beside the text that
+     refers to them.
+
+  COMPILE FAILURE (fixed): first latexmk run died with
+    "pdfTeX error: Font ecti1095 at 600 not found ... no output PDF produced".
+  Cause: \usepackage[T1]{fontenc} with default Computer Modern needs the EC
+  bitmap fonts generated on demand, and ~/.TinyTeX is read-only in this sandbox
+  so mktextfm cannot write them. Fix: load lmodern (Latin Modern, Type 1, real
+  T1 coverage) before fontenc. This is exactly the env.md "cannot install into
+  TinyTeX, rewrite to use what is available" case. Recorded here because any
+  future run using T1 fontenc will hit it.
+
+  Final compile: exit 0, 10 pages, zero undefined references, zero errors.
+  Build artefacts removed. lint_output.py --final -> OUTPUT LINT OK.
+  R5 re-checked by grep: no \documentclass / \begin{document} / \usepackage in
+  any fragment; all 9 labels namespaced (p1:/p2:/p3:); figures referenced by bare
+  filename. downloads.md written at master level; all 3 workers installed nothing.
+
+[submit] Round 1 submission -> fw submit.
+
+[submit] Round 1 -> master validator returned PASS.
+  The validator audited independently (it re-segmented the Q1 figure itself, got
+  15 pairs at coverage 1.000 vs highest non-edge 0.558, and independently
+  identified the Petersen graph -- matching p1). It recomputed every graph-1.txt
+  number and confirmed both centrality tables node-for-node and value-for-value
+  to all six printed digits. It also withdrew one of its own findings (a 68-vs-69
+  marker count on the CC2 figure) after tracing it to its own brightness
+  threshold dropping the yellow degree-7 hub.
+  It passed the submission but listed 3 minor defects, explicitly noting D1.1 and
+  D1.3 were "worth fixing on any further pass".
+
+[round 2] The job was already PASSed, so this round is not required. Doing it
+  anyway: D1.1 and D1.3 are FACTUAL errors in a document that will be graded, and
+  leaving a known-wrong number in place because the grader already waved it
+  through is not acceptable. Budget allows (1/5 used). Verified both myself first
+  rather than taking the validator's word:
+    D1.1  max spectral radius over all NON-giant components = 3.919262, attained
+          by a 9-node/16-edge component (index 89). The document said 3.63. The
+          validator's diagnosis was right: 3.63 comes from checking only the
+          components that are largest by NODE COUNT, but spectral radius tracks
+          density, not size -- a small dense component beats a big sparse one.
+          Fixed 3.63 -> 3.9193 in p3.tex.
+    D1.3  21167/26377 = 80.2479%, which rounds to 80.2%, not 80.3%.
+          Fixed in p3.tex.
+    D1.2  the inline \texttt{sorted(nx.connected_components(G), key=len,
+          reverse=True)[1]} overhung the right margin by 26.7pt because a \texttt
+          run has no break points. Moved it into its own \begin{center} line in
+          p2.tex; it fits comfortably on one line there.
+  Recompiled: exit 0, 10 pages, 0 errors, 0 undefined refs, and now
+  0 Overfull \hbox (was 1). Visually confirmed the reflowed page. Artefacts
+  removed, lint_output.py --final -> OK.
+
+[submit] Round 2 submission -> fw submit (confirming the fixes regressed nothing).
+
+[submit] Round 2 -> FAIL, but NOT on content. The validator returned:
+    "An image in the conversation exceeds the dimension limit for many-image
+     requests (2000px). Start a new session with fewer images."
+  Diagnosis from its own artefacts:
+   - validator/.session_id exists, so round 2 RESUMED the round-1 session rather
+     than starting clean.
+   - validator/work/finalpages/ (round 1, 10 pngs) AND finalpages2/ (round 2, 10
+     pngs) both exist; every page is 1654x2339 at 200 dpi, i.e. every single one
+     is over the 2000px cap. With 10 images that was tolerated; with 20
+     accumulated in one session the many-image limit tripped.
+   - validator/checklist.md is UNCHANGED from round 1 -- the round-2 run died
+     before forming any judgement about the document. There is no content defect
+     list, because no content was assessed.
+  So this is validator tooling, not a defect in the deliverable. The document it
+  choked on is the ROUND 1 document plus three fixes that the round-1 validator
+  itself asked for and that I verified numerically before applying.
+  I deliberately did NOT touch validator/.session_id or delete its rendered
+  images to force a clean session: that directory is the validator's, and
+  rule R2 forbids reaching into another agent's space to manufacture a pass.
+  Action: resubmit unchanged (round 3). 3 submissions remain, so there is room.

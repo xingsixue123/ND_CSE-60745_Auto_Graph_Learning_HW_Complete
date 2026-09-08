@@ -1,0 +1,56 @@
+{
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Part A - Q1 Graph Creation & Q2 Graph Modification",
+      "points": 30,
+      "rendered_pages": [2],
+      "anchor_text": "Part A \u2013 Graph Creation and Modification (30 pts) ... Q1: Graph Creation (15 pts) ... Q2: Graph Modification (15 pts)",
+      "input_files": [],
+      "figure_files": ["ingest/pages/CSE 60745_Fall 2026_HW1/page_002_fig_01.jpeg"],
+      "subparts": [
+        "Q1 (15 pts): create the undirected graph shown in the figure on rendered page 2 and show a visualization of it",
+        "Q2 (15 pts): from that graph remove node 1, edge (0,4) and edge (0,5); list the remaining connected components and visualize the remaining graph"
+      ],
+      "needs": ["code", "diagram"],
+      "grouped_with_reason": "Q2 operates directly on the graph constructed in Q1 ('Based on graph created in Q1'). Splitting them would let two workers transcribe the figure's edge list independently and produce contradictory graphs. They are one unit."
+    },
+    {
+      "id": "p2",
+      "title": "Part B - Q3 Graph Creation & Q4 Graph Essentials",
+      "points": 40,
+      "rendered_pages": [3],
+      "anchor_text": "Q3: Graph Creation (10 pts) ... Q4: Graph Essentials (30 pts)",
+      "input_files": ["/home/xing/project/auto_hw_complete/input/graph-1.txt"],
+      "figure_files": [],
+      "subparts": [
+        "Q3 (10 pts): build undirected graph from the attached edge-list file; report node count, edge count, number of connected components",
+        "Q4a (10 pts): largest connected component - report its node and edge count",
+        "Q4b (10 pts): visualize the second largest connected component",
+        "Q4c (10 pts): plot the degree distribution of the whole graph"
+      ],
+      "needs": ["code", "diagram"],
+      "grouped_with_reason": "Q4 is explicitly 'based on the created graph in Q3' and its answers (component sizes) are a direct continuation of the Q3 component count. Structural/component analysis is one coherent unit."
+    },
+    {
+      "id": "p3",
+      "title": "Part B - Q5 Graph Measures",
+      "points": 30,
+      "rendered_pages": [3],
+      "anchor_text": "Q5: Graph Measures (30 pts)",
+      "input_files": ["/home/xing/project/auto_hw_complete/input/graph-1.txt"],
+      "figure_files": [],
+      "subparts": [
+        "Q5a (10 pts): eigenvector centrality, report top-10 nodes",
+        "Q5b (10 pts): Katz centrality, report top-10 nodes",
+        "Q5c (10 pts): average clustering coefficient of all nodes; average Jaccard similarity of all connected node pairs"
+      ],
+      "needs": ["code"],
+      "grouped_with_reason": "Q5's three parts are all centrality/similarity measures on the same graph and are naturally one unit. Split from p2 because Q5 shares only the (fully deterministic, file-defined) input graph with Q3/Q4 and needs no result computed in Q4; the graph construction convention is pinned identically in both briefs so the two workers cannot diverge."
+    }
+  ],
+  "uncovered": [
+    "Rendered page 1 is the cover page (course header, Assignment Date / Submission Date / Student Name blanks). No question on it; handled by the master when assembling the final document, not assigned to a worker.",
+    "The administrative preamble on rendered page 2 (100 points total, independence statement, Canvas submission deadline Monday 09/14/2026) is instructions, not a question."
+  ]
+}

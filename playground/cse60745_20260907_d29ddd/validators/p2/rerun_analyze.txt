@@ -1,0 +1,30 @@
+n_lines_in_file: 26377
+self_loops_in_file: 0
+duplicate_undirected_edges_in_file: 0
+networkx_version: 3.3
+n_nodes: 26728
+n_edges: 26377
+n_components: 4104
+component_sizes_top20: [13903, 69, 30, 30, 29, 26, 23, 21, 21, 20, 19, 17, 17, 17, 17, 17, 16, 15, 15, 15]
+lcc_n_nodes: 13903
+lcc_n_edges: 16695
+lcc_frac_of_nodes: 0.5201661179287639
+cc2_n_nodes: 69
+cc2_n_edges: 80
+cc2_size: 69
+cc2_tie_count: 1
+cc3_size: 30
+cc3_tie_count: 2
+cc2_is_tree: False
+cc2_max_degree: 7
+cc2_diameter: 17
+deg_min: 1
+deg_max: 59
+deg_mean: 1.9737354085603114
+deg_sum: 52754
+degree_histogram: <37 distinct degrees, see results.json>
+n_distinct_degrees: 37
+deg_argmax_node: 22777
+invariant_degsum_eq_2m: True
+invariant_comp_nodes_sum: True
+invariant_edges_over_comps: True

@@ -1,0 +1,143 @@
+\section{Q5: Graph Measures (30 pts)}
+
+All measures below are computed on the graph built in Q3: the simple undirected
+graph read from \texttt{graph.txt} (one \texttt{networkx.Graph}, one node per
+distinct id, one edge per line), which has $26{,}728$ nodes, $26{,}377$ edges and
+$4104$ connected components, the largest of which contains $13{,}903$ nodes and
+$16{,}695$ edges. All computations use NetworkX with its default parameters; every
+number was reproduced under NetworkX 3.3 and 3.6.1 and independently re-derived
+with SciPy (see the remarks).
+
+\subsection{Eigenvector centrality (10 pts)}
+
+\texttt{nx.eigenvector\_centrality(G)} was called with default parameters
+(\texttt{max\_iter}$=100$, \texttt{tol}$=10^{-6}$). \textbf{It converged}; no
+\texttt{PowerIterationFailedConvergence} was raised, so the default call is the
+one reported. Values are the entries of the principal eigenvector of the adjacency
+matrix, normalised to unit $L^2$ norm.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{clrcc}
+\toprule
+Rank & Node & Degree & Centrality (default) & Centrality (exact) \\
+\midrule
+1  & 16485 & 57 & 0.491844 & 0.492371 \\
+2  & 22777 & 59 & 0.419863 & 0.422581 \\
+3  & 14618 & 38 & 0.177656 & 0.177494 \\
+4  & 21928 & 17 & 0.139183 & 0.139695 \\
+5  & 2884  & 29 & 0.133813 & 0.133861 \\
+6  & 1197  & 18 & 0.133186 & 0.133738 \\
+7  & 9068  & 51 & 0.111138 & 0.102654 \\
+8  & 17902 & 32 & 0.109219 & 0.109103 \\
+9  & 1324  & 20 & 0.100115 & 0.100053 \\
+10 & 25747 & 19 & 0.094368 & 0.094399 \\
+\bottomrule
+\end{tabular}
+\label{p3:tab:eig}
+\end{table}
+
+\paragraph{Remark on the default tolerance.}
+The fourth column is the answer with default parameters, as asked. For comparison
+the fifth column is the exact eigenvector from
+\texttt{eigenvector\_\-centrality\_\-numpy}. The two agree on the \emph{set} of
+top-10 nodes, but they order ranks 7 and 8 differently: the exact computation puts
+node 17902 ahead of node 9068. The reason is that NetworkX's power iteration stops
+when the total $L^1$ change falls below
+\[
+  n\cdot\texttt{tol} \;=\; 26{,}728\times10^{-6} \;\approx\; 2.67\times10^{-2},
+\]
+which is a loose \emph{absolute} bound on a vector of unit norm; the returned
+vector has residual $\lVert Ax-\lambda x\rVert_\infty\approx7.8\times10^{-3}$ and
+Rayleigh quotient $8.76202$ against the true
+$\lambda_{\max}=8.762217$. Node 9068 is the entry still
+furthest from its limit, so its rank has not settled after 100 iterations. Running
+the same power iteration with \texttt{max\_iter}$=10^5$, \texttt{tol}$=10^{-10}$
+reproduces the exact column to $9.3\times10^{-7}$.
+
+\paragraph{Interpretation.}
+Because the graph is disconnected, the principal eigenvector is supported on the
+component with the largest spectral radius. Here that is the giant component
+($\lambda_{\max}=8.7622$, versus at most $3.63$ for every other component), so all
+ten top nodes lie in the giant component and roughly half the nodes
+($12{,}908$, or $48.3\%$) receive centrality below $10^{-12}$. Note also that
+eigenvector centrality is not simply degree: only 6 of these 10 nodes are also in
+the top 10 by degree. Node 21928 ranks 4th with degree just 17, because its
+neighbours are themselves central, while node 17546 has degree 40 yet does not
+make the list.
+
+\subsection{Katz centrality (10 pts)}
+
+\texttt{nx.katz\_centrality(G)} was called with default parameters
+($\alpha=0.1$, $\beta=1.0$, \texttt{max\_iter}$=1000$, \texttt{tol}$=10^{-6}$),
+solving $x=\beta\mathbf{1}+\alpha Ax$ and normalising to unit $L^2$ norm.
+
+\paragraph{Admissibility of the default $\alpha$.}
+Katz centrality is well defined only for $\alpha<1/\lambda_{\max}$. For this graph
+$\lambda_{\max}=8.762217$, so $1/\lambda_{\max}=0.114126$. The default
+$\alpha=0.1$ satisfies $0.1<0.114126$, so it \textbf{is} admissible (though not by
+a large margin). Consistently with this, the default call \textbf{converged} and
+every entry of the unnormalised solution is positive.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{clrc}
+\toprule
+Rank & Node & Degree & Katz centrality \\
+\midrule
+1  & 16485 & 57 & 0.211609 \\
+2  & 22777 & 59 & 0.175512 \\
+3  & 9068  & 51 & 0.109482 \\
+4  & 14618 & 38 & 0.099380 \\
+5  & 2884  & 29 & 0.074102 \\
+6  & 17902 & 32 & 0.070590 \\
+7  & 17546 & 40 & 0.068771 \\
+8  & 21928 & 17 & 0.066834 \\
+9  & 1197  & 18 & 0.061642 \\
+10 & 9740  & 27 & 0.060545 \\
+\bottomrule
+\end{tabular}
+\label{p3:tab:katz}
+\end{table}
+
+These values were confirmed against \texttt{nx.katz\_centrality\_numpy(G)} and
+against a direct sparse solve of $(I-\alpha A)x=\beta\mathbf{1}$; all three give
+the same ordering, agreeing to $1.3\times10^{-5}$ and $1.9\times10^{-16}$
+respectively. Unlike eigenvector centrality, the $\beta\mathbf{1}$ term gives every
+node a positive baseline, so Katz does not collapse to zero off the giant
+component, and its ranking tracks degree more closely (node 9068, degree 51, rises
+from 7th to 3rd).
+
+\subsection{Average clustering coefficient and average Jaccard similarity (10 pts)}
+
+\paragraph{Average clustering coefficient.}
+Using \texttt{nx.average\_clustering(G)}, i.e.\ the mean over \emph{all} $26{,}728$
+nodes of the local clustering coefficient
+$c_u = 2T_u / \bigl(d_u(d_u-1)\bigr)$, where $T_u$ is the number of triangles
+through $u$, with the standard convention that $c_u=0$ for nodes of degree $<2$:
+\[
+  \bar{C} \;=\; 0.100539 .
+\]
+This average is held down by the graph's sparsity: $13{,}942$ of the $26{,}728$
+nodes ($52.2\%$) have degree $<2$ and so contribute $0$ by convention, and the
+graph contains only $1926$ triangles in total. Restricted to the $12{,}786$ nodes
+of degree $\ge 2$ the mean local clustering is $0.210168$.
+
+\paragraph{Average Jaccard similarity of all connected node pairs.}
+For every edge $(u,v)\in E$ the Jaccard similarity of the two neighbourhoods is
+\[
+  J(u,v) \;=\; \frac{\lvert N(u)\cap N(v)\rvert}{\lvert N(u)\cup N(v)\rvert},
+\]
+computed with \texttt{nx.jaccard\_coefficient(G, G.edges())} and averaged over all
+$26{,}377$ edges. Here $N(\cdot)$ denotes the \emph{raw} neighbour set, so
+$v\in N(u)$ and $u\in N(v)$; consequently an isolated edge (both endpoints of
+degree 1) has $\lvert N(u)\cap N(v)\rvert=0$ and scores $J=0$ rather than being
+undefined. Under this convention
+\[
+  \bar{J} \;=\; 0.041304 .
+\]
+The value is small because $21{,}167$ of the $26{,}377$ edges ($80.3\%$) join two
+nodes with no common neighbour and therefore score exactly $0$; the largest value
+attained by any edge is $2/3$. (For contrast, excluding the two endpoints from each
+other's neighbour sets would give $0.084305$; the number reported above is the
+NetworkX convention stated in the formula.)
