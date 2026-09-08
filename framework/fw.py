@@ -184,8 +184,11 @@ def system_prompt(role: str, level: str, runtime: dict) -> str:
 # ------------------------------------------------------------------- commands
 
 def cmd_init(args) -> Path:
-    if not INPUT.exists() or not any(INPUT.iterdir()):
-        sys.exit(f"{INPUT} is empty -- drop the assignment in first")
+    # Ignore dotfiles: input/ carries a .gitkeep so the directory survives a clone,
+    # and that must not read as "an assignment is present".
+    if not INPUT.exists() or not any(f for f in INPUT.rglob("*")
+                                     if f.is_file() and not f.name.startswith(".")):
+        sys.exit(f"{INPUT} contains no assignment files -- drop the assignment in first")
     jid = job_id()
     job = PLAYGROUND / jid
 
