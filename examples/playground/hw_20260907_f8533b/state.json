@@ -1,0 +1,45 @@
+{
+  "job": "hw_20260907_f8533b",
+  "created": "2026-09-07 23:17:19",
+  "playground": "/home/xing/project/auto_hw_complete/playground/hw_20260907_f8533b",
+  "output": "/home/xing/project/auto_hw_complete/output/hw_20260907_f8533b",
+  "problems": {
+    "p1": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-07 23:21:42",
+      "finished": "2026-09-07 23:29:15"
+    },
+    "p2": {
+      "status": "done",
+      "rounds": 2,
+      "started": "2026-09-07 23:29:24",
+      "finished": "2026-09-07 23:38:25"
+    },
+    "p3": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-07 23:38:36",
+      "finished": "2026-09-07 23:44:52"
+    },
+    "p4": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-07 23:44:59",
+      "finished": "2026-09-07 23:57:21"
+    }
+  },
+  "problem_order": [
+    "p1",
+    "p2",
+    "p3",
+    "p4"
+  ],
+  "master_rounds": 1,
+  "status": "master_finished",
+  "documents": [
+    "Homework_2.pdf"
+  ],
+  "master_session": "1a3fd2e3-359f-425c-beae-32a1e5a8265f",
+  "cost_usd": 22.4894
+}

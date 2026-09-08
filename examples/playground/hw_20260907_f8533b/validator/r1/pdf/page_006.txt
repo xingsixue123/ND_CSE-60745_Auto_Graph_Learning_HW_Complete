@@ -1,0 +1,52 @@
+Answer.
+The prediction accuracy must be at least
+amin = 54
+55 = 98.18 % ≈98.19 %.
+(10)
+Because this is a lower bound, the decimal answer is rounded up: the exact threshold 98.1818 . . . %
+rounded down to 98.18% would give AMATwp = 2.6 −1.1(0.9818) = 1.52002 ns, which exceeds the
+1.52 ns budget and therefore fails the requirement, whereas 98.19% gives 1.51991 ns and satisfies it.
+Check. At a = 54/55 exactly, AMATwp = 2.6 −1.1 × 54
+55 = 2.6 −1.08 = 1.52 ns, which is exactly
+0.95 × 1.6 ns, i.e. precisely a 5% reduction, as required at the threshold. Note also that even a
+perfect predictor (a = 1) only reaches AMAT = 1.5 ns, a 6.25% reduction, so the 5% target leaves
+very little margin — which is why the required accuracy is so high.
+Problem 4: Critical-Word First and Early Restart (16 points)
+Common setup and notation.
+A word is 8 Bytes, so a block of B Bytes holds n = B/8 words.
+For a given cache level write
+t1 time until the first word arrives when the block is sent in normal order (no critical-word first);
+tx time for each additional word;
+tc time until the requested word arrives when critical-word first is used (it is sent first, so this single
+transfer is all the processor waits for).
+Without reordering, word i of the block (i = 0, 1, . . . , n −1) is available after t1 + i tx. The three
+schemes are then
+neither:
+Tnone = t1 + (n −1) tx
+(wait for the whole block)
+(11)
+early restart only:
+TER =
+n−1
+∑︂
+i=0
+pi (t1 + i tx)
+(resume when word i arrives)
+(12)
+both:
+Tboth = tc
+(requested word first, then resume)
+(13)
+where pi is the probability that the referenced word sits at position i. Equations (11) and (13) do
+not involve pi: in the first the processor waits for the last word regardless of what it asked for, and
+in the third the requested word is always the first one delivered. Only (12) is a genuine expectation
+over the reference distribution.
+Question A (8 points)
+Here B = 64 Bytes, so
+n =
+64 Bytes
+8 Bytes/word = 8 words per block,
+with t1 = 90, tx = 10 and tc = 110 CCs. (The 1 MB capacity is not needed: the miss service time
+depends on the block size, not on how many blocks the cache holds.) Word i therefore arrives at
+90 + 10i CCs, i.e. at 90, 100, 110, 120, 130, 140, 150, 160 CCs for i = 0, . . . , 7.
+6

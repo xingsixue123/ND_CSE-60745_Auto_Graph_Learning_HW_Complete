@@ -1,0 +1,53 @@
+The reference distribution is not uniform. The first word carries 30% and the remaining n −1 = 7
+words share the other 70% equally:
+p0 = 0.30,
+pi = 0.70
+7
+= 0.10
+(i = 1, . . . , 7),
+check: 0.30 + 7(0.10) = 1.
+(1) Neither critical-word first nor early restart.
+The processor resumes only once the entire
+block has arrived, which happens when the last word lands:
+Tnone = t1 + (n −1)tx = 90 + 7 × 10 = 160 CCs .
+This does not depend on which word was requested, so the reference distribution is irrelevant here
+and the “average” equals this fixed value.
+(2) Early restart only.
+The block still arrives in normal order, but the processor resumes as
+soon as the requested word has arrived, so the wait depends on that word’s position:
+TER = 0.30 × 90 + 0.10
+(︁100 + 110 + 120 + 130 + 140 + 150 + 160
+)︁
+= 27 + 0.10 × 910 = 27 + 91 = 118 CCs .
+(3) Both critical-word first and early restart.
+Memory delivers the requested word first, at
+a cost of tc = 110 CCs, and the processor restarts immediately:
+Tboth = 110 CCs ⇒
+110 CCs .
+Again the block-position distribution drops out entirely: whichever word is requested, it is the one
+sent first, so every miss costs the same 110 CCs. Note that critical-word first is more expensive per
+transfer than a normal first word (110 > 90); it still wins overall because it removes the wait for
+all seven remaining words.
+Summary.
+Scheme
+Average L2 miss service time
+Saving vs. (1)
+(1) Neither
+160 CCs
+—
+(2) Early restart only
+118 CCs
+42/160 = 26.25%
+(3) Critical-word first + early restart
+110 CCs
+50/160 = 31.25%
+Question B (4 points)
+Answers: the first blank is 18 CCs and the second blank is 10%.
+Now B = 32 Bytes, so
+n =
+32 Bytes
+8 Bytes/word = 4 words per block,
+with tx = 4 CCs, tc = 27 CCs, and every word equally likely, pi = 1
+4. Let x denote the unknown
+first-word latency.
+7

@@ -1,0 +1,23 @@
+2. Fixed first-word latency versus the tail. The ceiling on the saving is (n−1)tx/
+[︁t1 +(n−1)tx
+]︁:
+70/160 = 43.75% at L2 and 12/30 = 40% at L1. When the fixed latency dominates, the
+processor must wait for it anyway and neither technique can help much. Here the two levels
+start out comparable, so this is not what separates them.
+3. The surcharge critical-word first itself costs. Reordering the transfer is not free: tc −t1 is
+20 CCs at L2 but 9 CCs at L1. Relative to the block service time that is 20/160 = 12.5%
+at L2 against 9/30 = 30% at L1. This is the decisive factor: it consumes 12.5 of L2’s 43.75
+available points but 30 of L1’s 40, leaving 31.25% and 10% respectively. The shorter a level’s
+total miss time, the harder a fixed reordering overhead is to justify.
+4. Shape of the reference distribution. Early restart only pays off to the extent that the requested
+word arrives early. L2’s 30% weight on the first word helps it: under a uniform 1/8 the L2
+early-restart average would be 125 CCs, a saving of 21.875% rather than 26.25%. Critical-
+word first is immune to this, since its cost is flat in the word position — which makes it the
+more attractive of the two when the distribution is unfavourable or unknown.
+5. Miss frequency (a full-AMAT caveat). The comparison above is per miss, which is what this
+problem measures. A complete average-memory- access-time analysis would also weight each
+level’s saving by how often that level misses, and L1 misses are far more frequent than L2
+misses. That is the one factor that could push the balance back towards L1; with the numbers
+given here, though, L1’s saving is only 3 CCs against L2’s 50 CCs, so it would take an L1:L2
+miss ratio above roughly 16:1 merely to draw level.
+9

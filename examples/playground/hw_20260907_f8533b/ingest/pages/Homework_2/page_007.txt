@@ -1,0 +1,98 @@
+ 
+7 
+mkdir setting-1 
+cp x86-config setting-1/ 
+cp mem-config setting-1/ 
+ 
+Next, use vim setting-1/mem-config to edit cache configurations as needed. 
+3. Each simulation takes approximately 15~25 minutes on student04. If you run simulations 
+sequentially on student04, a generous allowance of about 4~6 hours for all Questions in Problem 5 is 
+recommended. 
+4. You may use multiple separate terminals to connect to CSE student machines so that you can run 
+more than one simulation at the same time. These terminals are independent as long as they are not 
+writing to the same file(s), so please make sure that output files specified by --x86-report and --
+mem-report are different for each simulation. 
+5. Please start ASAP. All simulation time estimations above are measured on basically idle student 
+machines. If the machines get busy (due to multiple terminal connections and/or multiple students 
+working at the same time), the actual simulation time would be even longer. 
+ 
+Question A: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Read codes of both algorithms. What does the blocking version do differently than the more 
+conventional “no-blocking” version? 
+ 
+ 
+ 
+ 
+ 
+ 
+Question B: (15 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Given the following cache configurations: 
+ 
+Table 3: cache settings to test in Question B, Problem 5 
+Cache Setting 
+Cache Size / KB 
+Cache Block Size / Byte 
+Number of Sets 
+Set Associativity 
+Setting #1 
+4 
+8 
+ 
+Direct mapped 
+Setting #2 
+4 
+8 
+ 
+2-way 
+Setting #3 
+4 
+8 
+ 
+4-way 
+ 
+Fill in the blanks in Table 3. Then, compile two programs and run simulations for two programs under 
+all three cache settings. For the blocking program, use two values for B: 15 and 30. Fill in Table 4 with 
+execution cycles: 
+ 
+Table 4: execution cycles of tests in Question B, Problem 5 (Unit: CC) 
+Cache Setting 
+No-blocking 
+Blocking (B = 15) 
+Blocking (B = 30) 
+Setting #1 
+ 
+ 
+ 
+Setting #2 
+ 
+ 
+ 
+Setting #3 
+ 
+ 
+ 
+ 
+ 
+ 

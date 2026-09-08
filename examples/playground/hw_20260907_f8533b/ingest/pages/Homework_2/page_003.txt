@@ -1,0 +1,92 @@
+ 
+3 
+Problem 2: (10 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Consider the following parameters of a virtual memory system: 
+Table 1: basic specifications of the system 
+Virtual address 
+Physical memory size 
+Page size 
+PTE size 
+30 bits 
+2 GB 
+64 KB 
+4 Bytes 
+ 
+Question A: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Fill in the table: 
+Table 2: virtual address components 
+Page offset / bits 
+Virtual page memory (VPN) / bits 
+Total / bits 
+ 
+ 
+30 
+ 
+Question B: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+How many page table entries (PTEs) are needed and how much physical memory is needed for 
+storing the page table? Direct answers are expected (e.g., 210 entries and 1 KB physical memory). 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question C: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+What are the pros and cons of increasing the page size? Please provide at least 1 pro and 1 con. 
+ 
+ 
+ 

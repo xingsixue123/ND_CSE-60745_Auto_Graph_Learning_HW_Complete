@@ -1,0 +1,102 @@
+\section*{Problem 3: Way Prediction on an L1 Instruction Cache (8 points)}
+
+\noindent
+Throughout, we use the standard average-memory-access-time expression, in which the miss
+penalty is an \emph{additional} cost incurred on top of the access time:
+\begin{equation}
+  \label{p3:eq:amat}
+  \mathrm{AMAT} \;=\; \text{access time} \;+\; \text{miss rate} \times \text{miss penalty}.
+\end{equation}
+
+\noindent
+The stated geometry (4-way set associative, 64\,B blocks, 256\,KB capacity) fixes the
+baseline 1.1\,ns access time and the direct-mapped 1\,ns comparison point; it is not
+needed numerically below.
+
+\subsection*{Question A (2 points)}
+
+With way prediction the cache first probes the single predicted way. If that prediction
+is correct the access completes in the direct-mapped access time of 1\,ns. If it is
+wrong, the 1.1\,ns quoted for a misprediction is \emph{additional} time, so the failed
+probe is followed by the ordinary associative lookup and the two costs add:
+\begin{align}
+  \label{p3:eq:cases}
+  t_{\text{best}}  &= 1\ \mathrm{ns}, \\
+  t_{\text{worst}} &= 1 + 1.1 = 2.1\ \mathrm{ns}.
+\end{align}
+
+\noindent
+\textbf{Answer.} For the best case a cache access takes \textbf{1\,ns}; for the worst
+case it takes \textbf{2.1\,ns}.
+
+\medskip
+\noindent
+Here ``best/worst case'' is read as the two \emph{cache-access} (hit-time) outcomes of
+the way predictor, namely prediction success versus prediction failure, since the 50\,ns
+miss penalty is accounted separately in Eq.~\eqref{p3:eq:amat} rather than as part of
+the access time.
+
+\subsection*{Question B (6 points)}
+
+\paragraph{Step 1: baseline AMAT (no way prediction).}
+The original 4-way cache has a 1.1\,ns access time, a 1\% miss rate and a 50\,ns
+additional miss penalty:
+\begin{equation}
+  \label{p3:eq:base}
+  \mathrm{AMAT}_{\text{base}} = 1.1 + 0.01 \times 50 = 1.1 + 0.5 = 1.6\ \mathrm{ns}.
+\end{equation}
+
+\paragraph{Step 2: AMAT with way prediction.}
+Let $a$ be the prediction accuracy. The prediction succeeds with probability $a$
+(costing $t_{\text{best}} = 1$\,ns) and fails with probability $1-a$ (costing
+$t_{\text{worst}} = 2.1$\,ns), so the expected access time is
+$a(1) + (1-a)(2.1)$. Since the miss rate is unchanged at 1\% and the miss penalty is
+still 50\,ns, the miss term is identical to the baseline:
+\begin{align}
+  \label{p3:eq:wp}
+  \mathrm{AMAT}_{\text{wp}}(a)
+    &= \bigl[\, a \times 1 + (1-a) \times 2.1 \,\bigr] + 0.01 \times 50 \nonumber \\
+    &= (2.1 - 1.1a) + 0.5 \nonumber \\
+    &= 2.6 - 1.1a \quad \mathrm{ns}.
+\end{align}
+
+\paragraph{Step 3: impose the 5\% reduction.}
+Reducing the AMAT by at least 5\% means the new AMAT is at most 95\% of the baseline:
+\begin{equation}
+  \label{p3:eq:target}
+  \mathrm{AMAT}_{\text{wp}}(a) \;\le\; 0.95 \times \mathrm{AMAT}_{\text{base}}
+  = 0.95 \times 1.6 = 1.52\ \mathrm{ns}.
+\end{equation}
+
+\paragraph{Step 4: solve for $a$.}
+Substituting Eq.~\eqref{p3:eq:wp} into Eq.~\eqref{p3:eq:target}:
+\begin{align}
+  2.6 - 1.1a &\le 1.52 \nonumber \\
+  1.1a       &\ge 2.6 - 1.52 = 1.08 \nonumber \\
+  a          &\ge \frac{1.08}{1.1} = \frac{108}{110} = \frac{54}{55}
+                = 0.9818\overline{18}.
+  \label{p3:eq:solve}
+\end{align}
+
+\paragraph{Answer.}
+The prediction accuracy must be \emph{at least}
+\begin{equation}
+  \label{p3:eq:amin}
+  a_{\min} = \frac{54}{55} = 98.\overline{18}\,\% \;\approx\; \mathbf{98.19\,\%}.
+\end{equation}
+
+\noindent
+Because this is a lower bound, the decimal answer is rounded \emph{up}: the exact
+threshold $98.1818\ldots\%$ rounded down to $98.18\%$ would give
+$\mathrm{AMAT}_{\text{wp}} = 2.6 - 1.1(0.9818) = 1.52002$\,ns, which exceeds the 1.52\,ns
+budget and therefore fails the requirement, whereas $98.19\%$ gives $1.51991$\,ns and
+satisfies it.
+
+\medskip
+\noindent
+\textit{Check.} At $a = 54/55$ exactly,
+$\mathrm{AMAT}_{\text{wp}} = 2.6 - 1.1 \times \tfrac{54}{55} = 2.6 - 1.08 = 1.52$\,ns,
+which is exactly $0.95 \times 1.6$\,ns, i.e.\ precisely a 5\% reduction, as required at
+the threshold. Note also that even a perfect predictor ($a=1$) only reaches
+$\mathrm{AMAT} = 1.5$\,ns, a 6.25\% reduction, so the 5\% target leaves very little
+margin --- which is why the required accuracy is so high.

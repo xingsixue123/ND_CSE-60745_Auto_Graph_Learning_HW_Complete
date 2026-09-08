@@ -1,0 +1,65 @@
+First blank — recovered from the stated 20%.
+The paragraph gives us the early-restart
+result and asks us to work backwards. In terms of x,
+Tnone = x + (n −1)tx = x + 3 × 4 = x + 12,
+TER = 1
+4
+[︁x + (x + 4) + (x + 8) + (x + 12)
+]︁= x + 4(0 + 1 + 2 + 3)
+4
+= x + 6.
+Early restart alone reduces the original time by 20%, so
+Tnone −TER
+Tnone
+= (x + 12) −(x + 6)
+x + 12
+=
+6
+x + 12 = 0.20 =⇒x + 12 = 30 =⇒
+x = 18 CCs .
+Hence Tnone = 30 CCs and TER = 24 CCs, which indeed differ by 6/30 = 20%.
+Second blank.
+With critical-word first the requested word arrives after tc = 27 CCs and the
+processor restarts there, so Tboth = 27 CCs and
+Tnone −Tboth
+Tnone
+= 30 −27
+30
+= 1
+10 = 10% .
+Both blanks are exact integers, as the question requires.
+Question C (4 points)
+Verdict.
+On these numbers the two techniques are more important for the L2 cache.
+Reason (from the results of A and B).
+Comparing the savings the two techniques actually
+deliver at each level:
+L2 (Question A)
+L1 (Question B)
+Words per block
+8
+4
+Neither
+160 CCs
+30 CCs
+Early restart only
+118 CCs (−26.25%)
+24 CCs (−20%)
+Critical-word first + early restart
+110 CCs (−31.25%)
+27 CCs (−10%)
+Absolute saving of the pair
+50 CCs
+3 CCs
+At L2 the pair of techniques removes 31.25% of the miss service time (50 CCs); at L1 it removes
+only 10% (3 CCs). The gap is even sharper for critical-word first taken on its own: at L2 it improves
+on early restart alone (118 →110 CCs), whereas at L1 it makes matters worse (24 →27 CCs),
+because its 27 −18 = 9 CC surcharge exceeds the 6 CC that early restart had already saved. So at
+L1 it would be better not to enable critical-word first at all, while at L2 it pays for itself — which
+is precisely what “more important for L2” means.
+Factors that drive the relative importance.
+1. Words per block, n. The most these techniques can ever save is the transfer tail (n −1)tx
+— the time spent shipping the words the processor is not waiting for. Larger blocks mean
+a longer tail and more to skip. Lower cache levels normally use larger blocks (8 words here
+versus 4), which favours L2.
+8

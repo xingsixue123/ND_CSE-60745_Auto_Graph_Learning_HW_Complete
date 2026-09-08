@@ -1,0 +1,80 @@
+# master.log -- hw_20260907_f8533b -- CSE 60321 HW2
+[round 0] Ingest read via all three channels. manifest.json: 9 rendered pages, n_images=0 on
+  every page. Page renders for pp.1-5 inspected; pp.1 and 5 were downscaled by the Read tool so
+  the numeric regions were cropped and 2x-LANCZOS upscaled (crops/) and re-read. Confirmed:
+  no figures anywhere in this assignment, only ruled tables and header bars. No question refers
+  to a figure. Text channel is therefore authoritative and is corroborated by the renders.
+[round 0] Cross-checks made image-vs-text: P1 setup (2.0 GHz, 128B block, 1/10/50 CC hit times,
+  16B bus, +10 CC per extra transfer); P2 Table 1 (30 bits / 2 GB / 64 KB / 4 Bytes) and Table 2
+  headers with only 'Total = 30' pre-filled; P3 config bullets (1.1 ns, 1%, 50 ns, 1 ns / +1.1 ns);
+  P4A (110 / 90 / 10 CCs, 30% first word) and P4B (27 CCs, 4 CCs, 20%). All agree.
+[round 0] Cut into 4 problems on problem boundaries. Every Problem in this assignment is a
+  self-contained scenario with a shared setup paragraph consumed by all its lettered questions,
+  and there is zero coupling ACROSS problems (P1 = 3-level Xeon hierarchy, P2 = virtual memory,
+  P3 = way prediction, P4 = critical-word first). So the natural cut is one worker per Problem,
+  and each Problem must stay whole because its questions share a setup and chain numerically:
+    p1: D reuses C's maximum initial memory access time verbatim.
+    p2: B's entry count is 2^(VPN bits) from A.
+    p3: B's AMAT is built from A's best/worst-case access times.
+    p4: C explicitly consumes the results of both A and B.
+  55 points assigned (21+10+8+16).
+[round 0] p5 (45 pts) recorded in problems.json:uncovered. User instruction in specs.md is explicit
+  and unambiguous. Will be stated once in the final document so a reader knows it was intentional.
+  21+10+8+16+45 = 100 = stated assignment total, so the cut accounts for every point.
+[round 0] p1 spawned -> PASS in 1 worker round. Audited against my own independently derived
+  key before spawning: tag/index/offset = 47/10/7 (sets = 2^19/128/4 = 1024), Q1C max initial
+  memory access time = 305 CC = 152.5 ns, Q1D AMAT = 3.84 CC. Worker agrees on all four
+  questions and states the nested-AMAT convention explicitly as the brief asked. Accepted.
+[round 0] p2 spawned -> FAIL r1, PASS r2. Final answers: offset 16 / VPN 14 / total 30,
+  2^14 PTEs, 64 KB page table. Matches my key. Two pros and two cons, each naming a mechanism.
+[round 0] p3 spawned -> PASS in 1 worker round. best 1 ns / worst 2.1 ns; a_min = 54/55 =
+  98.18...%, reported as 98.19% with an explicit argument for rounding a lower bound UP.
+  Matches my key.
+[round 0] Heading style is inconsistent across fragments: p1 emits \section{...} (numbered),
+  p2 and p3 emit \section*{...}, and p3 also adds a descriptive subtitle the others lack.
+  Left to normalize at assembly to a single \section*{Problem N: Title (X points)} form.
+  This is presentation-only; no worker content is touched.
+[round 0] p4 spawned -> PASS in 1 worker round. Pre-verified against my own sympy/fractions
+  computation before reading the worker's output: A) 160 / 118 / 110 CCs, B) blanks 18 CCs and
+  10%, C) verdict L2 (31.25% saving vs 10%). Worker agrees on every number and its Question C
+  is grounded in its own A/B results, which is what the assignment's hint says is being marked.
+  Its extra observation -- that at L1 critical-word first is actively HARMFUL (24 -> 27 CCs)
+  because the 9 CC reordering surcharge exceeds the 6 CC early restart already saved -- is
+  correct and I verified it independently. Accepted.
+[round 0] ASSEMBLY. Copied 4 fragments to final/ as p<N>.tex. Merged the 4 preamble.txt files,
+  de-duplicated, into preamble.tex: lmodern, amsmath, amssymb, booktabs, float, enumitem.
+  Normalized the 4 section headings to a uniform \section*{Problem N: Title (X points)}: p1 and
+  p4 had emitted numbered \section{} while p2/p3 used \section*{}, and p1/p2 lacked the
+  descriptive title p3/p4 had. Heading line only; no worker content altered.
+[round 0] Compiled with latexmk -pdf in playground/build (NOT in final/, so no .aux/.log/.fls
+  can ever land in the deliverable). Clean: rc=0, zero warnings, zero overfull/underfull boxes,
+  9 pages. Only main.pdf is copied across. lint_output.py --final: OK. No figures exist in this
+  assignment, so final/ has no fig_*.pdf, which is correct rather than an omission.
+[round 0] Self-caught defect BEFORE first submission (free to fix at this point): p2's table
+  floated as "Table 1" because it is the document's first float, while the assignment calls it
+  "Table 2". Recaptioned to "Virtual address components (Table 2 of the assignment)" so the
+  correspondence is explicit without hard-coding a float number. Recompiled, re-linted, clean.
+[round 0] Submitting round 1.
+[round 1] MASTER VALIDATOR -> PASS on the first submission. It re-derived every number
+  independently and matched all of them, and confirmed coverage of all 13 answerable items.
+[round 1] It recorded two minor, explicitly non-blocking defects. DECIDING TO SHIP AS-IS
+  rather than spend a second submission round, because editing final/ after a PASS would
+  invalidate that PASS and require re-validation of a document whose substance would not
+  have changed:
+    (a) P4 Question C runs long for a 4-point question. Real, but the content is correct
+        and every claim in it is load-bearing for the verdict; trimming risks cutting the
+        A/B-grounded numeric comparison that the assignment's own hint says is what gets
+        marked. Verbosity costs nothing on a homework; a weakened argument does.
+    (b) P3 B headlines 98.19% rather than the exact 98.18...%. I do not agree this is a
+        defect. The exact value 54/55 is stated, and rounding a LOWER BOUND up is the
+        correct direction -- the fragment shows that 98.18% yields AMAT = 1.52002 ns and
+        actually violates the <= 1.52 ns constraint. Rounding down would be the error.
+  Neither is worth a round. Both are stated in the final report so the user can overrule me.
+[round 1] Note on the validator's aside that lint_output.py "fails on final/": it passes.
+  I ran it with the --final flag (the flag that selects the assembly whitelist rather than
+  the worker whitelist) both before and after the table-caption fix, and it returned
+  "OUTPUT LINT OK" with rc=0 each time. The validator appears to have run it without --final,
+  which applies the stricter worker whitelist that has no rule for main.tex/main.pdf/p*.tex.
+  It reached the right conclusion regardless and did not block on it. No action taken.
+[round 1] final/ untouched since the PASS. Job complete. downloads.md written: nothing was
+  installed or downloaded during this run.

@@ -1,0 +1,25 @@
+== Question A ==
+  best  case access = 1 ns
+  worst case access = 1 + 11/10 = 21/10 ns
+
+== Question B ==
+  AMAT_base      = 11/10 + 1/100*50 = 8/5 ns
+  AMAT_wp(a)     = 13/5 - 11*a/10 ns
+  target (<=95%) = 0.95 * 8/5 = 38/25 ns  (1.52)
+  constraint solution: 54/55 <= a
+
+  a_min (exact)   = 54/55 = 54/55
+  a_min (decimal) = 0.981818181818
+  a_min (percent) = 98.1818181818 %
+  AMAT_wp(a_min)  = 38/25 ns  (target 38/25) -> MATCH
+  reduction at a_min = 5.000000000 %
+
+  rounded UP  to 2dp: 98.19 %
+  rounded DOWN to 2dp: 98.18 %  <- would VIOLATE the constraint
+    a=98.18%: AMAT=1.520020000 ns  <= 1.52? False
+    a=98.19%: AMAT=1.519910000 ns  <= 1.52? True
+
+== numeric sweep cross-check ==
+  smallest a on a 1e-6 grid meeting the bound: 0.981819
+  sympy threshold:                             0.9818181818181818
+  agree to 1e-6? True

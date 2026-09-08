@@ -1,120 +1,99 @@
-# Worked example — CSE 60745 Fall 2026, Homework 1
+# Worked example — CSE 60321 Spring 2026, Homework 2 (with a deliberate skip)
 
-One complete run of the pipeline, kept as a reference: what went in, what came
-out, and how little had to be said to get there.
+The second test of the pipeline, on a different course and a different kind of
+question: no data files, no graphs, no code to speak of — analytical cache and
+pipeline arithmetic, where every answer is a number that is either right or wrong.
 
-The whole input was **a Word document, a data file, and a three-line spec.**
+This run also exercises something the first one did not: **the user asked for a
+problem to be skipped**, and both levels of validator had to treat that as
+compliance to check rather than a gap to flag.
 
 ## Where these files originally lived
 
-They were moved here after the run finished, so that `input/`, `output/` and
-`playground/` are empty and ready for the next assignment. Their original locations:
+Moved here after the run so `input/`, `output/` and `playground/` are empty for the
+next assignment:
 
 | file, as it is here | where it was during the run |
 |---|---|
 | `specs.md` | `auto_hw_complete/specs.md` |
-| `input/CSE 60745_Fall 2026_HW1.doc` | `auto_hw_complete/input/CSE 60745_Fall 2026_HW1.doc` |
-| `input/graph-1.txt` | `auto_hw_complete/input/graph-1.txt` |
-| `output/cse60745_20260907_d29ddd/` | `auto_hw_complete/output/cse60745_20260907_d29ddd/` |
-| `playground/cse60745_20260907_d29ddd/` | `auto_hw_complete/playground/cse60745_20260907_d29ddd/` |
-
-The playground is the full trajectory rather than the deliverable: every worker's
-scripts and notes, both levels of validator checklist, the ingest renders and
-figure extractions, and the run log. It is kept because how the answers were
-produced is most of the point of the example. Agent session transcripts and the
-private per-agent config directories are excluded by `.gitignore`.
+| `input/Homework_2.pdf` | `auto_hw_complete/input/Homework_2.pdf` |
+| `output/hw_20260907_f8533b/` | `auto_hw_complete/output/hw_20260907_f8533b/` |
+| `playground/hw_20260907_f8533b/` | `auto_hw_complete/playground/hw_20260907_f8533b/` |
 
 ## What went in
 
-**`input/CSE 60745_Fall 2026_HW1.doc`** — a legacy Word file, 3 pages, five
-questions worth 100 points. Two things about it matter:
+**`input/Homework_2.pdf`** — 9 pages, five problems, 100 points. Unlike the graph
+assignment, every figure here is drawn as **vector** graphics, so `ingest.py`
+extracted zero figure files: `get_image_info` finds nothing because nothing is an
+embedded image. That would matter if the vectors were diagrams; they are table
+rules and section header bars, and the questions are answerable from text plus the
+page render. The general fix lives in `pdf_pages.py --page N --dpi 600`, which
+re-renders any page or region on demand.
 
-- it is `.doc`, not `.pdf`, so it has to go through LibreOffice before anything
-  can read it;
-- **Q1's graph exists only as an embedded image.** "Create the following
-  undirected graph" is unanswerable from extracted text — the text channel has a
-  blank gap where the figure is. This is why `ingest.py` pulls figures out at
-  native resolution and why `rules.md` R7 requires all three channels.
+**`specs.md`** — the instruction that makes this example interesting:
 
-**`input/graph-1.txt`** — 26,377 whitespace-separated undirected edges over
-26,728 nodes, in 4,104 connected components. Used by Q3, Q4 and Q5.
+> **Skip Problem 5.** Do not answer it, do not assign a worker to it, and do not
+> include it in the final document. Problem 5 is worth 45 points; the answered work
+> is therefore Problems 1 through 4, 55 points in total. This is a deliberate
+> instruction from the user, not an omission.
 
-**`specs.md`** — the entire human-written specification, reproduced in full:
-
-```
-inputdir: `/home/xing/project/auto_hw_complete/input`, contains hw doc and graph data
-
-outputdir: `/home/xing/project/auto_hw_complete/output`
-```
-
-That is all of it. No problem list, no hints about the figure, no instructions
-about which questions belong together. Everything else — that there are five
-questions, that Q2 depends on the graph built in Q1, that Q4(b) needs a figure
-and Q5 does not — the master worked out by reading the assignment.
+The master did not merely obey it. It read Problem 5 anyway and recorded, in
+`problems.json` under `uncovered`, that the problem is *also* not executable here —
+it requires downloading `hw2.tar` onto a specific Notre Dame machine and running
+Multi2Sim simulations of 15–25 minutes each, with every answer being a table of
+measured cycle counts. Two independent reasons, the user's instruction being the
+operative one.
 
 ## What came out
 
-`output/cse60745_20260907_d29ddd/` — the deliverable:
+`output/hw_20260907_f8533b/final/main.pdf` — 9 pages, Problems 1–4, with the
+omission stated once on page 1: *"Problem 5 (45 points) has been omitted
+intentionally, at the explicit instruction of the submitter; it is not an
+oversight."*
 
-```
-final/
-  main.pdf                 10 pages, cover page + all five questions
-  main.tex preamble.tex    assembled source, recompilable
-  p1.tex p2.tex p3.tex     the three fragments as assembled
-  fig_*.pdf                four vector figures
-p1/ p2/ p3/                each worker's own deliverable, before assembly
-```
+The master cut on problem boundaries rather than merging, which was right here: the
+four problems share nothing, while the sub-questions inside each share one machine
+description. Its note on Problem 4 shows the reasoning:
 
-`playground/cse60745_20260907_d29ddd/` — how it got there:
-
-```
-ingest/                    the .doc converted to PDF, then per page: a 200 dpi
-                           render, the extracted text, and every embedded figure
-                           at native resolution
-problems.json              the master's decomposition, with its stated reasons
-problems/p1 p2 p3/         each worker's brief, notes, scripts and scratch work
-validators/p1 p2 p3/       each worker validator's checklist and its own re-runs
-validator/                 the master validator's checklist, both rounds
-logs/                      run log, heartbeats, per-agent JSON results
-```
-
-The master cut the assignment into three problems rather than five, on
-dependency rather than numbering:
-
-| id | questions | pts | why grouped this way |
-|---|---|---|---|
-| p1 | Q1 + Q2 | 30 | Q2 modifies the graph Q1 builds. Split, two workers would transcribe the figure independently and could disagree. |
-| p2 | Q3 + Q4 | 40 | Q4 is explicitly "based on the graph created in Q3". |
-| p3 | Q5 | 30 | Q5 also builds on Q3's graph, but inherits only a deterministic edge-list file, so there is nothing to diverge about. Kept separate so one worker did not carry 70 points and seven deliverables. |
-
-To stop p2 and p3 disagreeing about the shared graph, the master pinned the same
-reference counts (26,728 / 26,377 / 4,104) into both briefs.
+> Question B opens with "For this question, ignore Question A", which decouples B's
+> arithmetic from A's — but Question C then says "You may refer to your answer in B"
 
 ## How the run went
 
 | | |
 |---|---|
-| wall clock | ~80 minutes |
-| cost | $19.95 |
-| p1, p2, p3 | each passed its validator on **round 1** |
-| master validation | round 1 PASS with three minor defects; master fixed all three; round 2 confirmed the fixes and checked the resulting page reflow for regressions |
+| wall clock | ~46 minutes |
+| cost | $22.49 |
+| p1, p3, p4 | passed on validator round 1 |
+| **p2** | **failed round 1 on a blocking defect**, passed round 2 |
+| master validation | passed round 1 |
 
-The Q1 transcription is the part worth looking at. The drawing has vertices 5, 4
-and 8 nearly collinear, with the single edge (5,8) drawn straight across the disc
-of vertex 4 — so it *looks* like two edges (5,4) and (4,8). Read by eye, that
-misreading is very hard to avoid; it inflates three vertex degrees and corrupts
-Q1 and Q2 together. The worker resolved it by measurement rather than by
-looking, confirmed the result is 3-regular (it is the Petersen graph), and then
-**redrew the edge (5,8) with a slight bow** in its own figure so a grader can see
-it passes behind vertex 4 rather than terminating there.
+### The defect worth reading
+
+`playground/.../validators/p2/checklist.md` records the only real rework of the run,
+and it is the fragment contract (rule R5) failing exactly as predicted at design time.
+
+The worker's `answer.tex` used `\text{}` but its `preamble.txt` declared only
+`booktabs` and `float`, so the fragment did not compile. The worker had *tested* it —
+and reported "pdflatex exits 0, one page, no errors" — but against its own private
+wrapper, which loaded `amsmath` and `amssymb` without declaring them. Its compile
+check was run against a richer preamble than the one it shipped.
+
+Two things make this a good catch. First, the assembled document would have built
+anyway, because Problem 1 happens to declare `amsmath`; the defect was invisible at
+the system level and would have surfaced only when Problem 1 changed. The validator
+failed it regardless: *"that is luck, not correctness."* Second, on re-check it
+generated its wrapper by `cat`-ing the shipped `preamble.txt` rather than writing one
+by hand, then ran a three-way negative control — dropping each declared package in
+turn — to confirm all three were necessary and none superfluous.
+
+`framework/tools/crosscheck.py` now checks macro-versus-declared-package mechanically,
+so this class of defect is caught without spending a validation round on it.
 
 ## Reproducing it
 
 ```bash
 cp examples/specs.md .
-cp examples/input/* input/
+cp examples/input/Homework_2.pdf input/
 framework/fw run
 ```
-
-The job id is a hash of the input filenames, `specs.md` and the date, so a rerun
-on a different day lands in a different directory and will not overwrite this one.

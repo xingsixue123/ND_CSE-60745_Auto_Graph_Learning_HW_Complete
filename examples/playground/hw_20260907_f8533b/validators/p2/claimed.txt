@@ -1,0 +1,7 @@
+A: page offset = 16 bits, VPN = 14 bits, total = 30 bits
+B: PTEs = 2^14 = 16384 entries
+B: page table = 2^14 x 4 B = 2^16 B = 64 KB
+sanity: PPN = 15 bits, fits in 32-bit PTE with flags: True
+sanity: page table is exactly one page: True
+cross-check: 2^30 B / 65536 B = 16384 virtual pages == 16384 PTEs
+C: 128 KB page -> offset 17, VPN 13 bits, table = 2^13 x 4 B = 32 KB (half of 64 KB)

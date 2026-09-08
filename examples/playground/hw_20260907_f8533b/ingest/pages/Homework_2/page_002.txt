@@ -1,0 +1,90 @@
+ 
+2 
+Question B: (6 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Consider the L2 cache. It is 4-way set associative. Physical addresses are 64 bits long. Each data word 
+is 64-bit. Entries are Byte addressable. How many bits of a 64-bit physical address comprise the 
+tag, index and offset? Please provide your calculation process. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question C: (10 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Assuming the local miss rates of 5%, 40%, and 20% for the L1, L2, and L3 caches, respectively. To 
+have an average memory access time of no higher than 4 CCs, determine the maximum initial 
+main memory access time (in nanosecond). Please provide your calculation process. 
+ 
+Hint: to simplify calculation, you may use CCs for time and convert to nanoseconds at the last step. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question D: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Assuming the same local miss rates in Question C. Fill in the blank: 
+ 
+If the bus bandwidth increases to 32 Bytes, the average memory access time will be                      CCs. 
+ 
+Hint: be careful about the unit of time this question asks for. 
+ 
+ 
+ 

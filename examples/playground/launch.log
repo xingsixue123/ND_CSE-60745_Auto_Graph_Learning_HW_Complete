@@ -1,15 +1,42 @@
-[2026-09-07 21:12:13] job cse60745_20260907_d29ddd created
-[2026-09-07 21:12:13] ingesting input ...
-converting CSE 60745_Fall 2026_HW1.doc -> pdf
-  CSE 60745_Fall 2026_HW1.doc: 3 pages -> /home/xing/project/auto_hw_complete/playground/cse60745_20260907_d29ddd/ingest/pages/CSE 60745_Fall 2026_HW1
-[2026-09-07 21:12:14] ingest done: 1 document(s)
+[2026-09-07 23:17:19] job hw_20260907_f8533b created
+[2026-09-07 23:17:19] ingesting input ...
+  Homework_2.pdf: 9 pages -> /home/xing/project/auto_hw_complete/playground/hw_20260907_f8533b/ingest/pages/Homework_2
+[2026-09-07 23:17:19] ingest done: 1 document(s)
 
-job dir: /home/xing/project/auto_hw_complete/playground/cse60745_20260907_d29ddd
-output dir: /home/xing/project/auto_hw_complete/output/cse60745_20260907_d29ddd
-[2026-09-07 21:12:14] spawning master agent
-[2026-09-07 22:18:28] master finished rc=-15
+job dir: /home/xing/project/auto_hw_complete/playground/hw_20260907_f8533b
+output dir: /home/xing/project/auto_hw_complete/output/hw_20260907_f8533b
+[2026-09-07 23:17:19] spawning master agent
+[2026-09-08 00:04:12] master: $7.24 (job total $22.49)
+[2026-09-08 00:04:12] master finished rc=0
 
 ======================================================================
 MASTER REPORT
 ======================================================================
+**Master validator returned PASS on submission 1 of 5.** Job complete.
 
+`output/hw_20260907_f8533b/final/main.pdf` — 9 pages, Problems 1–4 (55 pts).
+
+## How it was cut
+
+One worker per Problem. The assignment has four self-contained scenarios with zero coupling between them, but each Problem's lettered questions chain numerically, so none could be split: P1's D reuses C's result, P2's B needs A's VPN width, P3's B is built from A's access times, and P4's C explicitly consumes both A and B. All four workers passed (p2 took 2 rounds, the rest 1).
+
+## Reading the assignment
+
+All three channels, reconciled. The ingest manifest reports `n_images: 0` on all 9 pages and the renders confirm it — this assignment has **no figures**, only ruled tables. The Read tool downscaled pages 1 and 5 into illegibility, so I cropped and 4×-upscaled the numeric regions to verify the constants (P1's 16 B bus / +10 CC per transfer, P4's 110/90/10 CCs and 30%) rather than guessing at them.
+
+## Verification
+
+I derived an independent answer key before reading any worker output — by hand for P1–P3, with `sympy`/`fractions` for P4 — and every worker matched it: 47/10/7 bits, 152.5 ns, 3.84 CC, 16/14/30 bits, 2¹⁴ PTEs / 64 KB, 1 and 2.1 ns, 54/55 ≈ 98.18%, 160/118/110 CC, 18 CC and 10%. The validator then re-derived everything a third time and agreed.
+
+Compiled in `playground/build/`, never in `final/`, so no `.aux`/`.log` could reach the deliverable. Zero warnings, zero overfull boxes. I caught one defect myself before submitting (P2's table floated as "Table 1" while the assignment calls it Table 2) and fixed it while it was still free.
+
+## Defects I am knowingly shipping
+
+The validator flagged two minor, non-blocking items and I chose not to spend a second round:
+
+1. **P4 Question C runs long** for 4 points. Correct, but verbose. Trimming risked cutting the A/B-grounded numeric comparison that the assignment's own hint says is what gets marked.
+2. **P3 B headlines 98.19%** rather than the exact 98.18…%. **I disagree that this is a defect** — it's a lower bound, the exact fraction 54/55 is stated, and the fragment shows 98.18% gives AMAT = 1.52002 ns, which *violates* the ≤ 1.52 ns constraint. Rounding down would have been the error.
+
+Say the word if you'd rather I trim P4 C — it would cost one more submission round to re-validate.
+
+Two notes: Problem 5 (45 pts) is omitted per your instruction, recorded in `problems.json` under `uncovered` and stated once in a boxed note on page 1. And the validator's aside that `lint_output.py` "fails on final/" is incorrect — it passes with the `--final` flag, which selects the assembly whitelist; it appears to have run without it. That didn't affect the verdict.

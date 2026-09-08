@@ -1,0 +1,191 @@
+\section{Problem 4: Critical-Word First and Early Restart (16 points)}
+
+\paragraph{Common setup and notation.}
+A word is 8~Bytes, so a block of $B$ Bytes holds $n=B/8$ words. For a given cache
+level write
+\begin{description}\itemsep2pt
+  \item[$t_1$] time until the \emph{first} word arrives when the block is sent in
+        normal order (no critical-word first);
+  \item[$t_x$] time for each \emph{additional} word;
+  \item[$t_c$] time until the requested word arrives when critical-word first is
+        used (it is sent first, so this single transfer is all the processor waits for).
+\end{description}
+Without reordering, word $i$ of the block ($i=0,1,\dots,n-1$) is available after
+$t_1+i\,t_x$. The three schemes are then
+\begin{align}
+  \text{neither:}\quad & T_{\text{none}} = t_1+(n-1)\,t_x
+    &&\text{(wait for the whole block)} \label{p4:eq:none}\\
+  \text{early restart only:}\quad & T_{\text{ER}} = \sum_{i=0}^{n-1} p_i\,(t_1+i\,t_x)
+    &&\text{(resume when word $i$ arrives)} \label{p4:eq:er}\\
+  \text{both:}\quad & T_{\text{both}} = t_c
+    &&\text{(requested word first, then resume)} \label{p4:eq:both}
+\end{align}
+where $p_i$ is the probability that the referenced word sits at position $i$.
+Equations~\eqref{p4:eq:none} and~\eqref{p4:eq:both} do not involve $p_i$: in the first
+the processor waits for the last word regardless of what it asked for, and in the third
+the requested word is always the first one delivered. Only~\eqref{p4:eq:er} is a genuine
+expectation over the reference distribution.
+
+\subsection*{Question A (8 points)}
+
+Here $B=64$~Bytes, so
+\[
+  n=\frac{64\ \text{Bytes}}{8\ \text{Bytes/word}}=8\ \text{words per block},
+\]
+with $t_1=90$, $t_x=10$ and $t_c=110$ CCs. (The 1~MB capacity is not needed: the miss
+service time depends on the block size, not on how many blocks the cache holds.) Word
+$i$ therefore arrives at $90+10i$ CCs, i.e.\ at
+$90,100,110,120,130,140,150,160$ CCs for $i=0,\dots,7$.
+
+The reference distribution is \emph{not} uniform. The first word carries $30\%$ and the
+remaining $n-1=7$ words share the other $70\%$ equally:
+\[
+  p_0=0.30,\qquad
+  p_i=\frac{0.70}{7}=0.10\quad(i=1,\dots,7),
+  \qquad\text{check: } 0.30+7(0.10)=1 .
+\]
+
+\paragraph{(1) Neither critical-word first nor early restart.}
+The processor resumes only once the entire block has arrived, which happens when the
+last word lands:
+\[
+  T_{\text{none}}=t_1+(n-1)t_x=90+7\times 10=\boxed{160\ \text{CCs}} .
+\]
+This does not depend on which word was requested, so the reference distribution is
+irrelevant here and the ``average'' equals this fixed value.
+
+\paragraph{(2) Early restart only.}
+The block still arrives in normal order, but the processor resumes as soon as the
+requested word has arrived, so the wait depends on that word's position:
+\begin{align*}
+  T_{\text{ER}}
+  &= 0.30\times 90
+   + 0.10\bigl(100+110+120+130+140+150+160\bigr)\\
+  &= 27 + 0.10\times 910
+   = 27+91
+   = \boxed{118\ \text{CCs}} .
+\end{align*}
+
+\paragraph{(3) Both critical-word first and early restart.}
+Memory delivers the requested word first, at a cost of $t_c=110$ CCs, and the processor
+restarts immediately:
+\[
+  T_{\text{both}}=110\ \text{CCs}\ \Rightarrow\ \boxed{110\ \text{CCs}} .
+\]
+Again the block-position distribution drops out entirely: whichever word is requested,
+it is the one sent first, so every miss costs the same 110 CCs. Note that
+critical-word first is \emph{more expensive per transfer} than a normal first word
+($110>90$); it still wins overall because it removes the wait for all seven remaining
+words.
+
+\paragraph{Summary.}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Scheme & Average L2 miss service time & Saving vs.\ (1)\\
+\midrule
+(1) Neither                       & 160 CCs & ---\\
+(2) Early restart only            & 118 CCs & $42/160=26.25\%$\\
+(3) Critical-word first + early restart & 110 CCs & $50/160=31.25\%$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Question B (4 points)}
+
+\textbf{Answers: the first blank is $18$ CCs and the second blank is $10\%$.}
+
+Now $B=32$~Bytes, so
+\[
+  n=\frac{32\ \text{Bytes}}{8\ \text{Bytes/word}}=4\ \text{words per block},
+\]
+with $t_x=4$ CCs, $t_c=27$ CCs, and every word equally likely, $p_i=\tfrac14$. Let $x$
+denote the unknown first-word latency.
+
+\paragraph{First blank --- recovered from the stated $20\%$.}
+The paragraph gives us the early-restart result and asks us to work backwards. In terms
+of $x$,
+\begin{align*}
+  T_{\text{none}} &= x+(n-1)t_x = x+3\times 4 = x+12,\\
+  T_{\text{ER}}   &= \frac14\bigl[x+(x+4)+(x+8)+(x+12)\bigr]
+                   = x+\frac{4(0+1+2+3)}{4} = x+6 .
+\end{align*}
+Early restart alone reduces the original time by $20\%$, so
+\[
+  \frac{T_{\text{none}}-T_{\text{ER}}}{T_{\text{none}}}
+  =\frac{(x+12)-(x+6)}{x+12}
+  =\frac{6}{x+12}=0.20
+  \ \Longrightarrow\ x+12=30
+  \ \Longrightarrow\ \boxed{x=18\ \text{CCs}} .
+\]
+Hence $T_{\text{none}}=30$ CCs and $T_{\text{ER}}=24$ CCs, which indeed differ by
+$6/30=20\%$.
+
+\paragraph{Second blank.}
+With critical-word first the requested word arrives after $t_c=27$ CCs and the
+processor restarts there, so $T_{\text{both}}=27$ CCs and
+\[
+  \frac{T_{\text{none}}-T_{\text{both}}}{T_{\text{none}}}
+  =\frac{30-27}{30}=\frac{1}{10}=\boxed{10\%} .
+\]
+Both blanks are exact integers, as the question requires.
+
+\subsection*{Question C (4 points)}
+
+\paragraph{Verdict.} On these numbers the two techniques are \textbf{more important for
+the L2 cache}.
+
+\paragraph{Reason (from the results of A and B).}
+Comparing the savings the two techniques actually deliver at each level:
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & L2 (Question A) & L1 (Question B)\\
+\midrule
+Words per block                     & 8       & 4\\
+Neither                             & 160 CCs & 30 CCs\\
+Early restart only                  & 118 CCs \;($-26.25\%$) & 24 CCs \;($-20\%$)\\
+Critical-word first + early restart & 110 CCs \;($-31.25\%$) & 27 CCs \;($-10\%$)\\
+Absolute saving of the pair         & 50 CCs  & 3 CCs\\
+\bottomrule
+\end{tabular}
+\end{center}
+At L2 the pair of techniques removes $31.25\%$ of the miss service time (50 CCs); at L1
+it removes only $10\%$ (3 CCs). The gap is even sharper for critical-word first taken on
+its own: at L2 it improves on early restart alone ($118\to110$ CCs), whereas at L1 it
+makes matters \emph{worse} ($24\to 27$ CCs), because its $27-18=9$~CC surcharge exceeds
+the 6~CC that early restart had already saved. So at L1 it would be better not to enable
+critical-word first at all, while at L2 it pays for itself --- which is precisely what
+``more important for L2'' means.
+
+\paragraph{Factors that drive the relative importance.}
+\begin{enumerate}\itemsep3pt
+  \item \emph{Words per block, $n$.} The most these techniques can ever save is the
+        transfer tail $(n-1)t_x$ --- the time spent shipping the words the processor is
+        not waiting for. Larger blocks mean a longer tail and more to skip. Lower cache
+        levels normally use larger blocks (8 words here versus 4), which favours L2.
+  \item \emph{Fixed first-word latency versus the tail.} The ceiling on the saving is
+        $(n-1)t_x/\bigl[t_1+(n-1)t_x\bigr]$: $70/160=43.75\%$ at L2 and $12/30=40\%$ at
+        L1. When the fixed latency dominates, the processor must wait for it anyway and
+        neither technique can help much. Here the two levels start out comparable, so
+        this is not what separates them.
+  \item \emph{The surcharge critical-word first itself costs.} Reordering the transfer
+        is not free: $t_c-t_1$ is $20$ CCs at L2 but $9$ CCs at L1. Relative to the
+        block service time that is $20/160=12.5\%$ at L2 against $9/30=30\%$ at L1. This
+        is the decisive factor: it consumes $12.5$ of L2's $43.75$ available points but
+        $30$ of L1's $40$, leaving $31.25\%$ and $10\%$ respectively. The shorter a
+        level's total miss time, the harder a fixed reordering overhead is to justify.
+  \item \emph{Shape of the reference distribution.} Early restart only pays off to the
+        extent that the requested word arrives early. L2's $30\%$ weight on the first
+        word helps it: under a uniform $1/8$ the L2 early-restart average would be
+        $125$ CCs, a saving of $21.875\%$ rather than $26.25\%$. Critical-word first is
+        immune to this, since its cost is flat in the word position --- which makes it
+        the more attractive of the two when the distribution is unfavourable or unknown.
+  \item \emph{Miss frequency (a full-AMAT caveat).} The comparison above is
+        \emph{per miss}, which is what this problem measures. A complete average-memory-
+        access-time analysis would also weight each level's saving by how often that
+        level misses, and L1 misses are far more frequent than L2 misses. That is the
+        one factor that could push the balance back towards L1; with the numbers given
+        here, though, L1's saving is only 3 CCs against L2's 50 CCs, so it would take an
+        L1:L2 miss ratio above roughly $16{:}1$ merely to draw level.
+\end{enumerate}

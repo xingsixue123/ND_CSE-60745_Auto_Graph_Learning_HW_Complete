@@ -1,0 +1,136 @@
+\section*{Problem 1: Multi-Level Cache Hierarchy on an Intel Xeon Chip (21 points)}
+
+\paragraph{Conventions used throughout.}
+The statement's hint says that a miss penalty is an additional cost \emph{on top of} the
+hit time, and that a miss is discovered only after the access to that level has been
+attempted. The hierarchy is therefore modelled by the nested expression
+\begin{equation}
+\label{p1:eq:amat}
+\mathrm{AMAT}=HT_{L1}+MR_{L1}\,P_{L1},\qquad
+P_{L1}=HT_{L2}+MR_{L2}\,P_{L2},\qquad
+P_{L2}=HT_{L3}+MR_{L3}\,P_{L3},
+\end{equation}
+with $HT_{L1}=1$, $HT_{L2}=10$, $HT_{L3}=50$ CC, and $P_{L3}$ the main-memory access
+cost. The miss rates supplied in Questions C and D are \emph{local} miss rates, which is
+exactly what \eqref{p1:eq:amat} consumes, so no conversion to global rates is needed.
+
+For the memory access itself, the initial access time $M$ ``accounts for a single
+transfer'', so with a block of $128$ B and a bus of $B$ bytes only the transfers after
+the first are charged $10$ CC each:
+\begin{equation}
+\label{p1:eq:pl3}
+P_{L3}=M+10\left(\frac{128\,\mathrm{B}}{B}-1\right).
+\end{equation}
+Finally, the clock is $2.0$ GHz, so $1\ \mathrm{CC}=1/(2.0\times10^{9}\,\mathrm{Hz})=0.5$ ns.
+
+\subsection*{Question A (3 points)}
+
+\begin{enumerate}
+  \item[(1)] \textbf{False.} The L1 caches hold only $64$ KB each, so with L2 and L3
+  removed every L1 miss would have to be served by main memory (hundreds of cycles)
+  instead of by a $10$- or $50$-cycle cache, which raises the average memory access time
+  substantially.
+
+  \item[(2)] \textbf{True.} L1 must be fast enough to answer in a single clock cycle, so
+  it is built from faster, lower-density SRAM cells with more ports and more decoding
+  logic per byte; L3 is latency-tolerant and can use denser, cheaper cells, so a given
+  capacity costs more in L1 than in L3.
+
+  \item[(3)] \textbf{False.} Caches are filled on demand, one block at a time, and the
+  program resides in main memory; only the blocks actually being referenced need to be
+  present in L1. Indeed a program larger than $64$ KB could never fit in the L1
+  instruction cache at all, yet still executes correctly.
+\end{enumerate}
+
+\subsection*{Question B (6 points)}
+
+\paragraph{Block offset.}
+Entries are \emph{Byte} addressable, so the offset field must select an individual byte
+within a block. With a $128$-Byte block,
+\[
+  \#\text{offset bits}=\log_{2}128=7 .
+\]
+(The fact that a data word is $64$ bit $=8$ Bytes does \emph{not} shrink this field:
+because addressing is per Byte and not per word, the low $3$ bits that select a byte
+inside a word are still part of the address and belong to the offset.)
+
+\paragraph{Index.}
+The L2 cache holds $512\ \mathrm{KB}=512\times2^{10}=2^{19}$ Bytes, so the number of
+blocks is
+\[
+  \#\text{blocks}=\frac{2^{19}\ \mathrm{B}}{128\ \mathrm{B}}=\frac{2^{19}}{2^{7}}=2^{12}=4096 .
+\]
+The cache is $4$-way set associative, i.e.\ $4$ blocks per set, so
+\[
+  \#\text{sets}=\frac{4096}{4}=1024=2^{10}
+  \quad\Longrightarrow\quad
+  \#\text{index bits}=\log_{2}1024=10 .
+\]
+
+\paragraph{Tag.}
+The tag is whatever remains of the $64$-bit physical address:
+\[
+  \#\text{tag bits}=64-\#\text{index}-\#\text{offset}=64-10-7=47 .
+\]
+
+\paragraph{Answer.}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Field & Tag & Index & Block offset \\
+\midrule
+Width (bits) & $47$ & $10$ & $7$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Check: $47+10+7=64$ bits, as required.
+
+\subsection*{Question C (10 points)}
+
+Local miss rates are $MR_{L1}=5\%$, $MR_{L2}=40\%$, $MR_{L3}=20\%$, and the bus is
+$16$ Bytes wide. A $128$-Byte block therefore needs $128/16=8$ transfers, of which
+$8-1=7$ are \emph{additional}, so by \eqref{p1:eq:pl3}
+\[
+  P_{L3}=M+10\times 7=M+70 \quad\text{CC},
+\]
+where $M$ is the initial main memory access time in CCs. Substituting into
+\eqref{p1:eq:amat}, the requirement $\mathrm{AMAT}\le 4$ CC reads
+\[
+  1+0.05\Bigl[\,10+0.40\bigl(50+0.20\,(M+70)\bigr)\Bigr]\;\le\;4 .
+\]
+Unwinding the nesting one level at a time:
+\begin{align*}
+  P_{L1}&\le\frac{4-1}{0.05}=60\ \text{CC},\\[2pt]
+  P_{L2}&\le\frac{60-10}{0.40}=125\ \text{CC},\\[2pt]
+  P_{L3}&\le\frac{125-50}{0.20}=375\ \text{CC},\\[2pt]
+  M&\le 375-70=305\ \text{CC}.
+\end{align*}
+
+\paragraph{Conversion.}
+At $2.0$ GHz one clock cycle is $0.5$ ns, hence
+\[
+  \boxed{\,M_{\max}=305\ \mathrm{CC}\times 0.5\ \frac{\mathrm{ns}}{\mathrm{CC}}=152.5\ \mathrm{ns}\,}
+\]
+
+\paragraph{Check.}
+With $M=305$ CC: $P_{L3}=375$, $P_{L2}=50+0.2(375)=125$, $P_{L1}=10+0.4(125)=60$, and
+$\mathrm{AMAT}=1+0.05(60)=4$ CC exactly, so the bound is attained and is tight.
+
+\subsection*{Question D (2 points)}
+
+The miss rates are unchanged and the initial main memory access time carried forward is
+the maximum value found in Question C, $M=305$ CC ($=152.5$ ns). Only the bus width
+changes, from $16$ to $32$ Bytes, so a $128$-Byte block now takes $128/32=4$ transfers,
+of which $4-1=3$ are additional. By \eqref{p1:eq:pl3},
+\[
+  P_{L3}=305+10\times 3=335\ \text{CC}.
+\]
+Working back up through \eqref{p1:eq:amat}:
+\begin{align*}
+  P_{L2}&=50+0.20\times 335=117\ \text{CC},\\
+  P_{L1}&=10+0.40\times 117=56.8\ \text{CC},\\
+  \mathrm{AMAT}&=1+0.05\times 56.8=3.84\ \text{CC}.
+\end{align*}
+The average memory access time will be $\boxed{3.84}$ CCs (equivalently $1.92$ ns).
+As expected, doubling the bus width removes $40$ CC of transfer time from the L3 miss
+penalty and lowers the AMAT below the $4$ CC budget of Question C.

@@ -1,0 +1,100 @@
+ 
+5 
+Problem 4: (16 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Consider applying critical-word first and early restart techniques to reduce miss penalty in a system with 
+L1 and L2 caches. Originally, in a cache miss scenario, the processor continues only when the entire 
+block with the critical word is loaded into the cache. 
+ 
+In this problem, a word is 8 Bytes wide. 
+ 
+Question A: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+First, we have an L2 cache with 1MB capacity and 64-Byte block size. With critical-word first, it takes 
+110 CCs to get the first word from memory. Otherwise, the time to receive the first word from memory is 
+90 CCs, and each additional word from the main memory requires 10 CCs. Further assume that the 
+probability of referencing the first word in a block of L2 cache is 30% while the rest ones are referenced 
+with equal probability. 
+ 
+How many CCs would it take on average to service an L2 cache miss for 1) with neither critical-
+word first nor early restart, 2) with early restart only, and 3) with both critical-word first and early 
+restart? Please provide your calculation process. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question B: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+For this question, ignore Question A. The following paragraph is a brief analysis regarding L1 cache. 
+Fill in the blank with the most appropriate integers: 
+ 
+Next, we have an L1 cache with 32 KB capacity and 32-Byte block size. To simplify the question, we 
+only use the average L2 cache access time, i.e., we ignore how different situations of L2 cache access 
+may affect L1 cache access. With critical-word first, it takes 27 CCs to get the first word from L2 cache. 
+Otherwise, the time to receive the first word from L2 cache is                      CCs, and each additional 
+word from the main memory requires 4 CCs. Further assume that the probability of referencing every 
+word in a block of L1 cache is the same. Then, applying both critical-word first and early restart can 
+reduce                     % of average time for the original case without either critical-word first or early 
+restart to service an L1 cache miss; applying only early restart can reduce 20% of average time for the 
+original case to service an L1 cache miss. 
+ 
+Question C: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Would critical-word first and early restart be more important for L1 or L2 cache? Why? What 
+factors would contribute to their relative importance? You may refer to your observations while 
+solving Questions A and B. 
+ 
+Hint: the solution is not fixed as long as it makes sense, but there must be at least one reason, and 
+your answer and reason(s) must be consistent. 
+ 
+ 
+ 

@@ -1,0 +1,34 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./w_full.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/size11.clo)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/geometry/geometry.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/keyval.sty) (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/ifvtex.sty (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/lm/lmodern.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amstext.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsgen.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsbsy.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsopn.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/booktabs/booktabs.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/enumitem/enumitem.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/lm/ot1lmr.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def)
+No file w_full.aux.
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+(./answer.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/lm/omllmm.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/lm/omslmsy.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/lm/omxlmex.fd)
+
+LaTeX Warning: Reference `p4:eq:none' on page 1 undefined on input line 24.
+
+
+LaTeX Warning: Reference `p4:eq:both' on page 1 undefined on input line 24.
+
+
+LaTeX Warning: Reference `p4:eq:er' on page 1 undefined on input line 26.
+
+[1{/home/xing/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/home/xing/.TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{/home/xing/.TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/home/xing/.TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}{/home/xing/.TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}] [2]) [3] (./w_full.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )</home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmex10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb>
+Output written on w_full.pdf (3 pages, 168926 bytes).
+Transcript written on w_full.log.

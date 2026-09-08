@@ -1,0 +1,65 @@
+ 
+6 
+Problem 5: (45 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Important Notice: the following tutorial has been tested on student04.cse.nd.edu. Due to certain 
+issues of operating systems, libraries, etc., Multi2Sim DOES NOT work on other student machines. 
+In other words, you have to share student04 for this problem. This is yet another reason you should 
+finish your homework ASAP: a lot of students will flow to these two student machines all together 
+before due, causing performance and even connection issues. 
+ 
+We have already known basic usages of Multi2Sim in Homework 1. On top of that, it is possible to 
+change the configuration of a cache and study its impact on program performance with Multi2Sim. To 
+get started, download and extract necessary files at your home directory on a CSE student machine: 
+ 
+wget https://notredame.box.com/shared/static/nok9rzzbc9d59jbs7jgm5xb5h0rhrltm.tar 
+-O hw2.tar 
+tar -xvf hw2.tar 
+ 
+At the beginning of hw2/mem-config, you can see the configurations of L1 cache: 
+ 
+head hw2/mem-config -n 7 
+ 
+Output: 
+ 
+[CacheGeometry geo-l1] 
+Sets = 256 
+Assoc = 2 
+BlockSize = 8 
+Latency = 2 
+Policy = LRU 
+Ports = 2 
+ 
+Note: you may also use cat hw2/mem-config or vim hw2/mem-config to check the content of a file. 
+ 
+Here, the first line is the name of the cache. Next, Sets, Assoc, BlockSize, and Policy represent 
+number of sets, associativity, number of Bytes per block, and replacement policy, respectively. For this 
+example, instruction and data share this L1 cache, and LRU stands for least recently used. 
+ 
+For this homework, you can assume that the instruction and data cache share the same configuration, 
+and that there will always be an instruction AND a data cache. Below, we only focus on the data cache. 
+ 
+An understanding of the underlying processor-memory architecture can actually make you a better 
+programmer. In this problem, we’ll use matrix multiplication code as a case study. Matrix multiplication 
+is common in scientific computing, graphics transformations, etc. There are two matrix multiplication 
+algorithms provided: one is in hw2/no_blocking.cc, and the other is in hw2/blocking.cc. Both are 
+multiplying two 120 × 120 matrices, whose original numbers are listed in hw2/mat-mat.hh. 
+ 
+Hint: 
+1. For usages of two programs, please refer to hw2/README.md or hw2/README.pdf. 
+2. To better manage configuration files of different cache settings, refer to previous tutorials for copying, 
+renaming, and editing files remotely, or uploading files you locally create and edit. For instance, to 
+prepare the configuration files for cache setting #1 of Question B, create a new directory (suppose you 
+start at the home directory after extraction) and copy files: 
+ 
+cd hw2 

@@ -1,0 +1,726 @@
+
+===== rendered page 1 =====
+ 
+1 
+CSE 60321 – Advanced Computer Architecture – Spring 2026 
+Homework 2 – 100 points 
+Assigned: Tuesday, February 10, 2026 – Due: Thursday, February 19, 2026 
+Individual Homework 
+ 
+Before you start: 
+1. Please clearly indicate which question an answer is for in your submission. 
+2. Different homework assignments may have different total point values, but they contribute equally to 
+final grades. 
+3. Some problems recommend or require you to use CSE student machines to complete, which may be 
+crowded with various minor issues at any time. In addition, programs may take longer than you expect 
+to run. Please go through all problems before starting so that you may better organize your time in 
+advance. 
+4. Unit clarification: for all problems in this homework, 1𝑇𝐵= 210𝐺𝐵, 1𝐺𝐵= 210𝑀𝐵, 1𝑀𝐵= 210𝐾𝐵, 
+1𝐾𝐵= 210𝐵𝑦𝑡𝑒𝑠, 1 𝐵𝑦𝑡𝑒= 8 𝑏𝑖𝑡𝑠; 1 𝑛𝑠= 10−9 𝑠, 1 𝑚𝑠= 10−3 𝑠; 1 𝐺𝐻𝑧= 109𝐻𝑧, 1 𝐻𝑧= 1 𝑠−1. 
+ 
+Problem 1: (21 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+One possible organization of the memory hierarchy on an Intel Xeon chip is: 
+• 
+A 64KB L1 instruction cache. 
+o The L1 instruction cache contains only instruction encodings. 
+• 
+A 64KB L1 data cache. 
+o The L1 data cache contains only data words. 
+• 
+A 512KB unified L2 cache. 
+o The L2 cache can contain both data and instruction encodings. 
+• 
+An 8 MB unified L3 cache. 
+o The L3 cache can contain both data and instruction encodings. 
+ 
+Suppose this chip has the clock frequency at 2.0 GHz, and for its cache system, assume that: 
+• 
+All caches use the block size of 128 Bytes. 
+• 
+The hit time for either L1 cache is 1 clock cycle (CC); the hit time for L2 cache is 10 CCs. 
+• 
+The time required to find data (i.e., hit time) in the L3 cache is 50 CCs. 
+• 
+If data is not found in the L3 cache, the processor must look for data in main memory. 
+o The processor-to-memory bus can accommodate 16 Bytes of memory at a time. 
+o The L3 miss penalty is the initial time required to access memory, which accounts for a 
+single transfer (equal to the bus bandwidth, in this case 16 Bytes), plus 10 CCs for every 
+additional transfer (also 16 Bytes here). 
+ 
+Hint: for a cache miss, cache miss penalty (transfer time) is an additional cost on top of the hit time 
+(access time). A cache miss happens after first attempting to access it. 
+ 
+Question A: (3 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Write “True” for correct statements, and “False” for wrong statements. 
+ 
+                     (1) This chip will be faster if we remove L2 and L3 caches and keep L1 cache the same. 
+ 
+                     (2) Typically, building a certain amount of L1 cache into the chip is more expensive than 
+building the same amount of L3 cache. 
+ 
+                     (3) To execute a program correctly on this chip, all instructions of this program must be 
+loaded into L1 instruction cache prior to execution. 
+ 
+ 
+ 
+
+===== rendered page 2 =====
+ 
+2 
+Question B: (6 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Consider the L2 cache. It is 4-way set associative. Physical addresses are 64 bits long. Each data word 
+is 64-bit. Entries are Byte addressable. How many bits of a 64-bit physical address comprise the 
+tag, index and offset? Please provide your calculation process. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question C: (10 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Assuming the local miss rates of 5%, 40%, and 20% for the L1, L2, and L3 caches, respectively. To 
+have an average memory access time of no higher than 4 CCs, determine the maximum initial 
+main memory access time (in nanosecond). Please provide your calculation process. 
+ 
+Hint: to simplify calculation, you may use CCs for time and convert to nanoseconds at the last step. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question D: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Assuming the same local miss rates in Question C. Fill in the blank: 
+ 
+If the bus bandwidth increases to 32 Bytes, the average memory access time will be                      CCs. 
+ 
+Hint: be careful about the unit of time this question asks for. 
+ 
+ 
+ 
+
+===== rendered page 3 =====
+ 
+3 
+Problem 2: (10 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Consider the following parameters of a virtual memory system: 
+Table 1: basic specifications of the system 
+Virtual address 
+Physical memory size 
+Page size 
+PTE size 
+30 bits 
+2 GB 
+64 KB 
+4 Bytes 
+ 
+Question A: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Fill in the table: 
+Table 2: virtual address components 
+Page offset / bits 
+Virtual page memory (VPN) / bits 
+Total / bits 
+ 
+ 
+30 
+ 
+Question B: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+How many page table entries (PTEs) are needed and how much physical memory is needed for 
+storing the page table? Direct answers are expected (e.g., 210 entries and 1 KB physical memory). 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question C: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+What are the pros and cons of increasing the page size? Please provide at least 1 pro and 1 con. 
+ 
+ 
+ 
+
+===== rendered page 4 =====
+ 
+4 
+Problem 3: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+We are trying to deploy the way-prediction technique on an L1 instruction cache. The configurations of 
+this cache are: 
+• 
+4-way set associative. 
+• 
+64 Bytes block size. 
+• 
+256 KB cache size. 
+• 
+1.1 ns cache access time. 
+• 
+1% cache miss rate. 
+• 
+50 ns additional cache miss penalty if missing. 
+ 
+With way-predicting enabled, this cache has: 
+• 
+1 ns cache access time if prediction succeeds, which is the same as a direct mapped cache. 
+• 
+1.1 ns additional cache access time if prediction fails. 
+• 
+Other conditions remain the same. 
+ 
+Question A: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Fill in the blank: 
+ 
+For this way-predicting enabled cache, for the best case, a cache access takes                      ns; for the 
+worst case, it takes                      ns. 
+ 
+Question B: (6 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Assuming the same cache miss rate with way-predicting. The way-predicting cache reduces the AMAT 
+by at least 5%. What is the minimum prediction accuracy? Please provide your calculation process. 
+ 
+ 
+ 
+
+===== rendered page 5 =====
+ 
+5 
+Problem 4: (16 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Consider applying critical-word first and early restart techniques to reduce miss penalty in a system with 
+L1 and L2 caches. Originally, in a cache miss scenario, the processor continues only when the entire 
+block with the critical word is loaded into the cache. 
+ 
+In this problem, a word is 8 Bytes wide. 
+ 
+Question A: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+First, we have an L2 cache with 1MB capacity and 64-Byte block size. With critical-word first, it takes 
+110 CCs to get the first word from memory. Otherwise, the time to receive the first word from memory is 
+90 CCs, and each additional word from the main memory requires 10 CCs. Further assume that the 
+probability of referencing the first word in a block of L2 cache is 30% while the rest ones are referenced 
+with equal probability. 
+ 
+How many CCs would it take on average to service an L2 cache miss for 1) with neither critical-
+word first nor early restart, 2) with early restart only, and 3) with both critical-word first and early 
+restart? Please provide your calculation process. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question B: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+For this question, ignore Question A. The following paragraph is a brief analysis regarding L1 cache. 
+Fill in the blank with the most appropriate integers: 
+ 
+Next, we have an L1 cache with 32 KB capacity and 32-Byte block size. To simplify the question, we 
+only use the average L2 cache access time, i.e., we ignore how different situations of L2 cache access 
+may affect L1 cache access. With critical-word first, it takes 27 CCs to get the first word from L2 cache. 
+Otherwise, the time to receive the first word from L2 cache is                      CCs, and each additional 
+word from the main memory requires 4 CCs. Further assume that the probability of referencing every 
+word in a block of L1 cache is the same. Then, applying both critical-word first and early restart can 
+reduce                     % of average time for the original case without either critical-word first or early 
+restart to service an L1 cache miss; applying only early restart can reduce 20% of average time for the 
+original case to service an L1 cache miss. 
+ 
+Question C: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Would critical-word first and early restart be more important for L1 or L2 cache? Why? What 
+factors would contribute to their relative importance? You may refer to your observations while 
+solving Questions A and B. 
+ 
+Hint: the solution is not fixed as long as it makes sense, but there must be at least one reason, and 
+your answer and reason(s) must be consistent. 
+ 
+ 
+ 
+
+===== rendered page 6 =====
+ 
+6 
+Problem 5: (45 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Important Notice: the following tutorial has been tested on student04.cse.nd.edu. Due to certain 
+issues of operating systems, libraries, etc., Multi2Sim DOES NOT work on other student machines. 
+In other words, you have to share student04 for this problem. This is yet another reason you should 
+finish your homework ASAP: a lot of students will flow to these two student machines all together 
+before due, causing performance and even connection issues. 
+ 
+We have already known basic usages of Multi2Sim in Homework 1. On top of that, it is possible to 
+change the configuration of a cache and study its impact on program performance with Multi2Sim. To 
+get started, download and extract necessary files at your home directory on a CSE student machine: 
+ 
+wget https://notredame.box.com/shared/static/nok9rzzbc9d59jbs7jgm5xb5h0rhrltm.tar 
+-O hw2.tar 
+tar -xvf hw2.tar 
+ 
+At the beginning of hw2/mem-config, you can see the configurations of L1 cache: 
+ 
+head hw2/mem-config -n 7 
+ 
+Output: 
+ 
+[CacheGeometry geo-l1] 
+Sets = 256 
+Assoc = 2 
+BlockSize = 8 
+Latency = 2 
+Policy = LRU 
+Ports = 2 
+ 
+Note: you may also use cat hw2/mem-config or vim hw2/mem-config to check the content of a file. 
+ 
+Here, the first line is the name of the cache. Next, Sets, Assoc, BlockSize, and Policy represent 
+number of sets, associativity, number of Bytes per block, and replacement policy, respectively. For this 
+example, instruction and data share this L1 cache, and LRU stands for least recently used. 
+ 
+For this homework, you can assume that the instruction and data cache share the same configuration, 
+and that there will always be an instruction AND a data cache. Below, we only focus on the data cache. 
+ 
+An understanding of the underlying processor-memory architecture can actually make you a better 
+programmer. In this problem, we’ll use matrix multiplication code as a case study. Matrix multiplication 
+is common in scientific computing, graphics transformations, etc. There are two matrix multiplication 
+algorithms provided: one is in hw2/no_blocking.cc, and the other is in hw2/blocking.cc. Both are 
+multiplying two 120 × 120 matrices, whose original numbers are listed in hw2/mat-mat.hh. 
+ 
+Hint: 
+1. For usages of two programs, please refer to hw2/README.md or hw2/README.pdf. 
+2. To better manage configuration files of different cache settings, refer to previous tutorials for copying, 
+renaming, and editing files remotely, or uploading files you locally create and edit. For instance, to 
+prepare the configuration files for cache setting #1 of Question B, create a new directory (suppose you 
+start at the home directory after extraction) and copy files: 
+ 
+cd hw2 
+
+===== rendered page 7 =====
+ 
+7 
+mkdir setting-1 
+cp x86-config setting-1/ 
+cp mem-config setting-1/ 
+ 
+Next, use vim setting-1/mem-config to edit cache configurations as needed. 
+3. Each simulation takes approximately 15~25 minutes on student04. If you run simulations 
+sequentially on student04, a generous allowance of about 4~6 hours for all Questions in Problem 5 is 
+recommended. 
+4. You may use multiple separate terminals to connect to CSE student machines so that you can run 
+more than one simulation at the same time. These terminals are independent as long as they are not 
+writing to the same file(s), so please make sure that output files specified by --x86-report and --
+mem-report are different for each simulation. 
+5. Please start ASAP. All simulation time estimations above are measured on basically idle student 
+machines. If the machines get busy (due to multiple terminal connections and/or multiple students 
+working at the same time), the actual simulation time would be even longer. 
+ 
+Question A: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Read codes of both algorithms. What does the blocking version do differently than the more 
+conventional “no-blocking” version? 
+ 
+ 
+ 
+ 
+ 
+ 
+Question B: (15 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Given the following cache configurations: 
+ 
+Table 3: cache settings to test in Question B, Problem 5 
+Cache Setting 
+Cache Size / KB 
+Cache Block Size / Byte 
+Number of Sets 
+Set Associativity 
+Setting #1 
+4 
+8 
+ 
+Direct mapped 
+Setting #2 
+4 
+8 
+ 
+2-way 
+Setting #3 
+4 
+8 
+ 
+4-way 
+ 
+Fill in the blanks in Table 3. Then, compile two programs and run simulations for two programs under 
+all three cache settings. For the blocking program, use two values for B: 15 and 30. Fill in Table 4 with 
+execution cycles: 
+ 
+Table 4: execution cycles of tests in Question B, Problem 5 (Unit: CC) 
+Cache Setting 
+No-blocking 
+Blocking (B = 15) 
+Blocking (B = 30) 
+Setting #1 
+ 
+ 
+ 
+Setting #2 
+ 
+ 
+ 
+Setting #3 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== rendered page 8 =====
+ 
+8 
+Question C: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+In your results of Question B, which cache setting is the best in terms of minimum execution 
+cycles? Give one probable reason for the performance differences among these settings. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question D: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+For your results of Question B, calculate the speedup of two blocking results over the no-
+blocking result under the best cache setting you find in Question C. In this case, which blocking 
+parameter is better? Give one probable reason for the speedup difference between different 
+blocking parameters. 
+ 
+Hint: what is the equivalent B for no-blocking? 
+ 
+ 
+ 
+
+===== rendered page 9 =====
+ 
+9 
+Question E: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Starting with your best cache setting from Question C, change the cache block size to 16 Bytes and run 
+simulations for two programs. For the blocking program, you may run with only the better B setting you 
+determine in Question D. To maintain the same cache size of 4 KB and the same set associativity, 
+what is the new number of sets? Report execution cycles, compute the new speedup result, and 
+briefly explain your findings (why execution time and speedup results are different from the 
+results in Question D, etc.). 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question F: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Starting with the cache setting in Question E, change the number of sets so that the cache size 
+becomes 8 KB, and run simulations for two programs. For the blocking program, you may run with only 
+the better B setting you determine in Question D. What is the new number of sets? Report 
+execution cycles, compute the new speedup result, and briefly explain your findings (why 
+execution time and speedup results are different from the results in Questions D and E, etc.). 
+ 

@@ -1,0 +1,49 @@
+ 
+8 
+Question C: (4 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+In your results of Question B, which cache setting is the best in terms of minimum execution 
+cycles? Give one probable reason for the performance differences among these settings. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question D: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+For your results of Question B, calculate the speedup of two blocking results over the no-
+blocking result under the best cache setting you find in Question C. In this case, which blocking 
+parameter is better? Give one probable reason for the speedup difference between different 
+blocking parameters. 
+ 
+Hint: what is the equivalent B for no-blocking? 
+ 
+ 
+ 

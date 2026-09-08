@@ -1,0 +1,52 @@
+(2) True. L1 must be fast enough to answer in a single clock cycle, so it is built from faster, lower-
+density SRAM cells with more ports and more decoding logic per byte; L3 is latency-tolerant
+and can use denser, cheaper cells, so a given capacity costs more in L1 than in L3.
+(3) False. Caches are filled on demand, one block at a time, and the program resides in main
+memory; only the blocks actually being referenced need to be present in L1. Indeed a program
+larger than 64 KB could never fit in the L1 instruction cache at all, yet still executes correctly.
+Question B (6 points)
+Block offset.
+Entries are Byte addressable, so the offset field must select an individual byte
+within a block. With a 128-Byte block,
+#offset bits = log2 128 = 7.
+(The fact that a data word is 64 bit = 8 Bytes does not shrink this field: because addressing is per
+Byte and not per word, the low 3 bits that select a byte inside a word are still part of the address
+and belong to the offset.)
+Index.
+The L2 cache holds 512 KB = 512 × 210 = 219 Bytes, so the number of blocks is
+#blocks = 219 B
+128 B = 219
+27 = 212 = 4096.
+The cache is 4-way set associative, i.e. 4 blocks per set, so
+#sets = 4096
+4
+= 1024 = 210
+=⇒
+#index bits = log2 1024 = 10.
+Tag.
+The tag is whatever remains of the 64-bit physical address:
+#tag bits = 64 −#index −#offset = 64 −10 −7 = 47.
+Answer.
+Field
+Tag
+Index
+Block offset
+Width (bits)
+47
+10
+7
+Check: 47 + 10 + 7 = 64 bits, as required.
+Question C (10 points)
+Local miss rates are MRL1 = 5%, MRL2 = 40%, MRL3 = 20%, and the bus is 16 Bytes wide. A
+128-Byte block therefore needs 128/16 = 8 transfers, of which 8 −1 = 7 are additional, so by (2)
+PL3 = M + 10 × 7 = M + 70
+CC,
+where M is the initial main memory access time in CCs. Substituting into (1), the requirement
+AMAT ≤4 CC reads
+1 + 0.05
+[︂
+10 + 0.40
+(︁50 + 0.20 (M + 70)
+)︁]︂
+≤4.
+2

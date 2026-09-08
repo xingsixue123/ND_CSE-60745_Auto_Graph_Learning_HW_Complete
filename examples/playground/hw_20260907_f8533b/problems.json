@@ -1,0 +1,81 @@
+{
+  "assignment": "CSE 60321 - Advanced Computer Architecture - Spring 2026, Homework 2 (100 points)",
+  "source_pdf": "/home/xing/project/auto_hw_complete/input/Homework_2.pdf",
+  "rendered_page_count": 9,
+  "figures_present": false,
+  "figures_note": "ingest manifest.json reports n_images=0 for all 9 rendered pages, and the page renders confirm it: the only graphics are ruled tables (vector) and the black/gray section-header bars. No question in this assignment refers to a figure. All content is carried by the text channel and corroborated by the page renders.",
+  "answered_points": 55,
+  "total_points": 100,
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Problem 1: Intel Xeon multi-level cache hierarchy (Questions A-D)",
+      "points": 21,
+      "rendered_pages": [1, 2],
+      "anchor_text": "Problem 1: (21 points) -- One possible organization of the memory hierarchy on an Intel Xeon chip is:",
+      "input_files": [],
+      "subparts": [
+        "A (3 pts): three True/False statements about the cache hierarchy",
+        "B (6 pts): tag/index/offset split of a 64-bit physical address for the 4-way 512KB L2",
+        "C (10 pts): maximum initial main memory access time in ns for AMAT <= 4 CCs",
+        "D (2 pts): AMAT in CCs when the processor-memory bus widens to 32 Bytes"
+      ],
+      "needs": ["plain", "code"],
+      "grouped_with_reason": "A, B, C and D all sit on top of one shared machine description (2.0 GHz, 128-Byte blocks, L1/L2/L3 hit times of 1/10/50 CCs, 16-Byte bus, +10 CCs per additional transfer) that is stated once before Question A and never repeated. D explicitly says 'Assuming the same local miss rates in Question C' and reuses the multi-level AMAT expression and the maximum initial memory access time that C solves for, so D is unanswerable without C's result. Splitting these would make two workers re-derive the same hierarchy model and risk them disagreeing on the transfer-count convention."
+    },
+    {
+      "id": "p2",
+      "title": "Problem 2: Virtual memory address split and page table sizing (Questions A-C)",
+      "points": 10,
+      "rendered_pages": [3],
+      "anchor_text": "Problem 2: (10 points) -- Consider the following parameters of a virtual memory system:",
+      "input_files": [],
+      "subparts": [
+        "A (2 pts): fill Table 2 -- page offset bits, VPN bits, total bits",
+        "B (4 pts): number of PTEs and physical memory needed to store the page table",
+        "C (4 pts): pros and cons of increasing the page size (at least 1 each)"
+      ],
+      "needs": ["plain"],
+      "grouped_with_reason": "All three questions read from one shared Table 1 (30-bit virtual address, 2 GB physical memory, 64 KB page size, 4-Byte PTE). B's entry count is exactly 2^(VPN bits) computed in A, so B is a direct continuation of A. C is the qualitative discussion of the same parameter A and B quantify. A single worker keeps the page-size arithmetic consistent across all three."
+    },
+    {
+      "id": "p3",
+      "title": "Problem 3: Way-prediction on an L1 instruction cache (Questions A-B)",
+      "points": 8,
+      "rendered_pages": [4],
+      "anchor_text": "Problem 3: (8 points) -- We are trying to deploy the way-prediction technique on an L1 instruction cache.",
+      "input_files": [],
+      "subparts": [
+        "A (2 pts): best-case and worst-case cache access time in ns with way-prediction enabled",
+        "B (6 pts): minimum prediction accuracy for the way-predicting cache to cut AMAT by at least 5%"
+      ],
+      "needs": ["plain", "code"],
+      "grouped_with_reason": "One shared cache configuration (4-way, 64-Byte blocks, 256 KB, 1.1 ns baseline access, 1% miss rate, 50 ns miss penalty; 1 ns on a correct way prediction, 1.1 ns additional on a wrong one). B's AMAT expression is built directly out of the best-case and worst-case access times that A asks for, so answering B requires A's numbers."
+    },
+    {
+      "id": "p4",
+      "title": "Problem 4: Critical-word first and early restart (Questions A-C)",
+      "points": 16,
+      "rendered_pages": [5],
+      "anchor_text": "Problem 4: (16 points) -- Consider applying critical-word first and early restart techniques to reduce miss penalty in a system with L1 and L2 caches.",
+      "input_files": [],
+      "subparts": [
+        "A (8 pts): average CCs to service an L2 miss under three schemes (neither / early restart only / both)",
+        "B (4 pts): fill two integer blanks in the L1 analysis paragraph",
+        "C (4 pts): is critical-word first / early restart more important for L1 or L2, and why"
+      ],
+      "needs": ["plain", "code"],
+      "grouped_with_reason": "Question B opens with 'For this question, ignore Question A', which decouples B's arithmetic from A's -- but Question C then says 'You may refer to your observations while solving Questions A and B', so C is a comparison that consumes the numeric results of BOTH A and B. Splitting A from B would leave whichever worker got C without half its evidence, and the shared framing (a word is 8 Bytes wide; the meaning of 'neither / early restart only / both') is stated once at the top of the problem."
+    }
+  ],
+  "uncovered": [
+    {
+      "id": "p5",
+      "title": "Problem 5: Multi2Sim cache configuration study (Questions A-F)",
+      "points": 45,
+      "rendered_pages": [6, 7, 8, 9],
+      "anchor_text": "Problem 5: (45 points) -- Important Notice: the following tutorial has been tested on student04.cse.nd.edu.",
+      "reason": "Deliberately skipped on the user's explicit written instruction in specs.md: 'Skip Problem 5. Do not answer it, do not assign a worker to it, and do not include it in the final document.' This is a user decision, not an oversight or a capability gap. The final document states once, in a short note, that Problem 5 was intentionally omitted. Independently of the instruction, the problem is also not executable here: it requires downloading hw2.tar onto a specific Notre Dame CSE student machine (student04.cse.nd.edu) and running Multi2Sim simulations that take 15-25 minutes each, and every answer in Questions B through F is a table of measured execution cycles from those runs."
+    }
+  ]
+}

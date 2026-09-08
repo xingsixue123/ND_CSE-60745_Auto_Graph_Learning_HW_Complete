@@ -1,0 +1,58 @@
+ 
+9 
+Question E: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Starting with your best cache setting from Question C, change the cache block size to 16 Bytes and run 
+simulations for two programs. For the blocking program, you may run with only the better B setting you 
+determine in Question D. To maintain the same cache size of 4 KB and the same set associativity, 
+what is the new number of sets? Report execution cycles, compute the new speedup result, and 
+briefly explain your findings (why execution time and speedup results are different from the 
+results in Question D, etc.). 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Question F: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Starting with the cache setting in Question E, change the number of sets so that the cache size 
+becomes 8 KB, and run simulations for two programs. For the blocking program, you may run with only 
+the better B setting you determine in Question D. What is the new number of sets? Report 
+execution cycles, compute the new speedup result, and briefly explain your findings (why 
+execution time and speedup results are different from the results in Questions D and E, etc.). 
+ 

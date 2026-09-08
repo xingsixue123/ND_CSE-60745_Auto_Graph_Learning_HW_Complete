@@ -1,0 +1,85 @@
+ 
+1 
+CSE 60321 – Advanced Computer Architecture – Spring 2026 
+Homework 2 – 100 points 
+Assigned: Tuesday, February 10, 2026 – Due: Thursday, February 19, 2026 
+Individual Homework 
+ 
+Before you start: 
+1. Please clearly indicate which question an answer is for in your submission. 
+2. Different homework assignments may have different total point values, but they contribute equally to 
+final grades. 
+3. Some problems recommend or require you to use CSE student machines to complete, which may be 
+crowded with various minor issues at any time. In addition, programs may take longer than you expect 
+to run. Please go through all problems before starting so that you may better organize your time in 
+advance. 
+4. Unit clarification: for all problems in this homework, 1𝑇𝐵= 210𝐺𝐵, 1𝐺𝐵= 210𝑀𝐵, 1𝑀𝐵= 210𝐾𝐵, 
+1𝐾𝐵= 210𝐵𝑦𝑡𝑒𝑠, 1 𝐵𝑦𝑡𝑒= 8 𝑏𝑖𝑡𝑠; 1 𝑛𝑠= 10−9 𝑠, 1 𝑚𝑠= 10−3 𝑠; 1 𝐺𝐻𝑧= 109𝐻𝑧, 1 𝐻𝑧= 1 𝑠−1. 
+ 
+Problem 1: (21 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+One possible organization of the memory hierarchy on an Intel Xeon chip is: 
+• 
+A 64KB L1 instruction cache. 
+o The L1 instruction cache contains only instruction encodings. 
+• 
+A 64KB L1 data cache. 
+o The L1 data cache contains only data words. 
+• 
+A 512KB unified L2 cache. 
+o The L2 cache can contain both data and instruction encodings. 
+• 
+An 8 MB unified L3 cache. 
+o The L3 cache can contain both data and instruction encodings. 
+ 
+Suppose this chip has the clock frequency at 2.0 GHz, and for its cache system, assume that: 
+• 
+All caches use the block size of 128 Bytes. 
+• 
+The hit time for either L1 cache is 1 clock cycle (CC); the hit time for L2 cache is 10 CCs. 
+• 
+The time required to find data (i.e., hit time) in the L3 cache is 50 CCs. 
+• 
+If data is not found in the L3 cache, the processor must look for data in main memory. 
+o The processor-to-memory bus can accommodate 16 Bytes of memory at a time. 
+o The L3 miss penalty is the initial time required to access memory, which accounts for a 
+single transfer (equal to the bus bandwidth, in this case 16 Bytes), plus 10 CCs for every 
+additional transfer (also 16 Bytes here). 
+ 
+Hint: for a cache miss, cache miss penalty (transfer time) is an additional cost on top of the hit time 
+(access time). A cache miss happens after first attempting to access it. 
+ 
+Question A: (3 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Write “True” for correct statements, and “False” for wrong statements. 
+ 
+                     (1) This chip will be faster if we remove L2 and L3 caches and keep L1 cache the same. 
+ 
+                     (2) Typically, building a certain amount of L1 cache into the chip is more expensive than 
+building the same amount of L3 cache. 
+ 
+                     (3) To execute a program correctly on this chip, all instructions of this program must be 
+loaded into L1 instruction cache prior to execution. 
+ 
+ 
+ 

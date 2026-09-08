@@ -1,0 +1,71 @@
+ 
+4 
+Problem 3: (8 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+We are trying to deploy the way-prediction technique on an L1 instruction cache. The configurations of 
+this cache are: 
+• 
+4-way set associative. 
+• 
+64 Bytes block size. 
+• 
+256 KB cache size. 
+• 
+1.1 ns cache access time. 
+• 
+1% cache miss rate. 
+• 
+50 ns additional cache miss penalty if missing. 
+ 
+With way-predicting enabled, this cache has: 
+• 
+1 ns cache access time if prediction succeeds, which is the same as a direct mapped cache. 
+• 
+1.1 ns additional cache access time if prediction fails. 
+• 
+Other conditions remain the same. 
+ 
+Question A: (2 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Fill in the blank: 
+ 
+For this way-predicting enabled cache, for the best case, a cache access takes                      ns; for the 
+worst case, it takes                      ns. 
+ 
+Question B: (6 points) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Assuming the same cache miss rate with way-predicting. The way-predicting cache reduces the AMAT 
+by at least 5%. What is the minimum prediction accuracy? Please provide your calculation process. 
+ 
+ 
+ 

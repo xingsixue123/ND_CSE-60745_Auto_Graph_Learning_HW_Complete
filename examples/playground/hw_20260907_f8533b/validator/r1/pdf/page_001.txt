@@ -1,0 +1,41 @@
+CSE 60321 — Advanced Computer Architecture — Spring 2026
+Homework 2
+Assigned: Tuesday, February 10, 2026
+–
+Due: Thursday, February 19, 2026
+Scope of this submission. This document answers Problems 1–4 (21 + 10 + 8 +
+16 = 55 points). Problem 5 (45 points) has been omitted intentionally, at the
+explicit instruction of the submitter; it is not an oversight. Problem 5 is the Multi2Sim
+cache-configuration study, whose Questions B–F consist of execution-cycle measurements
+that must be gathered by running simulations on the Notre Dame CSE student machine
+student04.cse.nd.edu.
+Each answer below is labelled with the problem and question it addresses, as required by
+the assignment’s instructions. The assignment’s binary unit convention (1 KB = 210 Bytes,
+and so on) is used throughout.
+Problem 1: Multi-Level Cache Hierarchy on an Intel Xeon Chip
+(21 points)
+Conventions used throughout.
+The statement’s hint says that a miss penalty is an additional
+cost on top of the hit time, and that a miss is discovered only after the access to that level has
+been attempted. The hierarchy is therefore modelled by the nested expression
+AMAT = HTL1 + MRL1 PL1,
+PL1 = HTL2 + MRL2 PL2,
+PL2 = HTL3 + MRL3 PL3, (1)
+with HTL1 = 1, HTL2 = 10, HTL3 = 50 CC, and PL3 the main-memory access cost. The miss
+rates supplied in Questions C and D are local miss rates, which is exactly what (1) consumes, so
+no conversion to global rates is needed.
+For the memory access itself, the initial access time M “accounts for a single transfer”, so with a
+block of 128 B and a bus of B bytes only the transfers after the first are charged 10 CC each:
+PL3 = M + 10
+(︃128 B
+B
+−1
+)︃
+.
+(2)
+Finally, the clock is 2.0 GHz, so 1 CC = 1/(2.0 × 109 Hz) = 0.5 ns.
+Question A (3 points)
+(1) False. The L1 caches hold only 64 KB each, so with L2 and L3 removed every L1 miss would
+have to be served by main memory (hundreds of cycles) instead of by a 10- or 50-cycle cache,
+which raises the average memory access time substantially.
+1
