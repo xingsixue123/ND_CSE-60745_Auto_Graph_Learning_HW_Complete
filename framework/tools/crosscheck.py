@@ -21,7 +21,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path("/home/xing/project/auto_hw_complete")
+ROOT = Path(__file__).resolve().parent.parent.parent
 PLAYGROUND, OUTPUT = ROOT / "playground", ROOT / "output"
 
 FORBIDDEN = [r"\\documentclass", r"\\usepackage", r"\\begin\{document\}",

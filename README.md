@@ -104,9 +104,91 @@ examples/       one complete worked run, input through deliverable
 `framework/README.md` documents the pipeline in detail; `examples/README.md`
 walks through the worked run.
 
-## Requirements
+## Setup
 
-Linux with `bwrap` and `socat`, the `claude` CLI, a TeX installation, LibreOffice
-for Office-format inputs, and `pymupdf`. `framework/env.md` records exactly what
-was verified present, and — more usefully — what is absent, so no agent wastes a
-round rediscovering it.
+Only the first step needs root. Everything else installs into your home directory,
+which is deliberate: the machine this was built on has no `sudo`.
+
+**1. bubblewrap** — the sandbox. The one hard requirement.
+
+```bash
+sudo apt install bubblewrap            # Debian/Ubuntu
+bwrap --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp true && echo ok
+```
+
+`socat` is *not* needed. Claude Code's built-in sandbox requires it, but this
+pipeline never enables that sandbox — it wraps the agent in `bwrap` itself.
+
+**2. The `claude` CLI, logged in.** No API key: credentials are read from
+`~/.claude/.credentials.json` and bind-mounted **read-only** into each agent, so no
+token is ever written into a playground. Run `claude` once interactively to log in.
+
+**3. TeX.** TinyTeX or TeX Live. TinyTeX's default scheme is too small — it lacks
+`listings`, `pgfplots`, `algorithmicx` and much else that homework answers reach
+for. Agents **cannot** `tlmgr install` from inside the sandbox (`~/.TinyTeX` is
+read-only to them), so the package set has to be complete up front:
+
+```bash
+tlmgr install amsmath amscls amsfonts tools graphics geometry booktabs \
+  hyperref xcolor float enumitem siunitx pgf pgfplots caption algorithms \
+  algorithmicx algorithm2e physics mathtools standalone adjustbox collectbox \
+  wrapfig multirow fancyhdr titlesec microtype ulem cancel etoolbox xkeyval \
+  environ trimspaces pdflscape threeparttable tcolorbox listings \
+  listingsutf8 lastpage l3packages l3kernel soul upquote fvextra framed
+tlmgr install ctex xecjk fandol zhnumber ctablestack   # only if you need CJK
+```
+
+`bm` and `longtable` are *not* separate packages — both ship inside `tools`, and
+naming them makes `tlmgr` abort the whole batch. Verify by style file rather than
+by package name: `kpsewhich bm.sty`.
+
+**4. LibreOffice**, for `.doc` / `.docx` / `.pptx` inputs — extracted, not installed:
+
+```bash
+curl -LO https://download.documentfoundation.org/libreoffice/stable/26.2.6/deb/x86_64/LibreOffice_26.2.6_Linux_x86-64_deb.tar.gz
+tar xzf LibreOffice_26.2.6_Linux_x86-64_deb.tar.gz
+for d in LibreOffice_*/DEBS/*.deb; do dpkg-deb -x "$d" ~/local/libreoffice; done
+ln -sf ~/local/libreoffice/opt/libreoffice26.2/program/soffice ~/.local/bin/soffice
+```
+
+**5. poppler**, so the `Read` tool can open a `.pdf` directly (without it, reading a
+PDF fails outright with *"pdftoppm is not installed"*):
+
+```bash
+conda create -y -n sandbox_tools -c conda-forge poppler
+# the conda binaries need their own env's libraries, so wrap rather than symlink
+for b in pdftoppm pdftotext pdfinfo pdftocairo; do
+  printf '#!/bin/bash
+export LD_LIBRARY_PATH="%s/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "%s/bin/%s" "$@"
+'     "$HOME/miniconda3/envs/sandbox_tools" "$HOME/miniconda3/envs/sandbox_tools" "$b" > ~/.local/bin/$b
+  chmod +x ~/.local/bin/$b
+done
+```
+
+**6. Python.** `pymupdf` is required — it is the only PDF reader the tooling uses.
+`matplotlib`, `numpy`, `scipy`, `pandas` and `networkx` are worth having; workers
+can otherwise build their own venv inside their playground (`conda create` will not
+work — `~/miniconda3` is read-only to them).
+
+**7. Tell the agents the truth about your machine.** `framework/env.md` is handed
+to every agent as ground truth and currently describes *this* machine — including
+an absolute path to a Python environment with matplotlib. Update it to match yours.
+Getting this file wrong is expensive: an agent will spend a whole round discovering
+that something you claimed exists does not.
+
+The pipeline itself is relocatable — clone it anywhere and `framework/fw` works
+from any directory.
+
+### Verifying
+
+```bash
+framework/fw init          # should refuse: input/ has no assignment in it
+```
+
+Then drop the worked example back in and run it:
+
+```bash
+cp examples/specs.md . && cp examples/input/* input/
+framework/fw run
+```

@@ -13,7 +13,7 @@ import shutil
 import sys
 from pathlib import Path
 
-ROOT = Path("/home/xing/project/auto_hw_complete")
+ROOT = Path(__file__).resolve().parent.parent.parent
 PLAYGROUND = ROOT / "playground"
 OUTPUT = ROOT / "output"
 

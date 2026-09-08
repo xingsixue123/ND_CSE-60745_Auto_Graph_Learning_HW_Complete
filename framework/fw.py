@@ -36,8 +36,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sandbox  # noqa: E402
 from ingest import ingest as run_ingest  # noqa: E402
 
-ROOT = Path("/home/xing/project/auto_hw_complete")
-FRAMEWORK = ROOT / "framework"
+FRAMEWORK = Path(__file__).resolve().parent
+ROOT = FRAMEWORK.parent
 PROMPTS = FRAMEWORK / "prompts"
 INPUT = ROOT / "input"
 SPECS = ROOT / "specs.md"
@@ -244,7 +244,7 @@ def _runtime_master(job: Path, out: Path, st: dict) -> dict:
         "VALIDATOR_DIR": str(job / "validator"),
         "MAX_MASTER_ROUNDS": CONFIG["max_master_rounds"],
         "MAX_WORKER_ROUNDS": CONFIG["max_worker_rounds"],
-        "fw command": "/home/xing/project/auto_hw_complete/framework/fw",
+        "fw command": str(FRAMEWORK / "fw"),
         "specs.md contents": "\n\n```\n" + (SPECS.read_text() if SPECS.exists()
                                             else "(none)") + "\n```",
     }

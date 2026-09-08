@@ -1,3 +1,3 @@
 #!/bin/bash
 # Thin entry point so agents can type `fw <cmd>` instead of a long python path.
-exec python3 /home/xing/project/auto_hw_complete/framework/fw.py "$@"
+exec python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fw.py" "$@"

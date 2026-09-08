@@ -47,6 +47,14 @@ A validator that knows less than the agent it audits cannot audit it.
 Workers run strictly one at a time — `fw spawn-worker` refuses to start a second
 problem while one is unfinished.
 
+Each worker validator sees only its own problem's brief, which makes it structurally
+blind to anything spanning problems: a label defined in two fragments, two workers
+reporting different values for the same quantity, a figure delivered to the wrong
+directory. `tools/crosscheck.py` covers that gap, and it is mechanical — it shares no
+context with the agents it checks, so it cannot make their mistakes with them.
+
+    python3 framework/tools/crosscheck.py [<job_id>]
+
 ## The sandbox
 
 Every agent runs under `bwrap`. The **only** writable paths are the ones in the table
@@ -74,6 +82,20 @@ master decides what to do. The master gets `max_master_rounds` (default 5) submi
 to the master validator. Both caps are in `config.json` and are enforced in `fw.py`,
 not in a prompt.
 
+A validator that **crashes** is distinguished from one that returns a verdict.
+Treating any non-`PASS` output as `FAIL` is wrong twice over: it feeds the harness's
+own error text back to the master as if it were a defect list, and it burns a
+submission round on work nobody judged. `classify()` returns `PASS` / `FAIL` /
+`ERROR`; an `ERROR` is retried once with a fresh session and does not consume a round.
+
+That retry also fixes a collision between two requirements. The validators are
+persistent (`--resume`, so the same agent sees every round), and rule R7 makes them
+read every page of the PDF as an image. A resumed session therefore accumulates page
+images until it trips the API's many-image limit — which is exactly what happened on
+the first multi-round master validation. The checklist on disk is the durable memory,
+so falling back to a fresh session loses nothing that matters: "no refresh" degrades
+to "the notes persist".
+
 ## Files
 
     framework/
@@ -88,8 +110,9 @@ not in a prompt.
         context_worker.md      shared by worker + worker validator
         master.md master_validator.md worker.md worker_validator.md
       tools/
-        pdf_pages.py     dual-channel PDF reader (image + text)
+        pdf_pages.py     three-channel PDF reader (page render + text + native-res figures)
         lint_output.py   enforces "OUTPUT is a deliverable, not a workspace"
+        crosscheck.py    cross-problem checks no single worker validator can make
         cleanup.py       remove a job's artifacts and installed packages
 
 ## Cleaning up
