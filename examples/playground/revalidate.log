@@ -1,0 +1,25 @@
+[2026-09-07 22:19:21] submitting to master validator (round 2)
+[2026-09-07 22:33:35] master validator r2: $1.32 (job total $19.95)
+[2026-09-07 22:33:35] master validator round 2 -> PASS
+======================================================================
+Round 2 validated. Summary:
+
+**Change surface was tiny and exactly on target.** All four figures are byte-identical; `main.tex`, `preamble.tex`, `p1.tex` unchanged. Exactly three edits — one per round-1 defect, no collateral changes. The shipped `main.pdf` is genuinely rebuilt from these sources (pdftotext of shipped == pdftotext of my own recompile).
+
+**All three round-1 defects fixed and independently verified:**
+- **D1.1** — `3.63` → `3.9193`. I recomputed the spectral radius of all 4,104 components by dense `eigvalsh`: ρ(giant)=8.762217, top non-giant = **3.9193** (n=9, m=16), then 3.8182, 3.7677, 3.6331. Exactly right.
+- **D1.2** — the long `sorted(...)` call is now broken into a centered block. Recompiled: **zero** overfull/underfull warnings in the whole log (was 26.73 pt), 10 pages, no undefined refs.
+- **D1.3** — `80.3%` → `80.2%`. Recomputed 21,167/26,377 = 80.2479%.
+
+**Regression check on the reflow.** The two extra lines pushed text across page boundaries (5→6, 6→7), so I didn't assume it was harmless: pages 1–4 and 9 are byte-identical, only two sentences migrate, page count still 10, and I rendered pages 5/6/7 — both figures still render in their correct sections with captions intact, nothing orphaned.
+
+**Extra checks on claims I'd leaned on least in round 1** (all pass): the "6 of 10 also in top-10 by degree" claim, the entire *exact* eigenvector column of Table 4 (all ten values match `eigenvector_centrality_numpy` to <5e-6), the 17902-ahead-of-9068 ordering claim, and max edge Jaccard = 2/3.
+
+**One minor defect remains (D2.1):** the corrections landed only in `final/`, not back in the worker deliverables — `p3/answer.tex` still says `3.63` and `80.3%`, `p2/answer.tex` still has the unbroken code line. The OUTPUT tree holds two disagreeing copies, and a re-assembly from worker dirs would reintroduce all three defects. The graded artifact is correct, so no answer is affected.
+
+Passing with that minor defect noted.
+
+VERDICT: PASS
+======================================================================
+
+PASS. The job is done. Final answer: /home/xing/project/auto_hw_complete/output/cse60745_20260907_d29ddd/final

@@ -7,8 +7,8 @@ The whole input was **a Word document, a data file, and a three-line spec.**
 
 ## Where these files originally lived
 
-They were moved here after the run finished, so that `input/` and `output/` are
-empty and ready for the next assignment. Their original locations:
+They were moved here after the run finished, so that `input/`, `output/` and
+`playground/` are empty and ready for the next assignment. Their original locations:
 
 | file, as it is here | where it was during the run |
 |---|---|
@@ -16,11 +16,13 @@ empty and ready for the next assignment. Their original locations:
 | `input/CSE 60745_Fall 2026_HW1.doc` | `auto_hw_complete/input/CSE 60745_Fall 2026_HW1.doc` |
 | `input/graph-1.txt` | `auto_hw_complete/input/graph-1.txt` |
 | `output/cse60745_20260907_d29ddd/` | `auto_hw_complete/output/cse60745_20260907_d29ddd/` |
+| `playground/cse60745_20260907_d29ddd/` | `auto_hw_complete/playground/cse60745_20260907_d29ddd/` |
 
-The matching scratch space — every worker's scripts and notes, both validators'
-checklists, the ingest renders, the run log — is **not** here. It stayed at
-`auto_hw_complete/playground/cse60745_20260907_d29ddd/`, because it is the
-trajectory rather than the deliverable.
+The playground is the full trajectory rather than the deliverable: every worker's
+scripts and notes, both levels of validator checklist, the ingest renders and
+figure extractions, and the run log. It is kept because how the answers were
+produced is most of the point of the example. Agent session transcripts and the
+private per-agent config directories are excluded by `.gitignore`.
 
 ## What went in
 
@@ -52,15 +54,28 @@ and Q5 does not — the master worked out by reading the assignment.
 
 ## What came out
 
-`output/cse60745_20260907_d29ddd/`:
+`output/cse60745_20260907_d29ddd/` — the deliverable:
 
 ```
-final/                     the deliverable
+final/
   main.pdf                 10 pages, cover page + all five questions
   main.tex preamble.tex    assembled source, recompilable
   p1.tex p2.tex p3.tex     the three fragments as assembled
   fig_*.pdf                four vector figures
 p1/ p2/ p3/                each worker's own deliverable, before assembly
+```
+
+`playground/cse60745_20260907_d29ddd/` — how it got there:
+
+```
+ingest/                    the .doc converted to PDF, then per page: a 200 dpi
+                           render, the extracted text, and every embedded figure
+                           at native resolution
+problems.json              the master's decomposition, with its stated reasons
+problems/p1 p2 p3/         each worker's brief, notes, scripts and scratch work
+validators/p1 p2 p3/       each worker validator's checklist and its own re-runs
+validator/                 the master validator's checklist, both rounds
+logs/                      run log, heartbeats, per-agent JSON results
 ```
 
 The master cut the assignment into three problems rather than five, on
