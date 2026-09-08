@@ -83,8 +83,11 @@ drops them. Always look at the page PNGs too.
 
 - `python3` = conda base 3.12: has numpy, sympy, torch, pymupdf, PIL, networkx.
   **No matplotlib, no scipy, no pandas, no sklearn.**
-- `/home/xing/miniconda3/envs/py311/bin/python` has matplotlib 3.10.8, numpy, scipy,
-  pandas. Use it for plotting if you do not want to build your own venv.
+- `~/miniconda3/envs/py311/bin/python` has matplotlib 3.10.8, numpy, scipy,
+  pandas. Use it for plotting if you do not want to build your own venv. If that
+  path does not exist, find an equivalent with `conda env list` and check it with
+  `<python> -c "import matplotlib, scipy, pandas"` before relying on it -- do not
+  assume this line is still true of the machine you are on.
 - `conda create` and `conda install` DO NOT WORK (read-only `~/miniconda3`).
 - `pip install` into the base env DOES NOT WORK. Make your own venv inside your
   playground instead:
