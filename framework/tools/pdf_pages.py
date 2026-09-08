@@ -12,6 +12,18 @@ file.  That is the channel to use when a question refers to "the following graph
 figure comes out at the size it was authored at, not at whatever survives a page
 downscale.
 
+A figure drawn as **vector** graphics -- a pipeline diagram, a circuit, a plot drawn
+in LaTeX rather than pasted in -- is not an embedded image, so there is nothing to
+extract: `get_image_info` returns nothing and the figure exists only in the page
+render. For those, use zoom mode to re-render any region at any resolution:
+
+    python3 pdf_pages.py <file.pdf> --page 3 --dpi 600 [--clip x0,y0,x1,y1] \
+                         --out zoom.png
+
+The manifest records `n_vector_drawings` per page. A page with a high count and a
+suspicious blank gap in its extracted text is hiding a vector figure; zoom into it
+rather than squinting at the whole-page render, which the Read tool downscales.
+
 Usage:
     python3 pdf_pages.py <file.pdf> --outdir <dir> [--dpi 200]
 
@@ -91,6 +103,7 @@ def render(pdf_path: Path, outdir: Path, dpi: int = 200):
             "height": pix.height,
             "n_chars": len(text),
             "n_images": len(page.get_images()),
+            "n_vector_drawings": len(page.get_drawings()),
             "figures": figs,
         })
     (outdir / "alltext.txt").write_text("".join(alltext))
@@ -100,21 +113,52 @@ def render(pdf_path: Path, outdir: Path, dpi: int = 200):
     return manifest
 
 
+def zoom(pdf_path: Path, page_no: int, out: Path, dpi: int, clip=None):
+    """Re-render one page, or a region of it, at an arbitrary resolution."""
+    doc = pymupdf.open(pdf_path)
+    page = doc[page_no - 1]
+    rect = pymupdf.Rect(*clip) if clip else None
+    pix = page.get_pixmap(dpi=dpi, clip=rect)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    pix.save(out)
+    return pix, page.rect
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("pdf")
-    ap.add_argument("--outdir", required=True)
+    ap.add_argument("--outdir")
     ap.add_argument("--dpi", type=int, default=200)
+    ap.add_argument("--page", type=int, help="zoom mode: which rendered page")
+    ap.add_argument("--clip", help="zoom mode: x0,y0,x1,y1 in PDF points")
+    ap.add_argument("--out", help="zoom mode: output PNG path")
     a = ap.parse_args()
+
+    if a.page:
+        clip = [float(v) for v in a.clip.split(",")] if a.clip else None
+        out = Path(a.out or f"page_{a.page:03d}_zoom.png")
+        pix, full = zoom(Path(a.pdf), a.page, out, a.dpi, clip)
+        print(f"{out}  {pix.width}x{pix.height} at {a.dpi} dpi")
+        print(f"  full page is {full.width:.0f}x{full.height:.0f} PDF points"
+              f" -- pass --clip to crop")
+        return
+
+    if not a.outdir:
+        ap.error("--outdir is required unless you are using --page (zoom mode)")
     m = render(Path(a.pdf), Path(a.outdir), a.dpi)
     print(f"{m['n_pages']} pages -> {a.outdir}")
     for p in m["pages"]:
         print(f"  page {p['rendered_page']}: {p['n_chars']} chars, "
-              f"{len(p['figures'])} figure(s) extracted at native resolution")
+              f"{len(p['figures'])} embedded figure(s), "
+              f"{p['n_vector_drawings']} vector drawings")
         for f in p["figures"]:
             print(f"      {f['file']}  ({f['width']}x{f['height']}) "
                   f"<-- READ THIS FILE for figure content, not the whole-page PNG")
+        if not p["figures"] and p["n_vector_drawings"] > 100:
+            print(f"      no embedded image, but {p['n_vector_drawings']} vector "
+                  f"drawings: any figure here is VECTOR. Zoom with "
+                  f"--page {p['rendered_page']} --dpi 600")
 
 
 if __name__ == "__main__":
