@@ -1,0 +1,24 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./wrap.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/size11.clo)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def)
+No file wrap.aux.
+(./answer.tex
+Overfull \hbox (67.1282pt too wide) in paragraph at lines 11--11
+[]\OT1/cmr/bx/n/12 Paper 1-10 --- Di-jk-stra, ``The Struc-ture of the \OT1/cmr/bx/it/12 ``THE''\OT1/cmr/bx/n/12 -Multiprogramming
+[1{/home/xing/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2]
+Overfull \hbox (6.43602pt too wide) in paragraph at lines 83--83
+[]\OT1/cmr/bx/n/12 Paper 1-2 --- Ritchie and Thomp-son, ``The UNIX Time-Sharing
+[3] [4] [5] [6]) [7] (./wrap.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)</home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbxti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
+Output written on wrap.pdf (7 pages, 138922 bytes).
+Transcript written on wrap.log.

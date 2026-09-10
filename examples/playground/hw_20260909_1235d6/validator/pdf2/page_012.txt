@@ -1,0 +1,46 @@
+Critical judgment. The gap between the ambition of the design and the weight of the evidence is
+very wide, and the paper is candid that “extensive performance comparisons with other systems
+have not yet been done.” In practice its entire quantitative evaluation is a single number: on a
+MicroVAX II, touching newly allocated memory costs under 0.7 ms per 1024 bytes against roughly
+1.2 ms for 4.3BSD. That microbenchmark measures zero-fill fault cost — exactly what the new VM
+system was built to improve — and was chosen by the implementers; fork is called “substantially
+faster” with no figure attached at all. Nothing measures IPC latency, although ports and messages
+are the centrepiece of the design; nothing measures multiprocessor scaling, although the abstract’s
+opening sentence announces a “multiprocessor operating system kernel”; threads, the feature the
+paper leads with, were not yet implemented and were merely “expected by Summer 1986”; and the
+caption of the paper’s own final figure concedes that UNIX compatibility still executed in kernel
+state. The central claim — that operating system services can be moved out to user-level servers at
+acceptable cost — is therefore precisely the claim the paper does not test.
+History then split the verdict. The mechanisms won comprehensively: separating the address
+space from the schedulable entity is now universal, memory-mapped files and external pagers are
+standard equipment, the machine-dependent/independent VM split survives as the pmap layer in
+the BSDs, and port-like capability handles reappear in Windows object handles and in Fuchsia’s
+channels, while macOS and iOS run on a Mach derivative to this day. The performance thesis lost:
+Mach 3.0’s user-space UNIX server proved slow, Chen and Bershad later traced the degradation to
+memory-system behaviour rather than to message path length, and Liedtke’s L4 work argued the
+cost was an artefact of implementation rather than of microkernels, cutting IPC by roughly an order
+of magnitude. Mach became the cautionary tale that motivated second-generation microkernels.
+Two of its assumptions have since expired outright.
+Network-transparent IPC treats a local
+multiprocessor and a LAN as points on one continuum, an equivalence the distributed systems
+community abandoned because transparency conceals latency and partial failure. And copy-on-write
+as the universal bulk-transfer mechanism assumed page-table manipulation was cheap relative to
+copying, which inverted once TLB shootdown across many cores entered the price. Finally, the
+extensibility argument is made by enumerating UNIX’s accumulated mess rather than by showing
+that the port model resists the same accretion — and it did not: Mach’s own VM, with its chains
+of shadow objects, became notoriously intricate, and the kernel that carries its name today is large.
+Paper 3 — Baumann et al., “The Multikernel: A New OS Architecture for
+Scalable Multicore Systems” (2009)
+Summary. The Multikernel’s premise is that hardware now diversifies faster than system software
+can be retuned for it, so that an OS built as a shared-memory kernel with lock-protected data
+structures faces an unbounded engineering bill. The authors evidence this with the “heroic” removal
+of the Windows 7 dispatcher lock, which touched 6000 lines across 58 files, and with the many
+iterations required by Linux’s read-copy-update. They then argue that the machine has itself become
+a network — interconnects route and congest, cores differ in ISA and performance, and peripherals
+are already non-coherent — and propose three principles: make all inter-core communication
+explicit, make OS structure hardware-neutral, and treat state as replicated rather than shared.
+Their prototype, Barrelfish, factors the per-core OS instance into a privileged CPU driver (event-
+driven, single-threaded, non-preemptable, 7135 lines of C for x86-64) and a schedulable user-space
+monitor. Monitors hold the replicas and run the agreement protocols — one-phase commit for
+unmapping a page, two-phase commit for capability retyping — over URPC, a user-level message
+12

@@ -1,0 +1,48 @@
+manipulation performed in user space, and a system knowledge base holding hardware facts in
+first-order logic computes topology-aware multicast trees at run time. The motivating measurement
+is stark: a single core updates shared state in under 30 cycles, but with 16 cores on the same data
+each update costs roughly 12,000 extra cycles, and one dedicated RPC server sustains twice the
+update rate of all 16 shared-memory threads together. The evaluation then shows a NUMA-aware
+multicast shootdown protocol holding at about 3.1k cycles across 32 cores where naive broadcast
+and unicast climb to roughly 13k; end-to-end page unmapping at 32 cores costing about 17.5k cycles
+against roughly 29.5k for Linux 2.6.26 and 46k for Windows Server 2008 R2; IP loopback at 2154
+versus 1823 Mbit/s with 21 versus 77 data-cache misses per packet; UDP echo over gigabit Ethernet
+at 951.7 against 951 Mbit/s; and a static web server at 18,697 requests per second against 8924 for
+lighttpd on Linux.
+Critical judgment. This is much the strongest evaluation of the three and an unusually honest one
+— it states outright that “it would be wrong to draw any quantitative conclusions from our large-scale
+benchmarks,” concedes that the capability system was “a mistake. . . unnecessarily complex, and no
+more efficient” than the per-processor allocators already in Windows and Linux, calls its network
+stack “very much a placeholder,” and admits that every test platform was homogeneous x86-64, so
+the heterogeneity that motivates the whole argument was never actually exercised. That honesty
+makes the weak points easier to locate. The headline numbers are the least defensible: the 2.1×
+web-server win pits a purpose-built user-space lwIP stack against general-purpose lighttpd on Linux
+with segmentation and checksum offload enabled, while Barrelfish’s own driver supported none
+of it, so what is measured is specialisation rather than architecture. The scalability case rests
+on global-coordination microbenchmarks, and there the gain comes largely from replacing serial
+IPIs with a topology-aware multicast tree — an algorithmic change a shared-memory kernel could
+equally adopt — so the experiment does not isolate shared-nothing structure as the cause of the
+improvement. Reading the shootdown and unmap figures against each other is more revealing still:
+the raw messaging baseline costs about 3.1k cycles at 32 cores while the complete unmap costs
+about 17.5k, so more than four-fifths of the operation is Barrelfish’s own monitor LRPC, marshaling
+and unoptimised thread dispatch. The shape of the unmap curve makes the same point at the other
+end. Barrelfish does not start cheaper than the systems it is compared against — at two cores it
+costs about 10.3k cycles against roughly 5.2k for Linux and 5.8k for Windows — and it stays almost
+perfectly flat out to five cores before rising gently. What it buys is slope: from two to thirty-two
+cores Barrelfish grows about 1.7×, reaching some 17.5k cycles, where Linux grows 5.7× to about
+29.5k and Windows 7.9× to about 46k. So the multikernel did not reduce the constant cost of the
+operation; it roughly doubled it and bought a much flatter curve in exchange. That is exactly the
+trade the authors themselves concede when they note that routing OS invocations through monitor
+RPC rather than system calls adds “a constant overhead on current hardware of several thousand
+cycles,” which is “constant as the number of cores increases” — a bargain that pays only once the
+machine is wide enough, and whose break-even against Linux does not arrive until around twelve or
+thirteen cores. The messaging table quietly reinforces the point, showing URPC at 450 cycles of
+latency against 424 for L4’s decade-older IPC, the real gains again being throughput and a much
+smaller cache footprint rather than latency. The hardware bet was half right. Cache coherence
+did not collapse — commodity servers remained coherent far past 2009 — and mainstream kernels
+absorbed NUMA and core asymmetry using per-CPU data, RCU and sharded locks, settling in
+the middle of the paper’s own spectrum of sharing disciplines rather than at the shared-nothing
+extreme it advocates. Barrelfish remained a research vehicle. What survived is the diagnosis and
+the method: treating the machine as a network, which resurfaced in kernel-bypass and dataplane
+systems such as Arrakis and IX, and in the now-routine practice of designing OS state per-core first.
+13

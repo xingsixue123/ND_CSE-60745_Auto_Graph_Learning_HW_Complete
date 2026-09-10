@@ -79,6 +79,18 @@ page index** (1-based, as produced by pdf_pages.py) when pointing at a location.
 WARNING: `.doc`/`.docx` figures are embedded images. Extracting text alone silently
 drops them. Always look at the page PNGs too.
 
+WARNING: a **spreadsheet** rendered to PDF extracts column-major -- every value in
+column A, then every value in column B -- so rows come apart and values get
+mis-associated. `ingest.py` also exports spreadsheets to CSV (`ingest/csv/<name>.csv`);
+use that, not the PDF text.
+
+WARNING: CSV export **flattens merged cells**. A category or group label that spanned
+several rows in the spreadsheet appears only on the first of them, and the rest are
+blank. A blank cell under a filled one usually means the value above spans down --
+so counting rows whose cell literally contains a label will undercount the group,
+often badly. Check whether the blanks form a contiguous run, and cross-check against
+any other column that encodes the grouping (an ID prefix, a numbering scheme).
+
 ## Python
 
 - `python3` = conda base 3.12: has numpy, sympy, torch, pymupdf, PIL, networkx.

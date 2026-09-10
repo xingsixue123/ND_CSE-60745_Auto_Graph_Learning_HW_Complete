@@ -25,3 +25,9 @@ playground/*.log
 playground/*.pid
 .last_run.pid
 **/.session_id
+
+# Papers a worker downloaded to read. Third-party copyrighted material (ACM, USENIX,
+# author sites) -- keeping it out of the repository avoids redistributing it. Each
+# worker's downloads.md records the exact URL it fetched and how it verified the file
+# was the genuine paper, so the run stays reproducible without shipping the PDFs.
+**/papers/*.pdf

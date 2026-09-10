@@ -1,0 +1,39 @@
+attempted; the paper notes in passing that one must ensure a packet filter does not “lie” and accept
+packets destined for another application, and leaves the problem there. There is also a deep tension
+the authors do not resolve: exposing physical names and physical resources to untrusted software
+makes the interface hardware-specific by construction, which is the portability cost of the whole
+design, and their own dismissal of VM/370 — that virtualising the base machine is expensive — was
+overtaken within a decade by hardware virtualisation that made that cost largely vanish. History’s
+verdict is therefore split, and that is the fair judgment: the critique of fixed abstractions was right
+and has outlived the artifact, while the deployment argument was wrong. Library operating systems
+became practical roughly twenty years later, as unikernels and VM-hosted specialisation — which is
+to say the idea won on someone else’s mechanism.
+The Three Together
+Read in sequence these papers are one long argument about where structure should live. Dijkstra
+puts it in the kernel as a total order of levels, and buys provability with rigidity. Ritchie and
+Thompson put it in a handful of uniform abstractions — the byte stream, the i-node, the special file,
+the shell as an ordinary program — and buy extraordinary leverage at the price of leaks wherever
+the uniformity is false. Engler and his co-authors argue that any such fixed abstraction is a tax,
+and push structure out of the kernel entirely into replaceable libraries.
+The pattern in their evidence is at least as instructive as the pattern in their designs. Dijkstra
+offers a proof and no measurements; Ritchie and Thompson offer one measurement they decline to
+interpret; the exokernel offers a great many measurements, all of primitives and none of a workload
+anyone actually ran. Each paper is strongest exactly where the previous one was weakest and
+weakest in a new place — which is a reasonable summary of how the field made progress.
+References
+[1-10] E. W. Dijkstra. “The Structure of the “THE”-Multiprogramming System.” Communications
+of the ACM, vol. 11, no. 5, May 1968, pp. 341–346. (Presented at the ACM Symposium
+on Operating System Principles, Gatlinburg, Tennessee, October 1967; also circulated as
+EWD196.)
+[1-2] D. M. Ritchie and K. Thompson. “The UNIX Time-Sharing System.” Communications of
+the ACM, vol. 17, no. 7, July 1974, pp. 365–375. (Revised version of a paper presented at
+the Fourth ACM Symposium on Operating Systems Principles, Yorktown Heights, New York,
+October 1973.)
+[1-3] D. R. Engler, M. F. Kaashoek and J. O’Toole Jr. “Exokernel: An Operating System Ar-
+chitecture for Application-Level Resource Management.” Proceedings of the Fifteenth ACM
+Symposium on Operating Systems Principles (SOSP ’95), 1995, pp. 251–266.
+Ex. 1.0 — Three Papers on OS History and Architecture
+The three papers below were located by searching the literature (Google Scholar and general web
+search for work on operating system history and architecture), downloaded in full and read; none
+of them is taken from the supplied paper list. They were chosen as a set because they form a
+9

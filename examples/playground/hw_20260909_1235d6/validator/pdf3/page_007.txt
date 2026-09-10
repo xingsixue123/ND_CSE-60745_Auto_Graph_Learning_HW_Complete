@@ -1,0 +1,45 @@
+the authors argue has a threefold advantage — file and device I/O become as similar as possible, file
+and device names share one syntax, and devices fall under the same protection mechanism as files.
+Directories form a rooted tree with the conventional . and .. entries, and all links to a file have
+equal status, because a directory entry holds nothing but a name and a pointer to an i-node. The
+i-node carries eight device addresses; small files use them directly and large files indirect through
+blocks of 256 addresses, which caps a file at 8 · 256 · 512 = 220 bytes. mount grafts a removable
+volume’s hierarchy onto a leaf of the existing one.
+Processes are equally spare. fork splits a process into two, execute overlays the image with a new
+program, and wait/exit join them again; pipe returns a descriptor for an interprocess channel
+that is read and written with the same read and write calls as a file. The Shell is not part of the
+kernel at all but an ordinary swappable user program that forks a process per command. Because
+the Shell — not the command — interprets < and >, no command contains any code for redirection;
+filters joined by | compose for the same reason. init creates one process per terminal line, and
+since a user’s password-file entry may name some other program in place of the Shell, the same
+mechanism confines the editing-only users and the users who may only play chess. Section 9 gives
+the operational picture: 72 users, 14 simultaneous, 4400 files, and per day 1800 commands, 4.3 CPU
+hours and 75 logins, at about 98% uptime with a longest unbroken run of roughly two weeks.
+Critical judgment. The paper is unusually honest, and that honesty is simultaneously its charm
+and its weakness as an evaluation. The entire performance argument is section 4.1: one assembly of
+a 7621-line program in 35.9 seconds, or 212 lines per second, split 63.5% assembler, 16.5% system
+overhead, 20% disk wait — immediately followed by the statement that the authors will not interpret
+these figures or compare them with any other system, and are “generally satisfied”. A design paper
+is entitled to that stance, but the consequence is that every efficiency claim in the paper rests
+on assertion. The famous “Perspective” remark, that UNIX succeeded largely because it was not
+designed to meet any predefined objectives, is charming and probably true, but it is unfalsifiable
+and useless as advice — one cannot plan to have no requirements.
+The treatment of security is thin, and the mechanisms it introduces so casually became the classic
+problems. Protection is a user ID plus seven bits: read, write and execute for the owner and for
+everyone else — there is no group in this version — plus set-user-ID, plus a super-user exempt from
+all checking. Set-user-ID is presented purely as an elegance, available to any user on his own files
+without administrative intervention. The paper never asks what happens when such a program
+can be induced to act on its invoker’s behalf, and decades of privilege-escalation bugs live in that
+unexamined gap.
+“Everything is a file” is also less total than the slogan it became, and the authors say so where it is
+inconvenient. Pipes are conceded to be “not a completely general mechanism” because a common
+ancestor must create them — the reason named pipes and then sockets had to be bolted on later,
+and the first place the uniform interface visibly leaks. The 1 MB file ceiling and the 14-character
+name limit are not principled choices but artifacts of the i-node layout. The accounting problem
+created by equal-status links is raised and then dropped with the admission that UNIX avoids the
+issue by charging no fees at all. There is essentially nothing on multiprocessing. And section 9
+describes a research laboratory, not a production load — chess alone accounts for 5.3% of CPU
+time — so the reliability figures cannot support conclusions about UNIX under commercial pressure.
+What the paper does establish, and establishes decisively, is a negative result: the expense and bulk
+of contemporary operating systems were not intrinsic to the problem.
+7

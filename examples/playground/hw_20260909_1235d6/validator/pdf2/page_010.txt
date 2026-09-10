@@ -1,0 +1,47 @@
+single argument across forty-four years. Each gives a different answer to the same two questions:
+where should operating system function live, and what may the system assume about the machine
+underneath it? Multics answers with one comprehensive system on a symmetric shared-memory
+machine; Mach answers by decomposing that system into a minimal kernel plus user-level servers;
+the Multikernel answers by discarding shared memory as the organising assumption altogether.
+Read in order, they also show a steady rise in evidentiary standards — from a design prospectus
+with no measurements at all, to a status report resting on a single microbenchmark, to a broad
+evaluation that volunteers its own weaknesses — without any matching fall in the confidence of the
+architectural claim being made.
+Paper 1 — Corbató and Vyssotsky, “Introduction and Overview of the Multics
+System” (1965)
+Summary.
+The paper opens the six-paper Multics session at the 1965 Fall Joint Computer
+Conference and states the objectives the other five then elaborate. Its problem is access: batch
+processing had, in the authors’ words, caused user access to large machines to “retrogress,” isolating
+the programmer from cause and effect. Their goal is a computer utility — a system running
+continuously and reliably twenty-four hours a day like a telephone or power network, serving
+everything from interactive terminals to absentee (batch) jobs. The mechanisms proposed are
+largely hardware–software co-design on the GE 645, a modification of the GE 635. Addressing
+is two-dimensional: programs are written as segments, each of which may grow or shrink during
+execution (up to roughly a quarter of a million segments per user, each of up to a quarter of a million
+words), and segments are independently paged by the supervisor with a choice of 64- or 1024-word
+pages. Cross-segment references are bound by dynamic linking — a segment names another only
+symbolically, binding occurs automatically on first execution, and afterwards runs at full speed.
+Pure, recursive, shareable procedures are the normal mode of programming, so that one copy of a
+procedure serves many users and, as the authors note, there is “no clear-cut demarcation” between
+user and system programs. Protection comes from descriptor bits acting as hardware “fire-walls,”
+including an execute-only bit, and most supervisor modules run with the same descriptors as user
+code and no access to privileged instructions. Processors form an anonymous pool with no master
+— “the supervisor does not have a special processor” — and reach I/O only through mailboxes
+in the memory modules. A file system names everything symbolically rather than by address,
+interlocks writing, and provides system-run backup against three named contingencies. I/O is
+device-independent, batch is simply the zero-terminal case of an ordinary process, resource budgets
+are hierarchical and delegable, PL/I is adopted for machine independence, and the reference manual
+is kept on-line. There is no evaluation: the system did not yet exist. The sole quantitative claim is
+that “a few hundred” simultaneous users are expected, derived by “simple scaling of processor and
+memory speed” and immediately qualified as “hazardous.” The paper closes by calling the plans
+“not unattainable” while conceding it would be “presumptuous” to think the initial system could
+meet all the stated requirements.
+Critical judgment. This is a prospectus, and it cannot be judged as an empirical paper: every
+verb is in the future tense and nothing in it is falsifiable by its own evidence. The deeper omission
+is not measurement but a cost estimate. The paper proposes to meet “almost all of the present and
+near-future requirements” of a large installation and never once asks what such generality would cost
+to build. That is precisely where the project failed — development ran years late, Bell Labs withdrew
+in 1969, and UNIX was written shortly afterwards as a deliberate reaction against exactly this scale.
+The most accurate sentences in the paper are its own hedges. Elsewhere it argues rhetorically rather
+10

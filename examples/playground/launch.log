@@ -1,15 +1,45 @@
-[2026-09-07 21:12:13] job cse60745_20260907_d29ddd created
-[2026-09-07 21:12:13] ingesting input ...
-converting CSE 60745_Fall 2026_HW1.doc -> pdf
-  CSE 60745_Fall 2026_HW1.doc: 3 pages -> /home/xing/project/auto_hw_complete/playground/cse60745_20260907_d29ddd/ingest/pages/CSE 60745_Fall 2026_HW1
-[2026-09-07 21:12:14] ingest done: 1 document(s)
+[2026-09-09 21:06:41] job hw_20260909_1235d6 created
+[2026-09-09 21:06:41] ingesting input ...
+converting PaperList.xlsx -> pdf
+  PaperList.xlsx: also exported to PaperList.csv (rows intact -- prefer this over the PDF text)
+  PaperList.xlsx: 6 pages rendered -> /home/xing/project/auto_hw_complete/playground/hw_20260909_1235d6/ingest/pages/PaperList
+  hw_questions.md: text document, 2221 chars (no rendering needed)
+[2026-09-09 21:06:42] ingest done: 1 document(s)
 
-job dir: /home/xing/project/auto_hw_complete/playground/cse60745_20260907_d29ddd
-output dir: /home/xing/project/auto_hw_complete/output/cse60745_20260907_d29ddd
-[2026-09-07 21:12:14] spawning master agent
-[2026-09-07 22:18:28] master finished rc=-15
+job dir: /home/xing/project/auto_hw_complete/playground/hw_20260909_1235d6
+output dir: /home/xing/project/auto_hw_complete/output/hw_20260909_1235d6
+[2026-09-09 21:06:42] spawning master agent
+[2026-09-09 22:28:32] master: $7.81 (job total $51.44)
+[2026-09-09 22:28:32] master finished rc=0
 
 ======================================================================
 MASTER REPORT
 ======================================================================
+Job passed. `output/hw_20260909_1235d6/final/main.pdf` — 14 pages, all ten questions, 100 pts.
 
+## How I cut it
+
+Four workers, all passed (p4 needed two rounds):
+
+| | Questions | Worker rounds |
+|---|---|---|
+| p1 | Ex 1.1–1.4 | 1 |
+| p2 | Ex 1.5–1.8 | 1 |
+| p3 | Ex 1.9 — three papers **from** the list | 1 |
+| p4 | Ex 1.0 — three papers **found by search** | 2 |
+
+The one cut that mattered: **1.9 and 1.0 were sequenced, not parallelised.** p3 ran first and fixed its picks (1-10 THE, 1-2 UNIX, 1-3 Exokernel); I read those out of its fragment and wrote them into p4's brief as hard exclusions along with all eleven list papers. p4 came back with Multics/Mach/Multikernel — zero overlap. Briefed identically or run in parallel, those two 30-pt answers would very likely have collided.
+
+Two ingest traps worth flagging, both resolved by cross-checking channels: `PaperList.csv` has **merged cells**, so only row 1-1 carries the topic label and 1-2..1-11 look blank — grepping for the label finds one paper, not eleven. The colour banding in the page render and the topic order on page 5 independently confirm the group is 1-1..1-11. Separately, Ex 1.4's `\segmentation fault (core dumped)."` is mangled LaTeX quotes, not content; I told p1 so it wouldn't reproduce the backslashes.
+
+## Rounds 2 and 3
+
+Round 1 passed with six minor defects. I fixed five and left one. Round 2's fix **introduced** a new defect — my correction to the Mach page-size claim bought precision by adopting the paper's own 16-word phrasing, against the assignment's explicit "cannot just copy". I reimplemented the validator's overlap scan myself rather than trusting its list, which surfaced two more runs in p3 it had waved through; reworded all four. Every remaining overlap now traces to explicitly-quoted, attributed passages or citation strings.
+
+Worth knowing: the Mach and Multikernel numbers were wrong in round 1 and I verified the corrections against the source PDFs and figures directly (`power of two`, not `multiple`; broadcast ≈13.8k and unicast ≈12.7k, not a single averaged "13k") rather than accepting either the worker's or the validator's reading.
+
+## One defect I knowingly shipped
+
+**Ex 1.1–1.8 run 180–380 words each (~2,170 total, 4 pages), where `specs.md` says twice that "a few sentences" suffice.** I read both fragments in full and declined to trim: the prose has no filler, and cutting to the suggested 80–120 words would delete gradeable content — the three binding times in 1.5, the worked base+limit example in 1.7, several segfault causes in 1.4. Ex 1.2 ("list *all* segments and explain each") is a six-item list that can't be done in a few sentences. I read "sufficient" as permissive guidance about effort allocation, which I followed by pushing the work into 1.9/1.0.
+
+**If you meant that as a hard cap, say so and I'll trim** — it's the one change left, it's low-risk since the text is correct, and I have 2 submission rounds in hand.

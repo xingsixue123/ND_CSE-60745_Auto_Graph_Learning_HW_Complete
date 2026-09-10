@@ -1,0 +1,41 @@
+or finishes early simply gives the CPU up sooner. With n runnable processes, every one of them
+therefore receives roughly 1/n of the CPU in slices no longer than q and waits no more than about
+(n −1)q for its next turn.
+The choice of q is the whole design decision: too large and no process is ever actually preempted,
+so the algorithm degenerates into plain FCFS, while too small and the system spends a growing
+fraction of its time context-switching instead of doing work — q must stay large relative to the
+context-switch cost. Its virtues are fairness and a bounded, predictable response time with no
+possibility of starvation, which is why it suits interactive and time-sharing systems. Its vices are a
+comparatively poor average turnaround time (worse than SJF) and the fact that it is deliberately
+blind: it takes no account of priority, deadlines, or how much work a job actually has left.
+Ex. 1.9 — Three Papers from “OS History and Architecture”
+From the “OS History and Architecture” group of the paper list (papers 1-1 through 1-11) I read
+Paper 1-10 (Dijkstra, “THE”), Paper 1-2 (Ritchie and Thompson, UNIX) and Paper 1-3 (Engler,
+Kaashoek and O’Toole, Exokernel). I chose these three because they form a single argument carried
+across nearly thirty years: structure by layers, then structure by uniform abstraction, then the
+proposal to abolish the abstraction altogether.
+Paper 1-10 — Dijkstra, “The Structure of the “THE”-Multiprogramming System”
+Summary. Dijkstra reports on a multiprogramming system built at Eindhoven for the Electrologica
+EL X8 — a machine with a 2.5 µs core cycle, 27-bit words, 32K of core and a 512K-word drum
+— by six people of, on average, half-time availability. The goals are deliberately modest: shorter
+turnaround for short jobs, economical use of peripherals and automatic control of backing store.
+He is explicit that this is not a multi-access system; users share only the configuration and an
+ALGOL 60 procedure library.
+Two structural ideas carry the design. The first decouples information from storage. “Segments”
+(units of information) are named independently of “pages” (units of memory, whether core or drum),
+and a segment variable in core records where a segment currently lives. A segment evicted to the
+drum therefore need not return to the drum page it came from, so the system simply picks the free
+page with minimum rotational latency and the drum allocation problem disappears entirely.
+The second is the level hierarchy. The system is a society of sequential processes running at undefined
+speed ratios, coordinated only by explicit P and V operations on semaphores; the appendix defines
+these and separates semaphores used for mutual exclusion from private semaphores, on which only
+the owning process ever performs a P. The processes are stacked in a strict hierarchy: level 0
+allocates the processor and absorbs the real-time clock; level 1 is the segment controller and the
+drum bookkeeping; level 2 is the message interpreter owning the console keyboard; level 3 buffers
+the peripherals; level 4 holds user programs; level 5 is the operator, “not implemented by us”. Each
+level implements an abstraction that makes the level below invisible — above 0 the number of
+processors is irrelevant, above 1 pages have lost their identity, above 2 every process appears to own
+a private console.
+The claimed payoff is verification, not speed. Because a process can only generate tasks for processes
+at lower levels, circularity is excluded; harmonious cooperation is then proved in three stages, ending
+5

@@ -1,0 +1,173 @@
+# Master log — hw_20260909_1235d6
+
+## 2026-09-09 — Round 0: ingest & cut
+
+Assignment source: input/hw_questions.md (plain markdown, 41 lines, no figures).
+Supporting data: input/PaperList.xlsx -> ingest/csv/PaperList.csv + 6 rendered pages.
+
+Three-channel read (R7):
+  - hw_questions.md is a text_document; ingest produced no PNGs for it (kind=text_document,
+    n_chars=2221). Read directly from input/hw_questions.md. There are NO figures anywhere in
+    the assignment (manifest: every PaperList page has "figures": [], n_images: 0; the xlsx
+    pages are vector table rules only). So channel 3 is empty by construction, not by oversight.
+  - PaperList channel 1 (csv): topic label "OS History and Architecture" appears only on the
+    1-1 row; rows 1-2..1-11 have a BLANK topic cell. Per env.md this is the merged-cell
+    flattening trap.
+  - PaperList channel 2 (page_001.png): the Paper ID column is colour-banded. 1-1 through 1-11
+    are one contiguous green band; 2-1 starts a new blue band. This independently confirms the
+    merged cell spans exactly 1-1..1-11.
+  - PaperList page_005.txt lists the five topic labels in order: OS History and Architecture,
+    Scheduling, Memory Management, Storage and File Systems, Threads/Events/Concurrency/Sync.
+    Matches the ID-prefix grouping 1-,2-,3-,5-,4-.
+  CONCLUSION (cross-checked, 3 independent signals): the 'OS History and Architecture' group is
+  papers 1-1 .. 1-11, eleven papers. This is what Ex 1.9 must draw from.
+  Caveat recorded: the spreadsheet-to-PDF text extraction is column-major, so page_003.txt
+  gives titles in a different row order than the CSV (Machine-Independent VM lands last).
+  I trusted the CSV for the ID<->title mapping and the PNG for the grouping.
+
+Cut (on independence, not numbering):
+  p1 = Ex 1.1-1.4   plain short-answer, 20 pts
+  p2 = Ex 1.5-1.8   plain short-answer, 20 pts
+  p3 = Ex 1.9       30 pts, three papers FROM the list
+  p4 = Ex 1.0       30 pts, three papers found by SEARCH
+
+Rationale:
+  - 1.1-1.8 are eight mutually independent textbook questions; specs.md says "just a few
+    sentences sufficient". Eight in one worker dilutes attention; eight workers is wasteful
+    (each answer is ~4 sentences). Split 4+4. They share nothing, so any cut is safe.
+  - 1.9 and 1.0 are deliberately kept as two separate workers BUT sequenced: p3 runs first and
+    fixes its three papers, then p4's brief names those three explicitly as forbidden, plus the
+    whole 1-1..1-11 list. Running them in parallel or briefing them identically is the obvious
+    way this assignment produces two overlapping answers, which would lose marks on 1.0.
+  - Ex "1.0" is almost certainly a typo for Ex 1.10 (it is last, worth 30 pts). Transcribed
+    verbatim as "Ex. 1.0" and rendered that way; not silently renumbered.
+
+Transcription note for p1: Ex 1.4 in the source reads \segmentation fault (core dumped)."
+The stray backslashes are a LaTeX-ism (`` opening quotes) that survived into the markdown.
+The intended text is "segmentation fault (core dumped)". Told the worker this explicitly so it
+does not reproduce the corruption in the answer PDF.
+
+## p1 PASS round 1. p2 PASS round 1. Spawning p3 (Ex 1.9).
+
+## p3 PASS round 1. Picks read out of its fragment: 1-10 (THE), 1-2 (UNIX), 1-3 (Exokernel).
+   p4 brief written with those three + all of 1-1..1-11 as hard exclusions, and told to match
+   p3's section shape so the two 30-pt answers look like one document. Spawning p4.
+
+## Assembly (master round 1)
+p4 PASS after 2 rounds (validator failed r1, worker fixed, r2 PASS). Picks: Multics (1965),
+Mach (1986), Multikernel (2009) -- zero overlap with p3's THE/UNIX/Exokernel, and none of the
+three is on the supplied list. The sequencing + exclusion-list brief did its job.
+
+Checked before assembling: no label collides across the four fragments (all correctly prefixed
+p1:/p2:/p3:/p4:), no fragment contains \documentclass, \begin{document} or \usepackage, and all
+four are pure ASCII (so pdflatex is fine; no CJK anywhere, no xelatex needed).
+
+main.tex: article 11pt, 1in margins, \input of the four fragments in assignment order, plus the
+de-duplicated preamble.tex (amsmath, enumitem -- from p1 and p2).
+
+One structural fix at assembly: p1 wraps its four answers in \section*{Exercise 1.1 -- 1.4} but
+p2 starts straight at \subsection* with no section of its own, so Ex 1.5-1.8 would have been
+swallowed into p1's section in the ToC-less flow. Added a matching \section*{Exercise 1.5 -- 1.8}
+in main.tex rather than editing p2's fragment -- same rendered result, no worker content touched.
+
+One compile fix: microtype's font expansion aborted with "auto expansion is only possible with
+scalable fonts" against the default CM bitmap fonts. Added \usepackage{lmodern} (scalable Type1,
+present in TinyTeX). Compiles clean after that.
+
+Result: 14 pages, 0 overfull/underfull boxes, no LaTeX warnings beyond "No \author given"
+(deliberate -- the assignment specifies no cover page and I do not know the student's name).
+pdftotext confirms all ten questions present and in order: 1.1 1.2 1.3 1.4 | 1.5 1.6 1.7 1.8 |
+1.9 (three papers + comparison + refs) | 1.0 (three papers + comparison + refs).
+lint_output.py --final: OK. Submitting.
+
+## Master round 1 -> PASS, with six minor defects. Decision on each.
+
+The PASS applies to the document as submitted, so any edit forces a resubmit. Weighed each
+defect against the cost of a second round (4 remaining) and the risk of churn.
+
+FIXED (worth the round; D1.5 in particular contains two real factual errors, and a paper
+critique that misquotes its source is exactly the thing a grader punishes):
+
+ D1.5(b) p4 said Mach's machine-independent page size is "a boot-time multiple" of the
+         machine-dependent one. I did not take the validator's word for this -- pulled the
+         text out of problems/p4/papers/mach_usenix1986.pdf myself: the paper says "a boot
+         time variable that is a power of two of the machine dependent size". Corrected to
+         match the source. Genuine error, now gone.
+ D1.5(d) p4 said naive broadcast and unicast "climb to roughly 13k". Re-read fig6_zoom.png
+         myself: broadcast ends ~13.8k, unicast ~12.7k. A single averaged figure hid a real
+         gap between two curves. Now quoted separately.
+ D1.5(c) Barrelfish/Linux break-even. Read fig7_hi.png myself rather than accepting either
+         reading: the curves overlap from about 12 to 14 cores and Linux is clearly above
+         only from ~15. "twelve or thirteen" was the optimistic edge of that band; changed
+         to "somewhere around thirteen or fourteen", which is defensible from the figure.
+ D1.5(a) p3's "thirty years" for 1968->1995 is 27. Now "nearly thirty years".
+ D1.2    p2 had no \section* of its own, so I had hardcoded the group heading in main.tex --
+         which left output/p2/answer.tex not self-contained, contrary to R5. Fixed properly:
+         moved the \section* into p2's own fragment and removed it from main.tex. Also gave
+         p2's four subsections descriptive titles so they match p1's style on the page.
+ D1.3    Broke p4's two 432- and 593-word judgment paragraphs at their existing topic shifts
+         (evidence critique / what history vindicated / what expired). Text unchanged.
+ D1.4    p3 and p4 both closed with "The pattern in their evidence is (at least) just as
+         instructive" under an identically-titled "The Three Together". Reworded p4's
+         sentence and retitled its subsection "Comparing the Three".
+ D1.6    Wrote the run-level PLAYGROUND/downloads.md that R3 names, consolidating the six
+         paper PDFs from the p3/p4 per-problem records. (This is a PLAYGROUND file and does
+         not touch output/final/, so on its own it would not have required a resubmit.)
+
+NOT FIXED, deliberately:
+
+ D1.1    Length of Ex 1.1-1.8 (180-380 words each) against specs.md's "just few sentences
+         sufficient". I read both fragments in full before deciding. The prose is dense and
+         genuinely unpadded -- there is no filler sentence to cut. Getting to the validator's
+         suggested 80-120 words would mean deleting gradeable content: the three binding
+         times in 1.5, the worked base+limit example in 1.7, several of the segfault causes
+         in 1.4. Ex 1.2 alone ("list ALL segments and explain each") is a six-item list that
+         cannot be done in a few sentences. I read "sufficient" as permissive -- guidance to
+         not over-invest here relative to 1.9/1.0, which I followed -- rather than a hard cap,
+         and no grader deducts for a fuller correct answer. Flagged to the user in the final
+         report so they can send it back if they meant a cap; that is their call, not mine.
+
+Kept p<pid>/answer.tex and final/p<pid>.tex byte-identical by editing the worker deliverable
+and re-copying, preserving the property the validator checked in round 1.
+Recompiled: 14 pages, 0 overfull/underfull boxes, no warnings. lint --final OK. Resubmitting.
+
+## Master round 2 -> PASS, one new minor defect (D2.1), self-inflicted. Fixing and resubmitting.
+
+The validator ran a check it had skipped in round 1: a >=10-word verbatim-overlap scan of the
+paper fragments against the six source PDFs, against the assignment's explicit "you cannot
+just copy the answers, put the answers in your own way". It found two unquoted verbatim runs
+in p4's Mach summary -- and one of them, 16 words, was introduced BY my own D1.5(b) fix in
+round 2. I had bought factual precision by adopting the paper's phrasing. That is a real
+regression and it is against an explicit instruction in the assignment's front matter, so it
+is worth the round to fix even though the validator passed the document.
+
+Rather than trust the validator's list, I reimplemented the scan myself (normalise LaTeX away,
+lowercase, strip punctuation, sliding 10-grams against pdftotext of all six PDFs) and ran it
+over both fragments. It reproduced the two runs it named, and also surfaced two more in p3
+that its own summary had waved through as "unavoidable technical phrasing". I fixed all four:
+
+ p4 (i)   "independent page size is a boot time variable that is a power of two of the"
+          -> "is fixed at boot as a power-of-two multiple of the machine-dependent one".
+          Note this keeps the D1.5(b) correction intact: "power-of-two multiple" still says
+          exactly what the paper says, in different words. Precision was not traded back.
+ p4 (ii)  "address space and a set of port rights; a thread is the ..." -> reworded.
+ p3 (iii) "an unbounded number of tasks for the segment controller and the system" -> reworded.
+ p3 (iv)  "the processor is explicitly revoked at the end of a time slice" -> reworded.
+
+Re-ran the scan afterwards. Every remaining >=10-word window in both fragments now traces to
+either (a) a passage the answer explicitly puts inside quotation marks and attributes -- six
+of these, which is legitimate quotation and not what the instruction forbids -- or (b) a
+citation string in the reference list (venue names, author names, paper titles), which cannot
+be reworded without making the citation wrong. Checked each of the six by grep to confirm the
+quote marks are actually there rather than assuming it.
+
+D1.1 (length of Ex 1.1-1.8) still deliberately not fixed; reasoning unchanged from round 2,
+and the validator agrees it is a judgment call for the user rather than a defect.
+
+Verified before submitting: 14 pages, 0 overfull/underfull, no LaTeX warnings, lint clean on
+final AND on all four worker dirs, and cmp confirms the shipped final/main.pdf is byte-identical
+to the build output (so the clean compile log describes the artifact actually being submitted).
+
+## Master round 3 -> PASS, no outstanding defects except D1.1 (deliberate, documented).
+Stopping here. Nothing has been edited in output/final since this PASS, so the PASS describes
+the artifact on disk. 3 of 5 submission rounds used.

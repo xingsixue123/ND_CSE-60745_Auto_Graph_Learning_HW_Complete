@@ -1,0 +1,45 @@
+than running garbage.
+5. The child’s old address space is torn down and a fresh one constructed: text, initialised data,
+zero-filled BSS, heap and stack, with argv/envp copied onto the new stack.
+6. The segments are set up by memory-mapping the file rather than reading it in, so almost no
+I/O happens yet.
+7. If the binary is dynamically linked, the interpreter named in its header (ld.so) is mapped
+and runs first, mapping the required shared libraries and performing relocations and symbol
+resolution.
+8. The kernel updates the process control block — page tables, inherited file descriptors, reset
+signal handlers — and puts the process on the ready queue.
+9. The scheduler eventually dispatches it and execution starts at the entry point; pages are
+faulted in on demand as they are actually touched.
+10. Runtime startup code initialises the language runtime and then calls main().
+11. The program connects to the window system (or inherits the terminal), creates a window and
+draws into it; the compositor puts those pixels on the screen.
+The last difference is on the parent’s side: a shell normally wait()s for the child (unless it was
+backgrounded), whereas a GUI launcher usually does not and returns to its event loop immediately.
+Ex. 1.7 (5 pts)
+Under contiguous allocation each process occupies one unbroken block of physical memory, which
+makes translation extremely cheap: the entire mapping is described by two registers that the kernel
+loads on a context switch, the relocation (base) register holding the block’s starting physical
+address and the limit register holding its length. The MMU applies them in a fixed order — check
+first, then add:
+physical =
+⎧
+⎨
+⎩
+base + virtual,
+if virtual < limit,
+addressing trap to the OS,
+if virtual ≥limit.
+(1)
+For example, with base = 14000 and limit = 3000:
+virtual 346 : 346 < 3000 ⇒physical = 14000 + 346 = 14346,
+virtual 3200 : 3200 ≥3000 ⇒addressing trap (no access).
+The process only ever names logical addresses in [0, limit) and never sees a physical address, so it is
+structurally incapable of referring to memory outside its own block — that is where the protection
+comes from. Loading the base and limit registers is a privileged instruction available only to the
+kernel, which is what stops a process from simply widening its own bounds.
+Ex. 1.8 (5 pts)
+Round robin is first-come-first-served made preemptive by a clock. The ready queue is treated as a
+circular FIFO and each process, on reaching the front, is given the CPU for at most one fixed time
+quantum q (typically tens of milliseconds); if it is still running when the timer interrupt fires, the
+OS preempts it, saves its context and moves it to the tail of the queue, while a process that blocks
+4

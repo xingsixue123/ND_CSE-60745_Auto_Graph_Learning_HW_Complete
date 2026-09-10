@@ -1,0 +1,405 @@
+     The Structure of the "THE"-Multiprogramming System
+                                                                   Edsger W . Dijkstra
+                                                 Technological University, Eindhoven, The Netherlands
+
+ A multiprogramming system is described in which all ac-                             Accordingly, I shall try to go beyond just reporting
+tivities are divided over a number of sequential processes.                        what we have done and how, and I shall try to formulate
+ These sequential processes are placed at various hierarchical                     as well what we have learned.
+ levels, in each of which one or more independent abstractions                        I should like to end the introduction with two short
+ have been implemented. The hierarchical structure proved to                       remarks on working conditions, which I make for the sake
+ be vital for the verification of the logical soundness of the                     of completeness. I shall not stress these points any further.
+ design and the correctness of its implementation.                                    One remark is that production speed is severely slowed
+                                                                                   down if one works with half-time people who have other
+KEY WORDS AND PHRASES: operating system, multlprogrammlng system,
+  system hierarchy, system structure, real-tlme debugging, program verification,   obligations as well. This is at least a factor of four; prob-
+  synchronizing primitives, cooperating sequential processes, system levels,       ably it is worse. The people themselves lose time and
+  input-outputbufferingt mulfiprogramming, processor sharing, mulfiprocessing'     energy in switching over; the group as a whole loses de-
+CR CATEGORIES: 4.30, 4.32                                                          cision speed as discussions, when needed, have often to be
+                                                                                   postponed until all people concerned are available.
+                                                                                      The other remark is that the members of the group
+                                                                                    (mostly mathematicians) have previously enjoyed as good
+                                                                                   students a university training of five to eight years and
+Introduction                                                                       are of Master's or Ph.D. level. I mention this explicitly
+                                                                                   because at least it1 my country the intellectual level needed
+   In response to a call explicitly asldng for papers "on                          for system design is in general grossly underestimated. I
+ timely research and development efforts," I present a                             am convinced more than ever that this type of work is
+progress report on the multiprogramming effort at the                              very difficult, and that every effort to do it with other than
+Department of Mathematics at the Technological Uni-                                the best people is doomed to either failure or moderate
+versity in Eindhoven.                                                              success at enormous expense.
+   Having very limited resources (viz. a group of six peo-
+ple of, on the average, haif-time availability) and wishing                        The Tool a n d the Goal
+to contribute to the art of system design--including all
+                                                                                       The system has been designed for a Dutch machine, the
+the stages of conception, construction, and verification,
+                                                                                    EL X8 (N.V. Electrologica, Rijswijk (ZH)). Charac-
+we were faced with the problem of how to get the necessary
+                                                                                    teristics of our configuration are:
+experience. To solve this problem we adopted the follow-
+                                                                                       (1) core memory cycle time 2.5usec, 27 bits; at present
+ing three guiding principles:
+                                                                                            32K;
+   (1) Select a project as advanced as you can conceive,
+                                                                                       (2) drum of 512K words, 1024 words per track, rev.
+as ambitious as you can justify, in the hope that routine
+                                                                                            time 40msec;
+work earl be kept to a minimum; hold out against all pres-
+                                                                                       (3) an indirect addressing mechanism very well suited
+sure to incorporate such system expansions that would
+                                                                                            for stack implementation;
+only result into a purely quantitative increase of the total
+                                                                                       (4) a sound system for commanding peripherals and
+amount of work to be done.                                                                  controlling of interrupts;
+   (2) Select a machine with sound basic characteristics
+                                                                                       (5) a potentially great number of low capacity chan-
+(e.g. an interrupt system to fall in love with is certainly
+                                                                                           nels; ten of them are used (3 paper tape readers
+an inspiring feature); from then on try to keep the spe-                                    at 1000char/see; 3 paper tape punches at 150char/
+cific properties of the configuration for which you are pre-                                sec; 2 teleprinters; a plotter; a line printer);
+paring the system out of your considerations as long as                                (6) absence of a number of not unusual, awkward
+possible.
+                                                                                           features.
+   (3) Be aware of the fact that experience does by no                                The primary goal of the system is to process smoothly
+means automatically lead to wisdom and understanding;                              a continuous flow of user programs as a service to the Uni-
+in other words, make a conscious effort to learn as much as                        versity. A multiprograrmning system has been chosen
+possible fl'om your previous experiences.                                          with the following objectives in mind: (1) a reduction of
+Presented at an ACM Symposium on Operating System Principles,                      turn-around time for programs of short duration, (2)
+Gatlinburg, Tennessee, October 1-4, 1967.                                          economic use of peripheral devices, (3) automatic control
+
+Volume 11 / Number 5 / May, 1968                                                                        C o m m u n i c a t i o n s o f t h e ACM   341
+of backing store to be combined with economic use of the        showed up during testing were trivial coding errors
+central processor, and (4) the economic feasibility to use       (occurring with a density of one error per 500 instructions),
+the machine for those applications for which only the flexi-    each of them located within 10 minutes (classical) inspec-
+bility of a general purpose computer is needed, but (as a       tion by the machine and each of them correspondingly
+rule) not the capacity nor the processing power.                easy to remedy. At the time this was written the testing
+   The system is not intended as a multiaeeess system.          had not yet been completed, but the resulting system is
+There is no common data base via which independent              guaranteed to be flawless. When the system is delivered we
+users can communicate with each other: they only share          shall not live in the perpetual fear that a system derail-
+the configuration and a procedure library (that includes a      ment may still occur in an unlikely situation, such as
+translator for ALGOL60 extended with complex numbers).          might result from an unhappy "coincidence" of two or
+The system does not eater for user programs written in          more critical occurrences, for we shall have proved the
+machine language.                                               eon'eetness of the system with a rigor and explicitness
+   Compared with larger efforts one can state that quanti-      that is unusual for the great majority of mathematical
+tatively spealdng the goals have been set as modest as the      proofs.
+equipment and our other resources. Qualitatively speak-
+ing, I am afraid, we became more and more immodest as           A Survey of the System gtructure
+the work progressed.                                               Storage Allocation. In the classical yon Neumann
+                                                                machine, information is identified by the address of the
+A Progress Report
+                                                                memory location containing the information. When we
+    We have made some minor mistakes of the usual type          started to think about the automatic control of secondary
+  (such as paying too much attention to eliminating what        storage we were familiar with a system (viz. GmR ALGOL)
+ was not the real bottleneck) and two major ones.               in which all information was identified by its drum address
+    Our first major mistake was that for too long a time we      (as in the classical yon Neumann machine) and in which
+ confined our attention to % perfect installation"; by the      the function of the core memory was nothing more than
+ time we considered h o w t o make the best of it, one of the   to make the information "page-wise" accessible.
+ peripherals broke down, we were faced with nasty prob-            We have followed another approach and, as it turned
+ lems. Taking care of the "pathology" took more energy          out, to great advantage. In our terminology we made a
+ than we had expected, and some of our troubles were a          strict distinction between memory units (we called them
+ direct consequence of our earlier ingenuity, i.e. the com-     "pages" and had "core pages" and "drum pages") and
+ plexity of the situation into which the system could have      corresponding information units (for lack of a better word
+ maneuvered itself. Had we paid attention to the pathology      we called them "segments"), a segment just fitting in a
+ at an earlier stage of the design, our management rules        page. For segments we created a completely independent
+ would certainly have been less refined.                        identification mechanism in which the number of possible
+    The second major mistake has been that we conceived         segment identifiers is much larger than the total number of
+ and programmed the major part of the system without            pages in primary and secondary store. The segment iden-
+ giving more than scanty thought to the problem of de-          tifier gives fast access to a so-called "segment variable"
+ bugging it. I must decline all credit for the fact that this   in core whose value denotes whether the segment is still
+ mistake had no serious consequences--on the contrary!          empty or not, and if not empty, in which page (or pages)
+ one might argue as an afterthought.                            it can be found.
+    As captain of the crew I had had extensive experience          As a consequence of this approach, if a segment of in-
+ (dating back to 1958) in making basic software dealing         formation, residing in a core page, has to be dumped onto
+ with real-time interrupts, and I knew by bitter experience     the drum in order to make the core page available for other
+ that as a result of the irreproducibility of the interrupt     use, there is no need to return the segment to the same
+ moments a program error could present itself misleadingly      drum page from which it originally came. I n fact, this
+like an occasional machine malfunctioning. As a result I        freedom is exploited: among the free drum pages the one
+ was terribly afraid. Having fears regarding the possibility    with minimum latency time is selected.
+ of debugging, we decided to be as careful as possible and,        A next consequence is the total absence of a drum allo-
+ prevention being better than cure, to try to prevent nasty     cation problem: there is not the slightest reason why, say,
+ bugs from entering the construction.                           a program should occupy consecutive drum pages. In a
+    This decision, inspired by fear, is at the bottom of what   multiprogramming environment this is very convenient.
+ I regard as the group's main contribution to the art of           Processor Allocation. We have given full recognition
+ system design. We have found that it is possible to design a   to the fact that in a single sequential process (such as ca~
+ refined multiprogramming system in such a way that its         be performed by a sequential automaton) only the time
+ logical soundness can be proved a priori and its implemen-     succession of the various states has a logical meaning, but
+ tation can admit exhaustive testing. The only errors that      not the actual speed with which the sequential process is
+
+342       C o m m u n i c a t i o n s of t h e ACM                                       V o l u m e 11 / N u m b e r 5 / May, 1968
+ performed. Therefore we have arranged the whole system          versations between the operator and any of the higher
+ as a society of sequential processes, progressing with un-      level processes can be carried out. The message interpreter
+ defined speed ratios. To each user program accepted by the      works in close synchronism with the operator. When the
+ system corresponds a sequential process, to each input          operator presses a key, a character is sent to the machine
+ peripheral corresponds a sequential process (buffering          together with an interrupt signal to announce the next
+ input streams in synchronism with the execution of the          keyboard character, whereas the actual printing is done
+ input commands), to each output peripheral corresponds a        through an output command generated by the machine
+ sequential process (unbuffering output streams in syn-          under control of the message interpreter. (As far as the
+ chronism with the execution of the output commands);            hardware is concerned the console teleprinter is regarded
+ furthermore, we have the "segment controller" associated        as two independent peripherals: an input keyboard and an
+ with the drum and the "message interpreter" associated          output printer.) If one of the processes opens a conversa-
+ with the console keyboard.                                      tion, it identifies itself in the opening sentence of the con-
+   This enabled us to design the whole system in terms of        versation for the benefit of the operator. If, however, the
+these abstract "sequential processes." Their harmonious          operator opens a conversation, he must identify the
+cooperation is regulated by means of explicit mutuM              process he is addressing, in the opening sentence of the
+synchronization statements. On the one hand, this ex-            conversation, i.e. this opening sentence must be inter-
+plicit mutual synchronization is necessary, as we do not         preted before it is known to which of the processes the
+make any assumption about speed ratios; on the other             conversation is addressed! Here lies the logical reason for
+hand, this mutual synchronization is possible because           the introduction of a separate sequential process for the
+ "delaying the progress of a process temporarily" can never     console teleprinter, a reason that is reflected in its name,
+be harmful to the interior logic of the process delayed. The     "message interpreter."
+fundamental consequence of this approaeh--viz, the ex-             Above level 2 it is as if each process had its private con-
+plicit mutual synchronization--is that the harmonious           versational console. The fact that they share the same
+cooperation of a set of such sequential processes can be        physical console is translated into a resource restriction of
+established by discrete reasoning; as a further consequence     the form "only one conversation at a time," a restriction
+the whole harmonious society of cooperating sequential          that is satisfied via mutual synchronization. At this
+processes is independent of the actual number of processors     level the next abstraction has been implemented; at higher
+available to carry out these processes, provided the proces-    levels the actual console teleprinter loses its identity.
+sors available can switch from process to process.              (If the message interpreter had not been on a higher level
+                                                               than the segment controller, then the only way to imple-
+   System Hierarchy. The total system admits a strict
+                                                               ment it would have been to make a permanent reservation
+ hierarchical structure.
+                                                               in core for it; as the conversational vocabulary might be-
+   At level 0 we find the responsibility for processor allo-
+                                                               come large (as soon as our operators wish to be addressed
+ cation to one of the processes whose dynamic progress is
+                                                               in fancy messages), this would result in too heavy a per-
+ logically permissible (i.e. in view of the explicit mutual
+                                                               manent demand upon core storage. Therefore, the vo-
+ synchronization). At this level the interrupt of the real-
+                                                               cabulary in which the messages are expressed is stored
+ time clock is processed and introduced to prevent any
+                                                               on segments, i.e. as information units that can reside on
+ process to monopolize processing power. At this level a
+                                                               the drum as well. For this reason the message interpreter
+ priority rule is incorporated to achieve quick response of
+                                                               is one level higher than the segment controller.)
+the system where this is needed. Our first abstraction has         At level 3 we find the sequential processes associated
+ been achieved; above level 0 the number of processors         with buffering of input streams and unbuffering of out-
+actually shared is no longer relevant. At higher levels we     put streams. At this level the next abstraction is effeeted,
+find the activity of the different sequential processes, the   viz. the abstraction of the actual peripherals used that are
+actual processor that had lost its identity having disap-      allocated at this level to the "logical communication units"
+peared from the picture.                                       in terms of which are worked in the still higher levels. The
+   At level 1 we have the so-called "segment controller,"      sequential processes associated with the peripherals are of
+a sequential process synchronized with respect to the drum     a level above the message interpreter, because they must
+interrupt and the sequential processes on higher levels.       be able to converse with the operator (e.g. in the case of
+At level 1 we find the responsibility to cater to the book-    detected malfunctioning). The limited number of periph-
+keeping resulting from the automatic backing store. At         erals again acts as a resource restriction for the processes
+this level our next abstraction has been achieved; at all      at higher levels to be satisfied b y mutual synchronizatioI~
+higher levels identification of information takes place in     between them.
+terms of segments, the actual storage pages that had lost          At level 4 we find the independent:user programs and
+their identity having disappeared from the picture.            at level 5 the operator (not implemented by us).
+   At level 2 we find the "message interpreter" taking care       The system structure has been described at length in
+of the allocation of the console keyboard via which con-       order to make the next section intelligible.
+
+V o l u m e 11 / N u m b e r 5 / May, 1968                                          C o m m u n i c a t i o n s o f t h e ACM   343
+Design Experience                                                   By that time we had implemented the correct reaction
+                                                                  upon the (mutually unsynchronized) interrupts from the
+ • The conception stage took a long time. During that
+period of time the concepts have been born in terms of           reaI-time clock and the drum. If we ihad not introduced
+which we sketched the system in the previous section.            the separate levels 0 and 1, and if we had not created a
+Furthermore, we learned the art of reasoning by which we         ternfinology (viz. that of the rather abstract sequential
+could deduce from our requirements the way in which the          processes) in which the existence of the clock interrupt
+processes should influence each other by their inutual           could be discarded, but had instead tried in a nonhierar-
+synchronization so that these requirements would be met.          ehieal construction, to make the central processor react
+ (The requirements being that no information can be used         directly upon any weird time succession of these two
+before it has been produced, that no peripheral can be set       interrupts, the number of "relevant states" would have
+to two tasks simultaneously, etc.). Finally we learned the       exploded to sueh a height that exhaustive testing would
+art of reasoning by which we could prove that the society        have been an illusion. (Apart from that it is doubtful
+composed of processes thus mutually synchronized by              whether we would have had the means to generate them
+each other would indeed in its time behavior satisfy all         all, drum and clock speed being outside our control.)
+requirements.                                                       For the sake of completeness I must mention a further
+   The construction stage has been rather traditional,           happy consequence. As Stated before, above level 1, core
+perhaps even old-fashioned, that is, plain machine code.         and drum pages have lost their identity, and buffering of
+Reprogramming on account of a change of specifications           input and output streams (at level 3) therefore occurs in
+has been rare, a circumstance that must have contributed         terms of segments. While testing at level 2 or 3 the drum
+greatly to the feasibility of the "steam method." That the       channel hardware broke down for some time, but t~sting
+first two stages took more time than planned was some-           proceeded by restricting the number of segments to the
+what compensated by a delay in the delivery of the               number that could be held in core. If building up the line
+machine.                                                         printer output streams had been implemented as "dump-
+   In the verification stage we had the machine, during          ing onto the drum" and the actual printing as "printing
+short shots, completely at our disposal; these were shots        from the drum," this advantage would have been denied
+during which we worked with a virgin machine without             to us.
+any software aids for debugging. Starting at level 0 the
+system was tested, each time adding (a portion of) the           Conclusion
+next level only after the previous level had been thoroughly        As far as program verification is concerned I present
+tested. Each test shot itself contained, on top of the (par-     nothing essentially new. In testing a general purpose object
+tial) system to be tested, a number of testing processes          (be it a piece of hardware, a program, a machine, or a
+with a double function. First, they had to force the system      system), one cannot subject it to all possible cases: for a
+into all different relevant states; second, they had to verify   computer this would imply that one feeds it with all
+that the system continued to react according to specifica-       possible programs! Therefore one must test it with a set
+tion.                                                            of relevant test cases. What is, or is not, relevant cannot be
+   I shall not deny that the construction of these testing       decided as long as one regards the mechanism as a black
+programs has been a major intellectual effort: to convince       box; in other words, the decision has to be based upon the
+oneself that one has not overlooked "a relevant state"           internal structure of the mechanism to be tested. It seems
+and to convince oneself that the testing programs generate       to be the designer's responsibility to construct his mecha-
+them all is no simple matter. The encouraging thing is           nism in such a way--i.e, so effectively structured--that
+that (as far as we know!) it could be done.                      at each stage of the testing procedure the number of rele-
+   This fact was one of the happy consequences of the            vant test cases will be so small that he can try them all and
+hierarchical structure.                                          that what is being tested will be so perspicuous that he
+   Testing level 0 (the real-time clock and processor allo-      will not have overlooked any situation. I have presented a
+cation) implied a number of testing sequential processes         survey of our system because I think it a nice example of
+on top of it, inspecting together that under all circum-         the form that such a structure might take.
+stances processor time was divided among them accord-               In my experience, I am sorry to say, industrial software
+ing to the rules. This being established, sequential processes   makers tend to react to the system with mixed feelings.
+as such were implemented.
+                                                                 On the one hand, they are inclined to think that we have
+   Testing the segment controller at level 1 meant that all
+                                                                 done a kind of model job; on the other hand, they express
+"relevant states" could be formulated in terms of se-
+quential processes making (in various combinations)              doubts whether the techniques used are applicable outside
+demands on core pages, situations that could be provoked         the sheltered atmosphere of a University and express the
+by explicit synchronization among the testing programs.          opinion that we were successful only because of the modest
+At this stage the existence of the real-time clock--al-          scope of the whole project. It is not my intention to under-
+though interrupting all the time--was so immaterial that         estimate the organizing ability needed to handle a much
+one of the testers indeed forgot its existence!                  bigger job, with a lot more people, but I should like to ven-
+
+344      Communications of the ACM                                                        Volume 11 / Number 5 / May, 1968
+ture the opinion that the larger the project, the more essen-   contributed to all stages of the design, and together we
+tial the structuring! A hierarchy of five logical levels        learned the art of reasoning needed. The construction and
+might then very well turn out to be of modest depth,            verification was entirely their effort; if my dreams have
+especially when one designs the system more consciously         come true, it is due to their faith, their talents, and their
+than we have done, with the aim that the software can be        persistent loyalty to the whole project.
+smoothly adapted to (perhaps drastic) configuration ex-            Finally I should like to thank the members of the pro-
+pansions.                                                       gram committee, who asked for more information on the
+                                                                synchronizing primitives and some justification of my
+   Acknowle@ments. I express my indebtedness to my              claim to be able to prove logical soundness a priori. In
+five collaborators, C. Bron, A. N. Habermann, F. J. A.          answer to this request an appendix has been added, which
+Hendriks, C. Ligtmans, and P. A. Voorhoeve. They have           I hope will give the desired information and justification.
+
+
+
+                                                        APPENDIX
+
+
+
+Synchronizing     Primitives                                    i.e. if they occur "simultaneously" in parallel processes
+   Explicit mutual synchronization of parallel sequential       they are noninterfcring in the sense that they can be re-
+processes is implemented via so-called "semaphores."            garded as being performed one after the other.
+They are special purpose integer variables allocated in the        Note 2. If the semaphore value resulting from a V-
+universe in which the processes are embedded; they are          operation is negative, its waiting list originally contained
+initialized (with the value 0 or 1) before the parallel proc-   more than one process. It is undefined--i.e, logically im-
+                                                                material-which of the waiting processes is then removed
+esses themselves are started. After this initialization the
+parallel processes will access the semaphores only via two      from the waiting list.
+                                                                   Note 3. A consequence of the mechanisms described
+very specific operations, the so-called synchronizing primi-
+                                                                above is that a process whose dynamic progress is permis-
+tives. For historical reasons they are called the P-opera-
+                                                                sible can only loose this status by actually progressing,
+tion and the V-operation.
+                                                                i.e. by performance of a P-operation on a semaphore with a
+   A process, "Q" say, that performs the operation " P
+ (sem)" decreases the value of the semaphore called "sem"       value that is initially nonpositive.
+                                                                   During system conception it transpired that we used
+by 1. If the resulting value of the semaphore concerned
+                                                                the semaphores in two completely different ways. The
+is nonnegative, process Q can continue with the execution
+                                                                difference is so marked that, looking back, one wonders
+of its next statement; if, however, the resulting value is
+                                                                whether it was really fair to present the two ways as
+negative, process Q is stopped and booked on a waiting
+                                                                uses of the very same primitives. On the one hand, we
+list associated with the semaphore concerned. Until fur-
+                                                                have the semaphores used for mutual exclusion, on the
+ther notice (i.e. a V-operation on this very same sema-
+phore), dynamic progress of process Q is not logically          other hand, the private semaphores.
+permissible and no processor will be allocated to it (see
+                                                                Mutual Exclusion
+above "System Hierarchy," at level 0).
+   A process, "R" say, that performs the operation " V             In the following program we indicate two parallel, cyclic
+ (sem)" increases the value of the semaphore called "sem"       processes (between the brackets " p a r b e g i n " and "par-
+by 1. If the resulting value of the semaphore concerned         e n d " ) that come into action after the surrounding uni-
+is positive, the V-operation in question has no further         verse has been introduced and inigiahzed.
+effect; if, however, the resulting value of the semaphore
+                                                                begin semaphore mutex; mutex := 1;
+concerned is nonpositive, one of the processes booked            parbegin
+on its waiting list is removed from this waiting list, i.e.          begin L1 : P (mutex) ; critical section 1; V (mutex) ;
+its dynamic progress is again logically permissible and in             remainder of cycle 1; go to L1
+                                                                     end;
+due time a processor will be allocated to it (again, see              begin L2: P mutex); critical section 2; V (mutex);
+above "System Hierarchy," at level 0).                                  remainder of cycle 2; go to L2
+   COROLLARY 1. I f a semaphore value is nonpositive its              end
+                                                                  pareud
+absolute value equals the number of processes booked on its
+                                                                end
+waiting list.
+   COROLLARY 2. The P-operation represents the potential          As a result of the P- and V-operations on "mutex"
+delay, the complementary V-operation represents the re-         the actions, marked as "critical sections" exclude e~ch
+moval of a barrier.                                             other mutually in time; the scheme given allows straight-
+   Note 1. P- and V-operations are "indivisible actions";       forward extension to more than two parallel processes,
+
+                                                                                     C o m m u n i c a t i o n s of t h e ACM   345
+Volume 11 / N u m b e r 5 / May, 1968
+the maxinnun value of mutex equals l, the minimum value           tlnstabIe si/;uation," such as a free resider and a process
+equals - ( n - 1) if we have n parallel processes.                needing a. reader. Whenever ~m unstable situation emerges
+   Critical sections are used always, ~md only for the pur-       it is removed (including one or more g-operations on
+pose of unambiguous inspection and modification of the            private semaphores) in the very same critical section in
+state variables (allocated in the surrounding universe)           which i{; has been created.
+that describe the current state of the system (as far as
+needed for the regulation of the ham~onious cooperation           Proving the t t a r m o n i o u s C o o p e r a t i o n
+between the various processes).                                       The sequential processes in the system east all be re~
+                                                                  garded as cyclic processes in which a certain neutral point
+Private Semaphores                                                 can be marked, the so-called "homing position," in which
+   Each sequential process has associated with it a num-          all processes are when the system is at rest,.
+ber of private semaphores and no other process will ever              When a cyclic process leaves its homing position "it
+perform a P-operation on them. The universe initializes           accepts a task"; when the task has been performed and
+them with the value equal to 0, their maximum value
+equals 1, and their minhnum value equals - 1 .
+   Whenever a process reaches a stage where the pemfis-
+sion for dynamic progress depends on current values of
+                                                                  not earlier, the process returns to its homing position.
+                                                                  Each eyelie process has a specific task processing power
+                                                                   (e.g. the execution of a user program or unbuffering a
+                                                                  portion of printer output, etc.).
+                                                                                                                                    i
+state variables, it follows the pattern:                              The harmonious cooperation is mainly proved in roughly
+                                                                  three stages.
+  P(mutex) ;                                                          (1) It is proved that although a process performing a
+  "inspection and modification of state variables including       task may in so doing generate a finite number of tasks for
+    a conditional V(private semaphore)";                          other processes, a single initial task cannot give rise to an
+  V (mutex) ;                                                     infinite number of task generations. The proof is simple as
+  P(private semaphore).                                           processes can only generate tasks for processes at lower
+   If the inspection learns that the process in question          levels of the hierarchy so that circularity is excluded.
+should eontinne, it performs the operation " V (private            (If a process needing a segment from the drum has gener-
+semaphore) " - - t h e semaphore value then changes from 0        ated a task for the segment controller, special precautions
+to 1--other~4se, this V-operation is skipped, leaving to          have been taken to ensure that the segment asked for
+the other processes the obligation to perform this V-             remains in core at least until the requesting process has
+operation at a suitable moment. The absence or presence
+of this obligation is reflected in the finM values of the
+state variables upon leaving the critical section.
+   Whenever a process reaches a stage where as a result
+                                                                  effectively accessed the segment concerned. Without this
+                                                                  precaution finite tasks could be forced ~o generate an
+                                                                  infinite number of tasks for the segment controller, and the
+                                                                  system could get stuck in an unproductive page flutter.)
+                                                                                                                                    l,i
+of its progress possibly one (or more) blocked processes              (2) It is proved that it is impossible that all processes
+should now get permission to continue, it follows the pat-        have returned to their honfing position while somewhere
+tern:                                                             in the system there is still pending a generated but unae-
+                                                                  eepted task. (This is proved via instability of the situation
+  P (mutex) ;
+                                                                  just described.)
+  "modification and inspection of state variables includ-
+                                                                      (3) It is proved that after the acceptance of an initial
+     ing zero or more V-operations on private semaphores
+                                                                  task all processes eventually will be (again) in their hom-
+     of other processes";
+                                                                  ing position. Each process blocked in the course of task
+  V(mutex).
+                                                                  execution relies on the other processes for removal of the
+   By the introduction of suitable state variables and            barrier. Essentially, the proof in question is a demon-
+appropriate programming of the critical sections any              stration of the absence of "circular waits": process P
+strategy assigning peripherals, buffer areas, etc. can be         waiting for process Q waiting for process R waiting for
+implemented.                                                      process P. (Our usual term for the circular wait is "the
+   The amount of coding and reasoning can be greatly              Deadly Embrace.") In a more general society than our
+reduced by the observation that in the two complemen-             system this proof turned out to be a proof by induction
+tary critical sections sketched above the same inspection         (on the level of hierarchy, starting at the lowest level), as
+can be performed by the introduction of the notion of "an         A. N. Habermann has shown in his doctoral thesis.
+
+
+
+
+                                                              N
+
+
+346     Communications of the ACM                                                               Volume 11 / Nu~tber 5 / May, 1968
+

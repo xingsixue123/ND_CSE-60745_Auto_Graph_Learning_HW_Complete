@@ -1,0 +1,45 @@
+in the absence of circular waits — what Dijkstra calls “the Deadly Embrace”. Testing followed the
+same order, level 0 first and a new level added only once the one beneath it was exhausted. The
+reported outcome is that only trivial coding errors appeared, at a density of one per 500 instructions,
+each located within ten minutes.
+Critical judgment. The case for layering here is purely structural, and the paper contains
+essentially no performance data — we are never told what the hierarchy cost, in memory, in context
+switches, or in the latency added by pushing every I/O request down through three levels. The
+most revealing sentence in the paper is the concession that at the time of writing testing was not
+yet complete, “but the resulting system is guaranteed to be flawless”. That is a claim about the
+rigour of a design being offered in place of evidence about an artifact, and the two are not the same
+thing. Worse, it is in tension with Dijkstra’s own report a paragraph earlier: what the proof covers
+is the synchronisation skeleton, whereas the errors he actually found were coding errors — exactly
+the class the proof cannot reach. He is transparent about both facts without ever conceding that
+the second undermines the first.
+The strict ordering of levels also shows a stress crack that the paper itself records. Keeping the
+hierarchy acyclic required a special precaution: a segment requested from the drum must be pinned
+in core until the requesting process has actually touched it, since otherwise one finite task could
+spawn unboundedly many requests on the segment controller, and the system would thrash. This is
+the level discipline failing, by itself, to deliver the property it was introduced to guarantee: acyclicity
+bounds which processes may be asked to do work, but not how often, so termination had to be
+rescued by a pinning rule that lives outside the hierarchy and is justified nowhere in it. It also hints
+at why strict total ordering did not survive — in later systems the pager needs the disk driver,
+which needs memory, which needs the pager. Layering endured as a discipline; the total order did
+not.
+Finally, the scope does a great deal of quiet work in the argument.
+Six people, one known
+configuration, no multi-access, no user-written machine code, and no security model at all is a
+setting in which exhaustive testing is plausible in a way it is not elsewhere. Dijkstra anticipates
+precisely this objection — industry doubts the technique scales — and answers that “the larger
+the project, the more essential the structuring”. This may well be true, but as stated it is rhetoric
+rather than evidence, and it is the one claim in the paper with no support behind it. What did
+survive, and survived enormously, is the deeper thesis: that one should choose a structure because it
+makes correctness provable. That line runs directly from here to seL4.
+Paper 1-2 — Ritchie and Thompson, “The UNIX Time-Sharing System”
+Summary. This describes the third version of UNIX, on the PDP-11/40 and /45. The scale is part
+of the argument: a 16-bit machine with 144K bytes of core of which UNIX occupies 42K, hardware
+costing as little as 40,000 dollars, and less than two man-years spent on the main system software,
+with about 40 installations running since February 1971. The system had been rewritten in C
+during the summer of 1973; the C version is about a third larger than the assembler one, which the
+authors accept because it is far easier to understand and modify and brought multiprogramming
+and shared reentrant code with it.
+The technical content is a small set of uniform abstractions. There are three kinds of file — ordinary,
+directory, and special. Ordinary files are unstructured strings of bytes: structure is the business of
+the programs that use a file, not of the system. Every device appears as a special file in /dev, which
+6

@@ -1,0 +1,41 @@
+What “core” means here. “Core” is magnetic-core memory, the ferrite-ring main memory
+of machines of the 1950s and 60s; “core” became a synonym for main memory and outlived the
+technology. A core dump is therefore an image of the process’s memory — its segments as listed in
+Ex. 1.2 — together with its register state, captured at the instant it faulted and written to a file so
+that a debugger can be pointed at it afterwards and reconstruct where and why the program died.
+Exercise 1.5 – 1.8
+Ex. 1.5 (5 pts)
+Why the compiler cannot know. A program is compiled once but run many times, on machines
+the compiler will never see. Where the binary ends up depends entirely on conditions that exist
+only at the moment of launch: how much physical memory the machine has, which other processes
+are already resident, and therefore which free hole the loader happens to pick. Nothing about that
+is available while the source is being translated. Modern systems push the answer even further away
+from compile time — address-space layout randomisation deliberately relocates the image on every
+run, shared libraries are mapped wherever there is room, and demand paging means a page is not
+given a physical frame until it is first touched. Two runs of the same binary on the same machine
+can therefore sit at different addresses, so no fixed address could have been correct anyway.
+What it assumes instead.
+The compiler sidesteps the problem by generating code into a
+logical (virtual) address space that it assumes begins at address 0 and is contiguous. Every
+internal reference — branch targets, function entry points, addresses of globals — is expressed
+as an offset from that assumed origin, so the whole image can later be shifted anywhere as a
+unit. The actual binding of logical to physical addresses is deferred to somebody better informed:
+either a relocating loader that patches the addresses when it places the image, or hardware (a
+relocation/base register and the MMU) that adds the offset on every reference at run time. This is
+exactly what makes relocatable and position-independent code possible. The three binding times are
+worth naming: compile time (absolute code, only usable if the load address is known in advance),
+load time (relocatable code, fixed up once when loaded), and execution time (bindings resolved on
+each reference, which is what lets a process be moved while running — and what essentially all
+general-purpose operating systems use today).
+Ex. 1.6 (5 pts)
+The two cases differ only in how the command line is assembled; once a path and an argument
+vector exist, the remaining path through the OS is identical. A double-click makes the desktop
+environment look up the icon’s file association or desktop entry to recover an executable path plus
+arguments; a typed command makes the shell tokenise the line, expand variables and globs, and
+resolve the command name against the directories listed in PATH. From there:
+1. fork() (or an equivalent spawn) creates a child process, copy-on-write.
+2. The child calls exec() on the resolved executable path.
+3. The kernel checks permissions (execute bit, ownership) and opens the file.
+4. It reads the header and validates the magic number, which identifies the binary format
+(ELF, PE, Mach-O) and selects the right loader; a bad magic number fails the exec rather
+3

@@ -1,0 +1,38 @@
+sharing disciplines rather than at the shared-nothing extreme it advocates. Barrelfish remained
+a research vehicle. What survived is the diagnosis and the method: treating the machine as a
+network, which resurfaced in kernel-bypass and dataplane systems such as Arrakis and IX, and in
+the now-routine practice of designing OS state per-core first. One irony deserves noting — having
+adopted the distributed systems analogy, the paper declines its principal prize, stating that “the
+complete system is a failure unit,” so it pays the full price of messaging and replication without
+buying any tolerance of partial failure.
+Comparing the Three
+Placed side by side, the three papers are three attempts to answer the same question — what may
+the operating system take for granted about the machine? — and each is undone at a different
+layer. Multics assumed that generality could be centralised in one comprehensive system, and was
+defeated by the complexity budget it never wrote down. Mach assumed the boundary could be
+pushed outward so that services became user-level servers, and was defeated by the cost of crossing
+that boundary. The Multikernel assumed shared memory was itself the wrong primitive, and was
+overtaken by shared-memory hardware that went on scaling for another decade. Their standards of
+proof move in the opposite direction to their confidence: 1965 offers a design prospectus with no
+measurements, 1986 a status report resting on one microbenchmark of the subsystem its authors
+had just optimised, and 2009 a broad evaluation that explicitly marks its own limits — yet the
+boldness of the architectural claim does not diminish as the evidence improves, which is a useful
+caution when reading any systems paper. Most striking is that all three have been vindicated in
+mechanism while being refuted in scope. Multics’ paging, protection rings and device independence
+are everywhere, but its segmented address space is gone. Mach’s tasks, threads, ports and memory
+objects are everywhere, but its argument that services could be evicted from the kernel for free is
+not. The multikernel’s per-core replication now sits inside Linux, but as an optimisation within
+a shared-memory kernel rather than as a replacement for one. The durable contribution of an
+architecture paper, on this evidence, is rarely the architecture.
+References
+[1] F. J. Corbató and V. A. Vyssotsky. “Introduction and Overview of the Multics System.” In
+Proceedings of the AFIPS Fall Joint Computer Conference (FJCC), vol. 27, part 1, pp. 185–196,
+1965.
+[2] M. Accetta, R. Baron, W. Bolosky, D. Golub, R. Rashid, A. Tevanian and M. Young. “Mach:
+A New Kernel Foundation for UNIX Development.” In Proceedings of the USENIX Summer
+Conference, pp. 93–112, 1986.
+[3] A. Baumann, P. Barham, P.-E. Dagand, T. Harris, R. Isaacs, S. Peter, T. Roscoe, A. Schüpbach
+and A. Singhania. “The Multikernel: A New OS Architecture for Scalable Multicore Systems.”
+In Proceedings of the 22nd ACM Symposium on Operating Systems Principles (SOSP), pp. 29–
+44, 2009.
+14

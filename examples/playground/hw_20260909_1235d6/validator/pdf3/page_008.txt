@@ -1,0 +1,46 @@
+Paper 1-3 — Engler, Kaashoek and O’Toole, “Exokernel”
+Summary. The target is the fixed abstraction itself. Any abstraction the kernel imposes — virtual
+memory, IPC — embodies a trade-off, between sparse and dense address spaces, or read-intensive
+and write-intensive access, and whichever way it is resolved some class of application pays. The
+authors cite measurements by Cao et al. showing that application-controlled file caching alone can
+cut running time by 45%. Their response is to separate protection from management: the kernel
+should securely multiplex the raw hardware and nothing more, while library operating systems,
+linked into the application’s own address space and untrusted, implement processes, virtual memory
+and IPC. Changing the operating system becomes relinking.
+Three mechanisms make this safe. Secure bindings decouple authorisation from use: the kernel
+performs the expensive check once, when a binding is established, and afterwards enforces it cheaply.
+They are implemented by hardware support, by software caching — a large software TLB acting as
+a cache of frequently used bindings — or by downloading code into the kernel, of which packet filters
+are the paradigm case, application-supplied predicates that demultiplex packets without the owning
+application being scheduled. Visible revocation makes the library a participant rather than a victim:
+even the CPU is taken back by an explicit revocation when a time slice ends, so a library that
+knows its floating-point state is dead can decline to save it. When a library will not cooperate, the
+abort protocol breaks the bindings by force, records the seizure in a repossession vector and raises
+an exception, with a small guaranteed reserve of pages so the library can survive being repossessed.
+The prototype is Aegis, which exports the processor, physical memory, TLB, exceptions, interrupts
+and — via a packet filter built with dynamic code generation — the network; and ExOS, which
+implements processes, virtual memory, user-level exceptions, IPC and ARP/RARP, IP, UDP and
+NFS. Both run on MIPS DECstations and are compared against Ultrix 4.2. The headline numbers:
+exception dispatch in 1.5 µs on a DECstation5000/125, roughly five times the best published figure
+and about two orders of magnitude faster than Ultrix; protected control transfer nearly seven times
+the best reported implementation; the dynamic packet filter classifying TCP/IP headers in 1.5µs
+against 35 µs for MPF; and an application-level stride scheduler in under 100 lines of code. The
+authors conclude that the architecture is viable for high-performance extensible systems.
+Critical judgment. The diagnosis is excellent and the evaluation cannot carry it. Nearly every
+number is a microbenchmark of a single primitive, obtained by repeating the operation many times
+and averaging, which — as the authors state themselves — means the measurements “do not
+consider cold start misses in the cache or TLB, and therefore represent a best case”. A system whose
+entire premise is that real applications are being held back by the kernel is evaluated without a real
+application. The one whole-program measurement, a 150 × 150 matrix multiplication, is dominated
+by the compiler and says almost nothing about the operating system underneath it.
+The comparison is also structurally unfair in a way the paper concedes in a single sentence and
+then walks past: ExOS does “not offer the same level of functionality as Ultrix”, and “we do not
+expect these additions to cause large increases in our timing measurements”. That expectation is
+exactly the claim that needed evidence, because the absent functionality — swapping, and a real
+file system still described as under development — is precisely where a general-purpose system
+spends its money. The admission that the prototype “has no real users” should be read alongside
+the ten-to-100× speedups: a factor measured against a system that is doing strictly more work is a
+much weaker result than the number suggests.
+The security argument is asserted more than demonstrated. Secure bindings are supposed to preserve
+protection while removing management, but no adversary model is developed and no attack is
+8

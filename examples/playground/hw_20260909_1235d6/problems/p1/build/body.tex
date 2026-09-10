@@ -1,0 +1,39 @@
+\subsection*{Ex. 1.4 (5 pts) --- ``Segmentation fault (core dumped)''}
+\label{p1:sec:segfault}
+
+\textbf{What the message means.} The program touched memory it was not entitled to touch.
+The MMU checks every address as it is translated, and when the address is either not
+mapped at all or is mapped with the wrong permission (writing a read-only page, executing
+a non-executable one), it raises a hardware fault. The kernel finds no legitimate reason
+for the fault, converts it into the signal \texttt{SIGSEGV}, and delivers it to the
+process; the default action for \texttt{SIGSEGV} is to kill the process and write out a
+core dump. The line you see is the shell afterwards reporting how its child died.
+
+\textbf{Possible reasons.}
+\begin{itemize}[nosep,leftmargin=1.4em]
+  \item Dereferencing a null pointer (typically an unchecked return from
+        \texttt{malloc} or \texttt{fopen}).
+  \item Dereferencing an uninitialized or otherwise wild pointer.
+  \item Use-after-free, or following a dangling pointer to a stack frame that has
+        already returned.
+  \item Running past the end of an array or buffer, far enough to leave the mapping.
+  \item Writing through a \texttt{char *} that points at a string literal, which lives on
+        a read-only page.
+  \item Unbounded recursion overflowing the stack into the guard page below it.
+  \item Corrupting the allocator's metadata (double free, overrun of a heap block), so
+        that a later allocation returns nonsense.
+\end{itemize}
+
+\textbf{What ``segmentation'' means here.} The word is historical. On machines with
+segmented memory the address space was divided into segments, each with a base, a limit
+and access rights, and the hardware trapped any reference that fell outside the bounds or
+rights of the current segment --- a \emph{segmentation violation}. Mainstream systems are
+paged rather than segmented now, but the name stuck, and it means what it always meant:
+an access outside a valid, permitted region of the address space.
+
+\textbf{What ``core'' means here.} ``Core'' is magnetic-core memory, the ferrite-ring
+main memory of machines of the 1950s and 60s; ``core'' became a synonym for main memory
+and outlived the technology. A core dump is therefore an image of the process's memory
+--- its segments as listed in Ex.~1.2 --- together with its register state, captured at
+the instant it faulted and written to a file so that a debugger can be pointed at it
+afterwards and reconstruct where and why the program died.

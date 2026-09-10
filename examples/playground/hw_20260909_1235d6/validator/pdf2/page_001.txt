@@ -1,0 +1,37 @@
+Operating Systems — Homework 1
+Exercise 1.1 – 1.4
+Ex. 1.1 (5 pts) — Magic number of a binary executable
+Role. A magic number is a short, fixed byte pattern that a file carries so that its format can be
+recognised from its contents rather than from its name. When the kernel services an execve(),
+it does not trust the file extension: it reads the first handful of bytes and matches them against
+the formats it knows, and that match is what selects the right loader (native ELF loader, script
+interpreter, emulation layer, . . . ). If nothing matches, the call is simply refused with ENOEXEC
+instead of the machine jumping into arbitrary bytes. It therefore does two jobs at once: format
+dispatch and a cheap integrity/sanity check.
+Where it is stored. In the very first bytes of the file, at offset 0, as the opening field of the
+file header — which is exactly what makes the check cheap, since the kernel already has to read
+that first block anyway. Examples: an ELF binary starts with 0x7F ’E’ ’L’ ’F’ (the first four
+bytes of e_ident in the ELF header); a shell or Python script starts with #! (0x23 0x21) followed
+by the interpreter path; a Windows PE image starts with ’M’ ’Z’; a Java class file starts with
+0xCAFEBABE.
+Ex. 1.2 (5 pts) — Segments of an address space
+A process address space is built from the following regions, conventionally laid out from low addresses
+to high:
+• Text (code) segment — the machine instructions of the program. Mapped read-only and
+executable, so it can be shared by every process running the same binary and cannot be scribbled
+over by a stray pointer. Fixed size.
+• Initialized data segment (.data) — global and static variables whose initial value is not zero.
+Their values are stored in the executable file and copied in by the loader. Read/write, fixed size.
+• Uninitialized data segment (BSS) — global and static variables that start out zero. Only
+their size is recorded in the file, not their contents; the loader zero-fills the region, so the BSS
+costs nothing on disk. Read/write, fixed size.
+• Heap — memory obtained at run time by malloc/new. It sits above the BSS and grows
+upward, toward higher addresses, as the allocator extends it (brk/sbrk, or mmap for large
+requests).
+• Memory-mapped region — shared libraries, files mapped with mmap, and large allocations.
+It occupies the middle ground between heap and stack, and is how dynamically linked code is
+brought into the space.
+• Stack — one per thread; holds activation records: parameters, local variables, saved registers
+and return addresses. It is placed at the top of the space and grows downward, toward lower
+addresses, one frame per call.
+1

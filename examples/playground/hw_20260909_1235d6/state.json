@@ -1,0 +1,45 @@
+{
+  "job": "hw_20260909_1235d6",
+  "created": "2026-09-09 21:06:42",
+  "playground": "/home/xing/project/auto_hw_complete/playground/hw_20260909_1235d6",
+  "output": "/home/xing/project/auto_hw_complete/output/hw_20260909_1235d6",
+  "problems": {
+    "p1": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-09 21:09:57",
+      "finished": "2026-09-09 21:17:44"
+    },
+    "p2": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-09 21:17:46",
+      "finished": "2026-09-09 21:25:01"
+    },
+    "p3": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-09 21:25:04",
+      "finished": "2026-09-09 21:40:45"
+    },
+    "p4": {
+      "status": "done",
+      "rounds": 2,
+      "started": "2026-09-09 21:41:59",
+      "finished": "2026-09-09 22:04:16"
+    }
+  },
+  "problem_order": [
+    "p1",
+    "p2",
+    "p3",
+    "p4"
+  ],
+  "master_rounds": 3,
+  "status": "master_finished",
+  "documents": [
+    "PaperList.xlsx"
+  ],
+  "master_session": "a945154e-65cc-4419-83c7-b5b4869330d4",
+  "cost_usd": 51.4436
+}

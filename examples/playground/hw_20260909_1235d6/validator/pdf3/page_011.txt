@@ -1,0 +1,46 @@
+than evidentially: “machine-aided cognition,” the promised social consequences, and above all the
+claim that PL/I would deliver machine independence are asserted rather than demonstrated, and
+the last of these badly underestimated the cost of building the compiler. On substance, history
+has split the paper cleanly in two. Vindicated: paged virtual memory, device-independent I/O, a
+symbolically named hierarchical file system with per-file access control and system-provided backup,
+symmetric multiprocessing with no master processor, writing an operating system in a high-level
+language, and graded hardware protection — the descriptor bits became Multics’ rings, which
+x86 inherited. Refuted: user-visible segmentation lost decisively to the flat, paged address space,
+and x86-64 all but abolished segmentation; nobody today programs a two-dimensional address
+space, and although dynamic linking survived it did so as lazy load-time binding over a flat space,
+not as segment binding. The most interesting case is the computer utility itself. The economic
+argument — that bulk economies, floor space and management efficiency favour one maximal
+centralised machine — was falsified for roughly thirty years by the minicomputer and the personal
+computer, then vindicated by cloud computing. The paper was right about the destination and
+wrong about both the timing and the reason, since what eventually made centralisation win was
+statistical multiplexing at datacentre scale, not the considerations it actually advanced.
+Paper 2 — Accetta et al., “Mach: A New Kernel Foundation for UNIX Develop-
+ment” (1986)
+Summary. Mach’s target is the accretion of mechanism in UNIX. The authors observe that
+a system which began with a small uniform set of operations on file descriptors had grown “a
+staggering number” of overlapping facilities — System V streams, 4.2BSD sockets, ptys, several
+kinds of semaphore, shared memory, and a “mind-boggling array” of ioctl operations — giving
+non-uniform access to resources both within a machine and across a network, while the process
+abstraction remained too heavyweight to express parallelism. Mach replaces the base with four
+abstractions. A task is the unit of resource allocation, owning a paged address space together with
+whatever port rights it holds; a thread is the unit of CPU utilisation, so that a UNIX process is
+simply a task with a single thread; a port is a kernel-protected message queue acting as a capability,
+with any number of senders but exactly one receiver; and a message is a typed collection of data that
+may carry port rights and may be as large as an entire address space. Every operation on any other
+object is a message to the port representing it, so that the kernel is merely one server among many
+— the design thesis is that “the actual system running on any particular machine is a function of its
+servers rather than its kernel.” The virtual memory system supports per-page inheritance (shared,
+copy, or none) and a current-versus-maximum protection pair in which the maximum may only
+ever be lowered; copy-on-write implements both fork and bulk message transfer, illustrated with a
+24 MB message that passes through a temporary kernel map. Most consequentially, page faults may
+be serviced outside the kernel by user-level pagers, so that a memory-mapped file is simply memory
+whose pager is the file system, and the default pager uses ordinary file systems rather than a paging
+partition. The implementation separates machine-dependent from machine-independent structure
+behind a bare validate/invalidate/protect interface — the independent page size is fixed at boot as
+a power-of-two multiple of the machine-dependent one, itself 512 bytes on the VAX — letting the
+same machine-independent code sit above VAX page tables and the RT/PC’s inverted page table.
+Matchmaker, an interface definition language, generates RPC stubs for C, Pascal and CommonLisp,
+and user-level network servers extend ports across machines transparently. As of April 1986 Mach
+was binary compatible with 4.3BSD and running on assorted VAXen, a four-processor VAX 11/784
+and the IBM RT/PC.
+11

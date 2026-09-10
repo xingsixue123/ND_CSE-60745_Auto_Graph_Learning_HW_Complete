@@ -1,0 +1,42 @@
+The heap and the stack thus grow toward each other, and the unmapped gap between them is what
+keeps them apart; a program that runs off either end walks into that hole, which is precisely the
+situation of Ex. 1.4.
+Ex. 1.3 (5 pts) — Von Neumann machines and machines today
+A von Neumann machine is the stored-program design: a CPU (control unit plus ALU and registers),
+a single main memory that holds instructions and data indistinguishably, and I/O, all joined by a
+shared bus. Its defining idea is that the program is itself just data sitting in memory, so the machine
+is general purpose — you change what it does by loading different bytes, not by rewiring it — and
+it operates by repeating the fetch–decode–execute cycle, with a program counter naming the next
+instruction. The price of the single shared memory and bus is that instruction fetch and data access
+compete for the same path, the well-known von Neumann bottleneck.
+Today’s computers are still von Neumann machines at the level the programmer sees: x86, ARM
+and RISC-V all present one flat address space containing both code and data, a program counter,
+and sequential instruction semantics — which is why a compiled program can be written into
+memory and then jumped to at all. What has changed is everything underneath, added mostly to
+hide that bottleneck: split L1 instruction and data caches (a Harvard-style separation smuggled
+inside a von Neumann machine), deep pipelines, superscalar and out-of-order execution, branch
+prediction, and many cores sharing memory. So the model is inherited essentially unchanged; only
+the implementation has become elaborate.
+Ex. 1.4 (5 pts) — “Segmentation fault (core dumped)”
+What the message means. The program touched memory it was not entitled to touch. The
+MMU checks every address as it is translated, and when the address is either not mapped at all or
+is mapped with the wrong permission (writing a read-only page, executing a non-executable one),
+it raises a hardware fault. The kernel finds no legitimate reason for the fault, converts it into the
+signal SIGSEGV, and delivers it to the process; the default action for SIGSEGV is to kill the process
+and write out a core dump. The line you see is the shell afterwards reporting how its child died.
+Possible reasons.
+• Dereferencing a null pointer (typically an unchecked return from malloc or fopen).
+• Dereferencing an uninitialized or otherwise wild pointer.
+• Use-after-free, or following a dangling pointer to a stack frame that has already returned.
+• Running past the end of an array or buffer, far enough to leave the mapping.
+• Writing through a char * that points at a string literal, which lives on a read-only page.
+• Unbounded recursion overflowing the stack into the guard page below it.
+• Corrupting the allocator’s metadata (double free, overrun of a heap block), so that a later
+allocation returns nonsense.
+What “segmentation” means here. The word is historical. On machines with segmented
+memory the address space was divided into segments, each with a base, a limit and access rights,
+and the hardware trapped any reference that fell outside the bounds or rights of the current segment
+— a segmentation violation. Mainstream systems are paged rather than segmented now, but the
+name stuck, and it means what it always meant: an access outside a valid, permitted region of the
+address space.
+2
