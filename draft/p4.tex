@@ -1,0 +1,167 @@
+\section*{Ex.\ 1.0 --- Three Papers on OS History and Architecture}
+
+\subsection*{Paper 1 --- Corbat\'o and Vyssotsky, ``Introduction and Overview of the Multics System'' (1965)}
+\label{p4:sec:multics}
+
+\textbf{Summary.} This paper opens the six-paper Multics session at the 1965 Fall Joint
+Computer Conference. Its problem is access: under batch processing, user contact with large
+machines had ``retrogressed'', isolating the programmer from cause and effect. The goal is
+a \emph{computer utility}, running ``continuously and reliably 7 days a week, 24 hours a
+day in a way similar to telephone or power systems''.
+
+The mechanisms are co-designed with the GE~645. Addressing is two-dimensional: programs are
+written as segments that grow or shrink during execution, up to a quarter million per user
+of a quarter million words each, paged with either 64- or 1{,}024-word pages, and
+cross-segment references are bound by dynamic linking at first reference. Pure shareable
+procedures are the normal mode, so there is ``no clear-cut demarcation between user
+programs and system programs''; protection comes from descriptor bits acting as hardware
+``fire-walls''; processors form an anonymous pool in which ``the supervisor does not have a
+special processor''; and PL/I is adopted for machine independence. There is no evaluation,
+since the system did not yet exist, and the one quantitative claim, ``a few hundred''
+simultaneous users by ``simple scaling of processor and memory speed'', is immediately
+called ``hazardous''.
+
+\textbf{Critical judgment.} This is a prospectus, and nothing in it is falsifiable by its
+own evidence. The deeper omission is not measurement but cost. The paper proposes to meet
+``almost all of the present and near-future requirements'' of a large installation and
+never asks what that generality would cost to build, which is precisely where the project
+failed: development ran years late, Bell Labs withdrew in 1969, and UNIX was written
+shortly afterwards in reaction to the scale. Its most accurate sentences are its own
+hedges, that the plans are ``not unattainable'' but that it would be ``presumptuous'' to
+expect the initial system to meet all of them.
+
+History has split the substance cleanly. Vindicated: paged virtual memory,
+device-independent I/O, a symbolically named hierarchical file system with per-file access
+control and backup, symmetric multiprocessing with no master, and writing an operating
+system in a high-level language. Refuted: user-visible segmentation lost to the flat paged
+address space, and x86-64 all but abolished it; dynamic linking survived, but as lazy
+binding over a flat space rather than as segment binding.
+
+The computer utility is the interesting case. The economic argument, that ``bulk
+economies'' and ``floor space, management efficiency and operating personnel'' favour
+``centralizing computer facilities in a single large installation'', was falsified for some
+thirty years by the minicomputer and the personal computer, then vindicated by cloud
+computing. The paper was right about the destination and wrong about the reason, since what
+made centralisation win was statistical multiplexing at datacentre scale.
+
+\subsection*{Paper 2 --- Accetta et al., ``Mach: A New Kernel Foundation for UNIX Development'' (1986)}
+\label{p4:sec:mach}
+
+\textbf{Summary.} Mach's target is the accretion of mechanism in UNIX. A system that began
+with a small uniform set of operations on file descriptors had grown ``a staggering
+number'' of overlapping facilities, from streams and sockets to ``a mind-boggling array of
+\texttt{ioctl} operations'', while the process abstraction remained too heavyweight to
+express parallelism.
+
+Mach replaces the base with four abstractions. A \emph{task} owns a paged address space and
+its port rights; a \emph{thread} is the unit of CPU utilisation, so a UNIX process is a
+task with one thread; a \emph{port} is a kernel-protected message queue acting as a
+capability, with any number of senders but one receiver; and a \emph{message} is typed data
+that may carry port rights and may be as large as an entire address space. Every operation
+on any other object is a message to the port representing it, so that ``the actual system
+running on any particular machine is a function of its servers rather than its kernel''.
+
+The virtual memory system offers per-page inheritance and a current-versus-maximum
+protection pair in which the maximum ``may never be raised, it may only be lowered'', with
+copy-on-write implementing both \texttt{fork} and bulk message transfer. Most
+consequentially, page faults may be serviced outside the kernel by user-level pagers, so a
+memory-mapped file is simply memory whose pager is the file system. As of April 1986 Mach
+was binary compatible with 4.3BSD and ran on most VAX machines, a four-processor
+VAX~11/784 and the IBM RT/PC.
+
+\textbf{Critical judgment.} The gap between the ambition of the design and the weight of
+the evidence is very wide, and the paper is candid that ``extensive performance comparisons
+with other systems have not yet been done''. Its entire quantitative evaluation is one
+number: on a MicroVAX~II, touching newly allocated memory costs ``less than 0.7
+milliseconds per 1024 bytes of data (versus approximately 1.2 milliseconds for 4.3BSD)''.
+That microbenchmark measures zero-fill fault cost, exactly what the new VM system was built
+to improve, and \texttt{fork} is called ``substantially faster'' with no figure attached at
+all.
+
+Nothing measures IPC latency, although ports and messages are the centrepiece of the
+design; nothing measures multiprocessor scaling, although the abstract's opening sentence
+announces a multiprocessor kernel; threads were not yet implemented and were ``expected by
+Summer 1986''; and the caption of Figure~6 concedes that as of April 1986 the box labelled
+UNIX compatibility ``still executes in kernel state''. The central claim, that operating
+system services can be moved out to user-level servers at acceptable cost, is precisely the
+claim the paper does not test.
+
+History then split the verdict. The mechanisms won comprehensively: separating the address
+space from the schedulable entity is now universal, memory-mapped files and external pagers
+are standard, the machine-dependent split survives as the \texttt{pmap} layer in the BSDs,
+and macOS and iOS run on a Mach derivative to this day. The performance thesis lost: Mach
+3.0's user-space UNIX server proved slow, Chen and Bershad traced the degradation to
+memory-system behaviour rather than message path length, and Liedtke's L4 work argued the
+cost was an artefact of implementation rather than of microkernels.
+
+\subsection*{Paper 3 --- Baumann et al., ``The Multikernel: A New OS Architecture for Scalable Multicore Systems'' (2009)}
+\label{p4:sec:multikernel}
+
+\textbf{Summary.} The premise is that hardware now diversifies faster than system software
+can be retuned for it, so an OS built as a shared-memory kernel with lock-protected data
+structures faces an unbounded engineering bill; the authors evidence this with the removal
+of the Windows~7 dispatcher lock, which ``touched 6000 lines of code in 58 files'' and was
+described as heroic. Arguing that the machine has itself become a network, they propose
+three principles: make all inter-core communication explicit, make OS structure
+hardware-neutral, and treat state as replicated rather than shared.
+
+Their prototype, Barrelfish, splits the per-core OS instance into a privileged
+\emph{CPU driver} (7135 lines of C for x86-64) and a schedulable user-space \emph{monitor}
+that holds the replicas and runs agreement protocols over URPC, a message transport tuned
+to the cache-coherence protocol. The motivating measurement is stark: a single core updates
+shared state in under 30 cycles, but with 16 cores on the same data each update costs
+``almost 12{,}000 extra cycles'', and a single dedicated server ``can perform twice as many
+updates per second as all 16 shared-memory threads combined''. The evaluation then shows
+NUMA-aware multicast shootdown holding near 3.1k cycles across 32 cores where broadcast and
+unicast climb to roughly 13.8k and 12.7k; unmapping at 32 cores costing about 17.5k cycles
+against 29.5k for Linux and 46k for Windows; and a static web server at 18{,}697 requests
+per second against 8924 for lighttpd on Linux.
+
+\textbf{Critical judgment.} This is much the strongest evaluation of the three and an
+unusually honest one. It states outright that ``it would be wrong to draw any quantitative
+conclusions from our large-scale benchmarks'', concedes that the capability system was ``a
+mistake\ldots unnecessarily complex, and no more efficient than scalable perprocessor
+memory managers used in conventional OSes like Windows and Linux'', calls its network stack
+``very much a placeholder'', and admits every test platform was homogeneous x86-64, so the
+heterogeneity motivating the whole argument was never exercised.
+
+That honesty makes the weak points easier to locate. The web-server win pits a
+purpose-built user-space lwIP stack against general-purpose lighttpd on Linux with offload
+enabled that Barrelfish's driver did not support, so what is measured is specialisation
+rather than architecture. The scalability case rests on global-coordination
+microbenchmarks, and the gain there comes largely from replacing serial IPIs with a
+topology-aware multicast tree, an algorithmic change a shared-memory kernel could equally
+adopt, so the experiment does not isolate shared-nothing structure as the cause.
+
+Reading the two figures against each other is more revealing. The raw messaging baseline
+costs about 3.1k cycles at 32 cores while the complete unmap costs about 17.5k, so more
+than four-fifths of the operation is Barrelfish's own monitor LRPC, marshaling and
+unoptimised thread dispatch. The unmap curve makes the same point at the other end:
+Barrelfish does not start cheaper, costing about 10.3k cycles at two cores against roughly
+5.2k for Linux and 5.8k for Windows, and what it buys is slope, growing about
+1.7$\times$ to 32 cores where Linux grows 5.7$\times$ and Windows 7.9$\times$. The
+multikernel did not reduce the constant cost of the operation; it roughly doubled it and
+bought a much flatter curve. That is the trade the authors concede, that routing
+invocations through monitor RPC adds ``a constant overhead on current hardware of several
+thousand cycles'' which is ``constant as the number of cores increases'', a bargain that
+pays only once the machine is wide enough and whose break-even against Linux does not
+arrive until around twelve or thirteen cores. The messaging table reinforces the point,
+showing URPC at 450 cycles of latency against 424 for L4's decade-older IPC, the real gains
+being throughput and cache footprint rather than latency.
+
+
+\subsection*{References}
+\label{p4:sec:refs}
+
+\begin{enumerate}
+  \item[{[1]}] F.~J. Corbat\'o and V.~A. Vyssotsky. ``Introduction and Overview of the
+    Multics System.'' In \emph{Proceedings of the AFIPS Fall Joint Computer Conference
+    (FJCC)}, vol.~27, part~1, pp.~185--196, 1965.
+  \item[{[2]}] M. Accetta, R. Baron, W. Bolosky, D. Golub, R. Rashid, A. Tevanian and
+    M. Young. ``Mach: A New Kernel Foundation for UNIX Development.'' In \emph{Proceedings
+    of the USENIX Summer Conference}, pp.~93--112, 1986.
+  \item[{[3]}] A. Baumann, P. Barham, P.-E. Dagand, T. Harris, R. Isaacs, S. Peter,
+    T. Roscoe, A. Sch\"upbach and A. Singhania. ``The Multikernel: A New OS Architecture for
+    Scalable Multicore Systems.'' In \emph{Proceedings of the 22nd ACM Symposium on Operating
+    Systems Principles (SOSP)}, pp.~29--44, 2009.
+\end{enumerate}

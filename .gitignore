@@ -31,3 +31,8 @@ playground/*.pid
 # worker's downloads.md records the exact URL it fetched and how it verified the file
 # was the genuine paper, so the run stays reproducible without shipping the PDFs.
 **/papers/*.pdf
+
+# The hand-editing workspace: keep the sources and the built PDF, drop the rest.
+# (*.log is not ignored globally because run.log and heartbeat.log are wanted.)
+draft/*.log
+draft/* copy.tex

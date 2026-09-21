@@ -1,0 +1,100 @@
+\section*{Exercise 1.1 -- 1.4}
+\label{p1:sec:main}
+
+\subsection*{Ex. 1.1 (5 pts) --- Magic number of a binary executable}
+\label{p1:sec:magic}
+
+\textbf{Role.} A magic number is a short, fixed byte pattern that a file carries so
+that its \emph{format} can be recognised from its contents rather than from its name.
+When the kernel services an \texttt{execve()}, it does not trust the file extension: it
+reads the first handful of bytes and matches them against the formats it knows, and that
+match is what selects the right loader. If nothing matches, the call is simply refused with \texttt{ENOEXEC}
+instead of the machine jumping into arbitrary bytes. It therefore does two jobs at once:
+format dispatch and a cheap integrity/sanity check.
+
+\textbf{Where it is stored.} In the very first bytes of the file, at offset~0, as the
+opening field of the file header, which is exactly what makes the check cheap, since
+the kernel already has to read that first block anyway. e.g.: an ELF binary starts
+with \texttt{0x7F 'E' 'L' 'F'} (the first four bytes of \texttt{e\_ident} in the ELF
+header); a shell or Python script starts with \texttt{\#!} (\texttt{0x23 0x21}) followed
+by the interpreter path; a Windows PE image starts with \texttt{'M' 'Z'}; a Java class
+file starts with \texttt{0xCAFEBABE}.
+
+\subsection*{Ex. 1.2 (5 pts) --- Segments of an address space}
+\label{p1:sec:segments}
+
+A process address space is built from the following regions, conventionally laid out from
+low addresses to high:
+
+\begin{itemize}[nosep,leftmargin=1.4em,label=$\bullet$]
+  \item \textbf{Text (code) segment}: the machine instructions of the program. Mapped
+        read-only and executable, so it can be shared by every process running the same
+        binary and cannot be scribbled over by a stray pointer. Fixed size.
+  \item \textbf{Initialized data segment (\texttt{.data})}: global and static variables
+        whose initial value is not zero. Their values are stored in the executable file
+        and copied in by the loader. Read/write, fixed size.
+  \item \textbf{Uninitialized data segment (BSS)}: global and static variables that
+        start out zero. Only their \emph{size} is recorded in the file, not their
+        contents; the loader zero-fills the region, so the BSS costs nothing on disk.
+        Read/write, fixed size.
+  \item \textbf{Heap}: memory obtained at run time by \texttt{malloc}/\texttt{new}.
+        It sits above the BSS and grows upward, toward higher addresses, as the
+        allocator extends it (\texttt{brk}/\texttt{sbrk}, or \texttt{mmap} for large
+        requests).
+  \item \textbf{Memory-mapped region}: shared libraries, files mapped with
+        \texttt{mmap}, and large allocations. It occupies the middle ground between heap
+        and stack, and is how dynamically linked code is brought into the space.
+  \item \textbf{Stack}: one per thread; holds activation records: parameters, local
+        variables, saved registers and return addresses. It is placed at the top of the
+        space and grows downward, toward lower addresses, one frame per call.
+\end{itemize}
+
+\subsection*{Ex. 1.3 (5 pts) --- Von Neumann machines and machines today}
+\label{p1:sec:vonneumann}
+
+A von Neumann machine is the \emph{stored-program} design: a CPU (control unit plus ALU
+and registers), a single main memory that holds instructions \emph{and} data
+indistinguishably, and I/O, all joined by a shared bus. Its defining idea is that the
+program is itself just data sitting in memory, so the machine is general purpose and it operates by
+repeating the "fetch->decode->execute" cycle, with a program counter naming the next
+instruction. The price of the single shared memory and bus is that instruction fetch and
+data access compete for the same path, the well-known \emph{von Neumann bottleneck}.
+
+Today's machines are still von Neumann at the level the programmer observe, like x86, ARM
+etc, all present one flat address space holding both code and data, a program
+counter, and sequential instruction semantics. 
+
+\subsection*{Ex. 1.4 (5 pts) --- ``Segmentation fault (core dumped)''}
+\label{p1:sec:segfault}
+
+\textbf{What the message means.} The program touched memory it was not entitled to
+touch. The MMU checks every address as it translates it; if the address is unmapped,
+or mapped with the wrong permission (writing a read-only page, executing a
+non-executable one), it raises a hardware fault. The kernel finds no legitimate
+reason for it, converts it into \texttt{SIGSEGV}, and delivers it to the process,
+whose default action is to die and write a core dump. The line you see is the shell
+afterwards reporting how its child died.
+
+\textbf{Possible reasons.}
+\begin{itemize}[nosep,leftmargin=1.4em,label=$\bullet$]
+  \item Dereferencing a null pointer, typically an unchecked return from
+        \texttt{malloc} or \texttt{fopen}.
+  \item Dereferencing an uninitialized or dangling pointer, including use-after-free.
+  \item Running past the end of an array far enough to leave the mapping.
+  \item Writing through a \texttt{char *} that points at a string literal, which
+        lives on a read-only page.
+  \item Unbounded recursion overflowing the stack.
+\end{itemize}
+
+\textbf{What ``segmentation'' means here.} The word is historical. On segmented
+machines the address space was divided into segments, each with a base, a limit and
+access rights, and the hardware trapped any reference falling outside them: a
+\emph{segmentation violation}. Mainstream systems are paged rather than segmented
+now, but the name stuck and still means an access outside a valid, permitted region.
+
+\textbf{What ``core'' means here.} ``Core'' is magnetic-core memory, used to be the ferrite-ring
+main memory of machines of the 1950s. Then it became a synonym for main memory and
+outlived the technology. A core dump is an image of the process's memory and register
+state at the instant it faulted, written to a file so a debugger can reconstruct where
+the program died.
+

@@ -1,0 +1,175 @@
+\section*{Ex.\ 1.9 --- Three Papers from ``OS History and Architecture''}
+\label{p3:sec:ex19}
+
+
+\subsection*{Paper 1-10 --- Dijkstra, ``The Structure of the \textit{``THE''}-Multiprogramming System''}
+\label{p3:sec:the}
+
+\textbf{Summary.}
+Dijkstra reports a multiprogramming system built at Eindhoven for the Electrologica
+EL~X8 by six people of on average half-time availability. The goals are modest: shorter
+turnaround for short jobs, economical use of peripherals, automatic control of backing
+store; it is explicitly not a multiaccess system.
+
+Two ideas carry the design. The first decouples information from storage: segments are
+named independently of pages, so a segment evicted to the drum need not return to the
+page it came from and the free page with minimum latency is simply selected. The second
+is the level hierarchy, a society of sequential processes at undefined speed ratios
+coordinated only by \textbf{P} and \textbf{V} on semaphores, stacked strictly from
+processor allocation at level~0 up to user programs, each level implementing an
+abstraction that makes the one below it invisible.
+
+The claimed payoff is verification rather than speed. Because a process can only generate
+tasks for processes at lower levels, ``circularity is excluded'', and harmonious
+cooperation is proved in roughly three stages, ending in the absence of what Dijkstra
+calls the ``Deadly Embrace''. Testing found only trivial coding errors, one per 500
+instructions, each located within ten minutes.
+
+\textbf{Critical judgment.}
+The case for layering is purely structural: the paper contains no performance data at
+all, so we are never told what the hierarchy cost in memory, in context switches, or in
+latency. The most revealing sentence
+is the concession that testing was not yet complete ``but the resulting system is
+guaranteed to be flawless''. That offers the rigour of a design in place of evidence
+about an artifact, and it sits badly beside his own report a paragraph earlier: the proof
+covers the synchronisation skeleton, while the errors he found were coding errors,
+exactly the class it cannot reach.
+
+The ordering also shows a crack the paper itself records. Keeping the hierarchy acyclic
+required a segment fetched from the drum to be pinned in core until the requesting
+process has accessed it, since otherwise ``finite tasks could be forced to generate an
+infinite number of tasks for the segment controller''. Acyclicity bounds which processes
+may be asked to do work, but not how often, so termination had to be rescued by a rule
+living outside the hierarchy. The strict total order did not survive: in later systems
+the pager needs the disk driver, which needs memory, which needs the pager.
+
+Scope does quiet work throughout. Six people, one configuration, no multiaccess and no
+user-written machine code is a setting where exhaustive testing is plausible in a way it
+is not elsewhere. Dijkstra anticipates the objection and answers that ``the larger the
+project, the more essential the structuring!'' That is asserted rather than argued. What
+survived is the thesis beneath it: choose a structure because it makes correctness
+provable.
+
+\subsection*{Paper 1-2 --- Ritchie and Thompson, ``The UNIX Time-Sharing System''}
+\label{p3:sec:unix}
+
+\textbf{Summary.}
+This describes the third version of UNIX, on the PDP-11/40 and /45. The scale is part of
+the argument: 144K bytes of core of which UNIX occupies 42K, hardware costing as little
+as \$40{,}000, less than two man years on the main system software, and about 40
+installations since February 1971. It had been rewritten in C in 1973 at about one third
+greater size, accepted for the gain in ease of modification.
+
+The design is a small set of uniform abstractions. Ordinary files are unstructured
+strings of bytes, so structure belongs to the programs that use a file and not to the
+system; every device appears as a special file, under one name syntax and one protection
+mechanism; all links to a file have equal status, a directory entry holding only a name
+and an i-node pointer; and processes are built from \texttt{fork}, \texttt{execute},
+\texttt{wait} and \texttt{pipe}. The Shell is not part of the kernel but an ordinary
+swappable user program, and because the Shell rather than the command interprets
+\texttt{<}, \texttt{>} and \texttt{|}, no command contains any code for redirection.
+Section~9 reports 72 users, 14 maximum simultaneous, and 1800 commands a day at about 98
+percent uptime.
+
+\textbf{Critical judgment.}
+The entire performance argument is section~4.1: one assembly of a 7621-line program in
+35.9 seconds, divided 63.5 percent assembler execution, 16.5 percent system overhead and
+20 percent disk wait. The authors then decline to interpret the figures or compare them
+with any other system, saying only that they are generally satisfied. A design paper is
+entitled to that stance, but the consequence is that every efficiency claim in the paper
+rests on assertion.
+
+The treatment of security is thin, and the mechanisms introduced most casually became the
+classic problems. Protection is a user ID plus seven bits, with no group in this version,
+plus set-user-ID and a super-user exempt from all checking. Set-user-ID is presented
+purely as an elegance, available to any user on his own files without administrative
+intervention. The paper never asks what happens when such a program can be induced to act
+on its invoker's behalf, and decades of privilege-escalation bugs live in that gap.
+
+``Everything is a file'' is also less total than the slogan it became, and the authors say
+so where it is inconvenient: pipes are conceded to be ``not a completely general mechanism
+since the pipe must be set up by a common ancestor'', which is why named pipes and then
+sockets had to be added later. Section~9 also describes a research laboratory rather than
+a production load, chess alone taking 5.3 percent of command CPU time, so the reliability
+figures cannot support conclusions about UNIX under commercial pressure.
+
+The Perspective section is candid about circumstance rather than method: the authors were
+never faced with the need ``to satisfy someone else's requirements''. That is honest, and
+it is also the part of the story that cannot be copied. What the paper does establish is
+its own opening claim, that a powerful interactive system ``need not be expensive either
+in equipment or in human effort''.
+
+\subsection*{Paper 1-3 --- Engler, Kaashoek and O'Toole, ``Exokernel''}
+\label{p3:sec:exokernel}
+
+\textbf{Summary.}
+The target is the fixed abstraction itself: any abstraction the kernel imposes embodies a
+trade-off, and whichever way it is resolved some class of application pays. The authors
+cite Cao et al., who report that application-level control over file caching alone can
+reduce running time by 45 percent. Their response is to separate protection from
+management: the kernel securely multiplexes the raw hardware and nothing more, while
+untrusted \emph{library operating systems}, linked into the application's own address
+space, implement processes, virtual memory and IPC. Changing the operating system becomes
+relinking.
+
+Three mechanisms make this safe: \emph{secure bindings}, which let the kernel perform the
+expensive check once and enforce it cheaply thereafter; \emph{visible revocation}, which
+makes the library a participant rather than a victim; and an \emph{abort protocol} that
+breaks bindings by force when a library will not cooperate. The prototype, Aegis with
+ExOS above it, is compared against Ultrix~4.2 on MIPS DECstations. Exception dispatch
+takes 1.5\,$\mu$s against Ultrix's 130 and five times the best reported implementation,
+protected control transfer is almost seven times the best reported, the dynamic packet
+filter classifies TCP/IP headers in 1.5\,$\mu$s against 35 for MPF, and an
+application-level stride scheduler takes under 100 lines of code.
+
+\textbf{Critical judgment.}
+The diagnosis is excellent and the evaluation cannot carry it. Nearly every number is a
+microbenchmark of a single primitive, averaged over many repetitions, which as the authors
+state themselves means the measurements ``do not consider cold start misses in the cache
+or TLB, and therefore represent a best case''. A system whose entire premise is that real
+applications are held back by the kernel is evaluated without a real application; the one
+whole-program measurement, a $150\times150$ matrix multiplication, is dominated by the
+compiler.
+
+The comparison is also structurally unfair in a way the paper concedes in one sentence and
+then walks past: ExOS does ``not offer the same level of functionality as Ultrix'', and the
+authors ``do not expect these additions to cause large increases in our timing
+measurements''. That expectation is exactly the claim that needed evidence, because the
+absent functionality, swapping and a file system still under development, is where a
+general-purpose system spends its money. Read alongside the admission that the prototype
+``has no real users'', the ten-to-100$\times$ speedups are a weaker result than the number
+suggests, since the baseline is doing strictly more work.
+
+The security argument is asserted more than demonstrated: no adversary model is developed
+and no attack attempted. The requirement that a packet filter must not ``lie'' and accept
+packets destined for another application is answered with a trusted installer, or, on ``a
+system that assumes no malicious processes'', by statically checking the filter language,
+a premise that assumes away the threat the mechanism was meant to address. The paper
+prefers the second route, since avoiding a central authority ``increases extensibility'',
+which makes the weaker premise the load-bearing one. The
+deeper unresolved tension is portability, since exposing physical names to untrusted
+software makes the interface hardware-specific by construction. Their treatment of VM/370
+shows it: they grant that it ``exports the ideal exokernel interface'' and separate
+themselves from it on cost, that virtualising the base machine ``can be expensive'' and
+``often requires additional hardware support''. That support duly arrived, which weakens
+the cost objection; what survives is their second one, that hiding the real machine leaves
+applications managing virtual resources counterproductively. The critique of fixed
+abstractions was right and has outlived the architecture built on it.
+
+
+\subsection*{References}
+\label{p3:sec:refs}
+
+\begin{enumerate}
+\item[{[1-10]}] E.\,W. Dijkstra. ``The Structure of the \textit{``THE''}-Multiprogramming
+  System.'' \emph{Communications of the ACM}, vol.~11, no.~5, May 1968, pp.~341--346.
+  (Presented at the ACM Symposium on Operating System Principles, Gatlinburg, Tennessee,
+  October 1967; also circulated as EWD196.)
+\item[{[1-2]}] D.\,M. Ritchie and K. Thompson. ``The UNIX Time-Sharing System.''
+  \emph{Communications of the ACM}, vol.~17, no.~7, July 1974, pp.~365--375. (Revised version
+  of a paper presented at the Fourth ACM Symposium on Operating Systems Principles, Yorktown
+  Heights, New York, October 1973.)
+\item[{[1-3]}] D.\,R. Engler, M.\,F. Kaashoek and J. O'Toole Jr. ``Exokernel: An Operating
+  System Architecture for Application-Level Resource Management.'' \emph{Proceedings of the
+  Fifteenth ACM Symposium on Operating Systems Principles (SOSP~'95)}, 1995, pp.~251--266.
+\end{enumerate}
