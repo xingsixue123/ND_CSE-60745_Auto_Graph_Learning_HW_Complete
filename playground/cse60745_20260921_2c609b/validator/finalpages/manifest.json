@@ -1,0 +1,651 @@
+{
+  "source": "/home/xing/project/auto_hw_complete_graph/output/cse60745_20260921_2c609b/final/main.pdf",
+  "dpi": 200,
+  "n_pages": 28,
+  "pages": [
+    {
+      "rendered_page": 1,
+      "png": "page_001.png",
+      "txt": "page_001.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 219,
+      "n_images": 1,
+      "n_vector_drawings": 14,
+      "figures": [
+        {
+          "file": "page_001_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 2,
+      "png": "page_002.png",
+      "txt": "page_002.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2874,
+      "n_images": 1,
+      "n_vector_drawings": 2,
+      "figures": [
+        {
+          "file": "page_002_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 3,
+      "png": "page_003.png",
+      "txt": "page_003.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3817,
+      "n_images": 1,
+      "n_vector_drawings": 3,
+      "figures": [
+        {
+          "file": "page_003_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 4,
+      "png": "page_004.png",
+      "txt": "page_004.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3525,
+      "n_images": 1,
+      "n_vector_drawings": 2,
+      "figures": [
+        {
+          "file": "page_004_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 5,
+      "png": "page_005.png",
+      "txt": "page_005.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3042,
+      "n_images": 1,
+      "n_vector_drawings": 1,
+      "figures": [
+        {
+          "file": "page_005_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 6,
+      "png": "page_006.png",
+      "txt": "page_006.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2567,
+      "n_images": 1,
+      "n_vector_drawings": 14,
+      "figures": [
+        {
+          "file": "page_006_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 7,
+      "png": "page_007.png",
+      "txt": "page_007.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 1491,
+      "n_images": 1,
+      "n_vector_drawings": 50,
+      "figures": [
+        {
+          "file": "page_007_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 8,
+      "png": "page_008.png",
+      "txt": "page_008.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3287,
+      "n_images": 1,
+      "n_vector_drawings": 2,
+      "figures": [
+        {
+          "file": "page_008_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 9,
+      "png": "page_009.png",
+      "txt": "page_009.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3161,
+      "n_images": 1,
+      "n_vector_drawings": 2,
+      "figures": [
+        {
+          "file": "page_009_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 10,
+      "png": "page_010.png",
+      "txt": "page_010.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3494,
+      "n_images": 1,
+      "n_vector_drawings": 1,
+      "figures": [
+        {
+          "file": "page_010_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 11,
+      "png": "page_011.png",
+      "txt": "page_011.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2835,
+      "n_images": 1,
+      "n_vector_drawings": 5,
+      "figures": [
+        {
+          "file": "page_011_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 12,
+      "png": "page_012.png",
+      "txt": "page_012.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2615,
+      "n_images": 1,
+      "n_vector_drawings": 7,
+      "figures": [
+        {
+          "file": "page_012_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 13,
+      "png": "page_013.png",
+      "txt": "page_013.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2324,
+      "n_images": 1,
+      "n_vector_drawings": 6,
+      "figures": [
+        {
+          "file": "page_013_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 14,
+      "png": "page_014.png",
+      "txt": "page_014.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 1972,
+      "n_images": 1,
+      "n_vector_drawings": 27,
+      "figures": [
+        {
+          "file": "page_014_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 15,
+      "png": "page_015.png",
+      "txt": "page_015.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 1244,
+      "n_images": 1,
+      "n_vector_drawings": 4,
+      "figures": [
+        {
+          "file": "page_015_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 16,
+      "png": "page_016.png",
+      "txt": "page_016.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2871,
+      "n_images": 1,
+      "n_vector_drawings": 5,
+      "figures": [
+        {
+          "file": "page_016_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 17,
+      "png": "page_017.png",
+      "txt": "page_017.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2083,
+      "n_images": 1,
+      "n_vector_drawings": 11,
+      "figures": [
+        {
+          "file": "page_017_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 18,
+      "png": "page_018.png",
+      "txt": "page_018.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3139,
+      "n_images": 1,
+      "n_vector_drawings": 1,
+      "figures": [
+        {
+          "file": "page_018_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 19,
+      "png": "page_019.png",
+      "txt": "page_019.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3490,
+      "n_images": 1,
+      "n_vector_drawings": 1,
+      "figures": [
+        {
+          "file": "page_019_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 20,
+      "png": "page_020.png",
+      "txt": "page_020.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2499,
+      "n_images": 1,
+      "n_vector_drawings": 6,
+      "figures": [
+        {
+          "file": "page_020_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 21,
+      "png": "page_021.png",
+      "txt": "page_021.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 840,
+      "n_images": 1,
+      "n_vector_drawings": 69,
+      "figures": [
+        {
+          "file": "page_021_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 22,
+      "png": "page_022.png",
+      "txt": "page_022.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2374,
+      "n_images": 1,
+      "n_vector_drawings": 10,
+      "figures": [
+        {
+          "file": "page_022_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 23,
+      "png": "page_023.png",
+      "txt": "page_023.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 1978,
+      "n_images": 1,
+      "n_vector_drawings": 81,
+      "figures": [
+        {
+          "file": "page_023_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 24,
+      "png": "page_024.png",
+      "txt": "page_024.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3294,
+      "n_images": 1,
+      "n_vector_drawings": 1,
+      "figures": [
+        {
+          "file": "page_024_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 25,
+      "png": "page_025.png",
+      "txt": "page_025.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 3006,
+      "n_images": 1,
+      "n_vector_drawings": 1,
+      "figures": [
+        {
+          "file": "page_025_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 26,
+      "png": "page_026.png",
+      "txt": "page_026.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2800,
+      "n_images": 1,
+      "n_vector_drawings": 6,
+      "figures": [
+        {
+          "file": "page_026_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 27,
+      "png": "page_027.png",
+      "txt": "page_027.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2994,
+      "n_images": 1,
+      "n_vector_drawings": 6,
+      "figures": [
+        {
+          "file": "page_027_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 28,
+      "png": "page_028.png",
+      "txt": "page_028.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 956,
+      "n_images": 1,
+      "n_vector_drawings": 5,
+      "figures": [
+        {
+          "file": "page_028_fig_01.jpeg",
+          "width": 343,
+          "height": 344,
+          "bbox_on_page": [
+            72.0,
+            36.8,
+            84.2,
+            49.0
+          ]
+        }
+      ]
+    }
+  ]
+}

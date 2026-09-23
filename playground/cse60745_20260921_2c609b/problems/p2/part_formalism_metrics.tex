@@ -1,0 +1,150 @@
+% ===== DRAFT: formalism (sec 0) and metrics (sec 4). Merged into answer.tex later. =====
+
+\subsection*{1. Set-up: heterogeneous information networks, schemas and meta-paths}
+
+\paragraph{Heterogeneous information network (HIN).}
+Following Sun et al.~\cite{p2:pathsim} and the survey of Shi et al.~\cite{p2:hinsurvey}, a
+\emph{heterogeneous information network} is a directed graph
+\[
+  G=(V,E,\phi,\psi),\qquad
+  \phi:V\to\mathcal{A},\qquad
+  \psi:E\to\mathcal{R},
+\]
+where every node $v\in V$ carries exactly one \emph{node type} $\phi(v)$ drawn from the type set
+$\mathcal{A}$, every edge $e\in E$ carries exactly one \emph{relation type} $\psi(e)$ drawn from
+$\mathcal{R}$, and
+\[
+  |\mathcal{A}|+|\mathcal{R}|>2 .
+\]
+The inequality is the definition of heterogeneity: if $|\mathcal{A}|=|\mathcal{R}|=1$ the network
+collapses to the ordinary homogeneous graph treated in Problem~1. A relation
+$R\in\mathcal{R}$ is typed at both ends, so it induces a map between two specific node types,
+written $A_i\xrightarrow{R}A_j$; its inverse $R^{-1}$ is in general a different relation
+($\textsf{writes}$ vs.\ $\textsf{written-by}$).
+
+\paragraph{Network schema.}
+The \emph{network schema} $T_G=(\mathcal{A},\mathcal{R})$ is the directed graph defined over the
+node types $\mathcal{A}$ with edges the relation types $\mathcal{R}$. It is a meta-template: $G$ is
+an instantiation of $T_G$ in the sense that every node and every edge of $G$ must map to some type
+in $T_G$, so the schema tells you which kinds of connection are even expressible in the dataset.
+This is exactly the object the question asks to be drawn for each benchmark, and it is the reason
+the drawing carries information here and not in the homogeneous case: for Cora the schema is a
+single node type with a single self-relation, whereas for DBLP it is a four-type star.
+
+\paragraph{Meta-path.}
+A \emph{meta-path} $\mathcal{P}$ of length $\ell$ is a path defined \emph{on the schema},
+\[
+  \mathcal{P}\;:\;A_1\xrightarrow{R_1}A_2\xrightarrow{R_2}\cdots\xrightarrow{R_\ell}A_{\ell+1},
+\]
+which denotes the composite relation $R=R_1\circ R_2\circ\cdots\circ R_\ell$ between type $A_1$ and
+type $A_{\ell+1}$. A concrete node sequence $v_1v_2\cdots v_{\ell+1}$ in $G$ with
+$\phi(v_i)=A_i$ and $\psi(v_iv_{i+1})=R_i$ is a \emph{path instance} of $\mathcal{P}$. A meta-path
+is usually written by its type initials, so in DBLP $\mathrm{APA}$ abbreviates
+$\text{Author}\xrightarrow{\textsf{writes}}\text{Paper}\xrightarrow{\textsf{written-by}}\text{Author}$.
+Meta-paths matter because each one defines a different homogeneous projection of the same HIN, and
+those projections carry different semantics: on DBLP, $\mathrm{APA}$ means \emph{co-authorship}
+whereas $\mathrm{APCPA}$ means \emph{publishing at the same venue}, and two authors can be strongly
+related under one and unrelated under the other. Essentially every method in
+Section~\ref{p2:sec:baselines} is a different answer to the question ``how should the meta-path
+structure be used?'' --- fixed and hand-chosen (metapath2vec, HAN), aggregated with attention
+(MAGNN), learned (GTN), or dispensed with in favour of per-relation parameters (R-GCN, HGT,
+simple-HGN).
+
+% =====================================================================
+\subsection*{4. Evaluation metrics}
+
+Two conventions run through the whole heterogeneous literature and are worth stating before the
+formulas. First, a HIN benchmark normally labels \textbf{exactly one node type} --- the author in
+DBLP, the paper in ACM, the movie in IMDB --- so ``node classification accuracy on DBLP'' always
+means accuracy on that one target type, and the other types exist only as context. Second, for
+\emph{unsupervised} embedding methods the standard protocol is
+\emph{embed $\to$ freeze $\to$ fit a linear classifier}: the embedding is learned without labels,
+then held fixed while a logistic regression or linear SVM is trained on a fraction of the target
+nodes, with the fraction varied over $20/40/60/80\%$ and mean $\pm$ std reported over several
+splits. HAN, MAGNN and HeCo all report in this form.
+
+\subsubsection*{4.1 Node classification}
+
+Let $\mathcal{C}$ be the class set and, for class $c$, let $\mathrm{TP}_c,\mathrm{FP}_c,\mathrm{FN}_c$
+be the true-positive, false-positive and false-negative counts. \textbf{Micro-F1} pools the
+confusion matrix over all classes before computing the score:
+\[
+  \mathrm{Micro\text{-}P}=\frac{\sum_{c\in\mathcal{C}}\mathrm{TP}_c}
+       {\sum_{c\in\mathcal{C}}\left(\mathrm{TP}_c+\mathrm{FP}_c\right)},\qquad
+  \mathrm{Micro\text{-}R}=\frac{\sum_{c\in\mathcal{C}}\mathrm{TP}_c}
+       {\sum_{c\in\mathcal{C}}\left(\mathrm{TP}_c+\mathrm{FN}_c\right)},
+\]
+\[
+  \boxed{\;\mathrm{Micro\text{-}F1}
+   =\frac{2\,\mathrm{Micro\text{-}P}\cdot \mathrm{Micro\text{-}R}}
+          {\mathrm{Micro\text{-}P}+\mathrm{Micro\text{-}R}}\;}
+\]
+whereas \textbf{Macro-F1} computes a per-class F1 and averages them \emph{unweighted}:
+\[
+  \mathrm{F1}_c=\frac{2\,\mathrm{TP}_c}{2\,\mathrm{TP}_c+\mathrm{FP}_c+\mathrm{FN}_c},
+  \qquad
+  \boxed{\;\mathrm{Macro\text{-}F1}=\frac{1}{|\mathcal{C}|}\sum_{c\in\mathcal{C}}\mathrm{F1}_c\;}
+\]
+In the \emph{single-label} multi-class setting each node contributes exactly one false positive for
+every false negative, so $\mathrm{Micro\text{-}P}=\mathrm{Micro\text{-}R}$ and Micro-F1 coincides
+with plain accuracy --- which is why papers that report Micro-F1 rarely also report accuracy. The
+pair is reported together because they answer different questions: Micro-F1 is dominated by the
+frequent classes, Macro-F1 weights a rare class as heavily as a common one, and a large gap between
+them is the signature of a method that has learned the class prior rather than the graph.
+
+\paragraph{The multi-label caveat.} This equivalence \emph{fails} for the multi-label benchmarks. In
+the HGB versions of IMDB and Freebase a node may carry several labels at once (a film is both
+``Drama'' and ``Romance''), prediction is per-label thresholding rather than an $\arg\max$, and the
+pooled confusion matrix is taken over the flattened node~$\times$~label indicator matrix. There
+$\mathrm{Micro\text{-}P}\neq\mathrm{Micro\text{-}R}$ in general and Micro-F1 is \emph{not} accuracy.
+Comparing a Micro-F1 from a multi-label IMDB against one from single-label DBLP is meaningless.
+
+\paragraph{Other classification metrics.} \textbf{Accuracy} is reported mainly on OGB
+(\texttt{ogbn-mag}'s official leaderboard metric is accuracy). \textbf{ROC-AUC} appears for binary
+or strongly imbalanced targets. For the \emph{clustering} probe that HAN, MAGNN, DMGI and HeCo all
+run --- $k$-means on the frozen embeddings with $k=|\mathcal{C}|$ --- the scores are normalised
+mutual information and adjusted Rand index. With $Y$ the ground-truth partition and $\hat{C}$ the
+predicted one,
+\[
+  \mathrm{NMI}(Y,\hat{C})=\frac{2\,I(Y;\hat{C})}{H(Y)+H(\hat{C})}\in[0,1],
+  \qquad
+  \mathrm{ARI}=\frac{\mathrm{RI}-\mathbb{E}[\mathrm{RI}]}{\max(\mathrm{RI})-\mathbb{E}[\mathrm{RI}]},
+\]
+where $I$ is mutual information, $H$ is entropy and $\mathrm{RI}$ is the Rand index; both are $0$
+for a chance partition and $1$ for a perfect one, and ARI can go negative. These are the metrics
+that test whether the embedding geometry is class-structured without a classifier being fitted at
+all.
+
+\subsubsection*{4.2 Link prediction}
+
+The essential difference from the homogeneous case is that in a HIN link prediction is stated
+\textbf{per relation type}: the task is not ``is there an edge'' but ``is there an edge
+\emph{of type $R$}'' --- predict Author--Paper, or Paper--Venue, or User--Artist. Two consequences
+follow. (i) \emph{Negatives must be sampled type-consistently}: a candidate negative for an
+Author--Paper edge must join an author to a paper, never an author to a venue, because a
+type-violating negative is trivially rejected by any type-aware model and inflates its score
+against type-agnostic baselines. (ii) Scores are reported per relation and then averaged, so a
+model can be strong on a dense relation and useless on a sparse one without that showing in a
+single number.
+
+Let the evaluation rank a positive edge against a set of sampled negatives. With
+$\mathrm{rank}_i$ the position of the $i$-th true edge among its candidates and $Q$ the query set,
+\[
+  \boxed{\;\mathrm{MRR}=\frac{1}{|Q|}\sum_{i\in Q}\frac{1}{\mathrm{rank}_i}\;}
+  \qquad
+  \boxed{\;\mathrm{Hits}@K=\frac{1}{|Q|}\sum_{i\in Q}\mathbf{1}\!\left[\mathrm{rank}_i\le K\right]\;}
+\]
+so MRR is the mean reciprocal rank of the first true item and Hits@$K$ is the fraction of positive
+edges ranked inside the top $K$ against their sampled negatives; $K\in\{1,3,10\}$ is conventional,
+inherited from the knowledge-graph literature. \textbf{ROC-AUC} treats the problem as binary
+scoring and equals the probability that a random positive outranks a random negative;
+\textbf{average precision} (equivalently the area under the precision--recall curve) is
+\[
+  \mathrm{AP}=\sum_{n}\left(R_n-R_{n-1}\right)P_n ,
+\]
+with $P_n,R_n$ the precision and recall at the $n$-th threshold. AP is preferred to ROC-AUC when
+the positive class is rare, which it always is for link prediction on a sparse graph --- ROC-AUC
+is optimistic there because the huge true-negative count sits in its denominator.
+\textbf{Precision@$K$} and \textbf{Recall@$K$} appear in the recommendation-flavoured HIN papers
+(HERec on Yelp/Douban/MovieLens). HGB's link-prediction track standardises on \textbf{ROC-AUC and
+MRR}.

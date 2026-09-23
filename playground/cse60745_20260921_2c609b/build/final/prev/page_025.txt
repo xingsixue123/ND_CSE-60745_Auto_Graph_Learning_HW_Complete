@@ -1,0 +1,41 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+⟨τ(s), ϕ(e), τ(t)⟩, with a learnable scalar prior µ per meta-relation. It needs no hand-designed
+meta-paths. Adds relative temporal encoding for dynamic graphs and HGSampling for web-
+scale mini-batch training.
+• simple-HGN / HGB — Lv, Ding, Liu et al., KDD 2021. A deliberately minimal baseline:
+GAT plus (i) a learnable edge-type embedding concatenated into the attention logit, (ii)
+residual connections on both node representations and attention scores, and (iii) L2 normal-
+isation of the output embeddings. The paper’s larger contribution is the HGB benchmark
+itself and the finding that this simple model matches or beats most specialised HGNNs.
+• ie-HGCN — Yang, Guan, Li, Zhao, Cui & Wang, IEEE TKDE 35(2):1637–1650, 2023.
+Hierarchical object-level then type-level aggregation which, as a by-product, ranks the useful
+meta-paths, making the model interpretable while avoiding an exhaustive meta-path search.
+• RSHN — Zhu, Zhou, Pan, Zhu & Wang, IEEE ICDM 2019. Builds a coarsened edge-centric
+“relation structure graph” to embed relation types themselves, then propagates with those
+relation embeddings rather than treating relations as bare labels.
+• HPN — Ji, Wang, Shi, Wang & Yu, IEEE TKDE 35(1):521–532, 2023. Analyses semantic
+confusion (the HIN analogue of over-smoothing) and replaces the propagation step with a
+personalised-PageRank-like update that retains a fraction of the node’s own representation,
+enabling deeper meta-path propagation.
+4.4 Self-supervised / contrastive heterogeneous methods
+• DMGI — Park, Kim, Han & Yu, AAAI 2020. Extends Deep Graph Infomax to attributed
+multiplex networks: one DGI mutual-information objective per relation type, with a consensus
+regularisation that pulls the per-relation embeddings towards a shared representation.
+• HDGI — Ren, Liu, Huang, Dai, Bo & Zhang, arXiv:1911.08538, 2019 (AAAI-20 DLGMA
+workshop, under a different title; no archival venue). Applies mutual-information maximisa-
+tion between local node embeddings and a global summary, using meta-path-based convolu-
+tion plus semantic attention as the encoder.
+• HeCo — Wang, Liu, Han & Shi, KDD 2021. Contrasts two views of the same node: a
+network-schema view (attention over directly-connected neighbours of each other type) and a
+meta-path view (meta-path-specific GCNs with semantic attention). Positives are not merely
+the node’s counterpart view — HeCo selects multiple positives by counting how many meta-
+path instances connect two nodes and taking the top ones.
+4.5 Knowledge-graph embeddings as relation-aware LP baselines
+A HIN with many relation types is close to a knowledge graph, so heterogeneous link-prediction
+papers (and HGB’s LP track) routinely report KG embedding models, which score a typed triple
+(h, r, t) directly.
+• TransE — Bordes, Usunier, Garcia-Duran, Weston & Yakhnenko, NIPS 2013. Models a
+relation as a translation, h + r ≈t, scoring −∥h + r −t∥.
+Cannot represent 1-to-N or
+symmetric relations.
+Page 25 of 28

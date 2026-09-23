@@ -1,0 +1,227 @@
+% ---- p2-namespaced TikZ styles (package loading happens in preamble.txt) ----
+\tikzset{
+  p2ent/.style={circle, draw=black!65, line width=0.7pt, minimum size=9.5mm,
+                inner sep=0pt, font=\small\bfseries},
+  p2lab/.style={font=\scriptsize},
+  p2rel/.style={draw=black!65, line width=0.7pt},
+  p2el/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+}
+\newcommand{\pTwoTgt}{orange!22}
+\newcommand{\pTwoAgt}{blue!12}
+\newcommand{\pTwoAtt}{green!14}
+\newcommand{\pTwoVen}{purple!12}
+
+\subsection*{2. Benchmarks}
+
+\subsubsection*{2.1 The standardised suite: HGB}
+
+Heterogeneous GNN papers before 2021 each preprocessed DBLP/ACM/IMDB their own way, so their
+reported numbers were not comparable. \textbf{HGB} (Heterogeneous Graph Benchmark; Lv, Ding, Liu
+et al., KDD 2021) exists precisely to fix this: fixed splits, fixed features, one leaderboard.
+Its headline statistics are Table~\ref{p2:tab:hgb}; the per-type breakdown is
+Table~\ref{p2:tab:hgbdetail}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{}
+\label{p2:tab:hgb}
+\begin{tabular}{llrrrrlc}
+\toprule
+Task & Dataset & \#Nodes & \#N.\,types & \#Edges & \#E.\,types & Target & \#Classes \\
+\midrule
+\multirow{4}{*}{NC}
+ & DBLP     & 26{,}128  & 4 & 239{,}566   & 6  & author  & 4 \\
+ & IMDB     & 21{,}420  & 4 & 86{,}642    & 6  & movie   & 5$^{\dagger}$ \\
+ & ACM      & 10{,}942  & 4 & 547{,}872   & 8  & paper   & 3 \\
+ & Freebase & 180{,}098 & 8 & 1{,}057{,}688 & 36 & book  & 7 \\
+\midrule
+\multirow{3}{*}{LP}
+ & Amazon   & 10{,}099  & 1 & 148{,}659   & 2  & product--product & --- \\
+ & LastFM   & 20{,}612  & 3 & 141{,}521   & 3  & user--artist     & --- \\
+ & PubMed   & 63{,}109  & 4 & 244{,}986   & 10 & disease--disease & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize $^{\dagger}$ \textbf{multi-label} --- see Section~\ref{p2:sec:metrics}.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{}
+\label{p2:tab:hgbdetail}
+\begin{tabular}{llrrlr}
+\toprule
+Dataset & Node type & Count & Feat.\ dim & Relation & \#Edges \\
+\midrule
+\multirow{3}{*}{DBLP}
+ & author $^{\star}$ & 4{,}057  & 334   & author--paper & 19{,}645 \\
+ & paper             & 14{,}328 & 4{,}231 & paper--term  & 85{,}810 \\
+ & term              & 7{,}723  & 50    & paper--venue  & 14{,}328 \\
+ & venue             & 20       & ---   & \emph{(+3 inverse relations)} & \\
+\midrule
+\multirow{3}{*}{IMDB}
+ & movie $^{\star}$  & 4{,}932  & 3{,}489 & movie--director & 4{,}932 \\
+ & director          & 2{,}393  & 3{,}341 & movie--actor    & 14{,}779 \\
+ & actor             & 6{,}124  & 3{,}341 & movie--keyword  & 23{,}610 \\
+ & keyword           & 7{,}971  & ---   & \emph{(+3 inverse relations)} & \\
+\midrule
+\multirow{4}{*}{ACM}
+ & paper $^{\star}$  & 3{,}025  & 1{,}902 & paper--cite--paper & 5{,}343 \\
+ & author            & 5{,}959  & 1{,}902 & paper--ref--paper  & 5{,}343 \\
+ & subject           & 56       & 1{,}902 & paper--author      & 9{,}949 \\
+ & term              & 1{,}902  & ---   & paper--subject     & 3{,}025 \\
+ &                   &          &       & paper--term        & 255{,}619 \\
+ &                   &          &       & \emph{(+3 inverse relations)} & \\
+\midrule
+\multirow{4}{*}{Freebase}
+ & book $^{\star}$ 40{,}402 & \multicolumn{2}{l}{film 19{,}427} & \multicolumn{2}{l}{music 82{,}351} \\
+ & sports 1{,}025 & \multicolumn{2}{l}{people 17{,}641} & \multicolumn{2}{l}{location 9{,}368} \\
+ & organization 2{,}731 & \multicolumn{2}{l}{business 7{,}153} & \multicolumn{2}{l}{\emph{no features at all}} \\
+ & \multicolumn{5}{l}{36 typed relations (\textsc{book-and-book} 202{,}674,
+   \textsc{music-and-music} 283{,}670, \dots)} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize $^{\star}$ labelled target type. Labelled counts: DBLP 4{,}057/4{,}057 authors;
+ACM 3{,}025/3{,}025 papers; IMDB 4{,}573/4{,}932 movies (of which \textbf{2{,}684 carry more than
+one label}); Freebase 7{,}954/40{,}402 books. Split is $24\%$ train / $6\%$ validation / $70\%$
+test on the labelled target nodes.}
+\end{table}
+
+\paragraph{Provenance of Table~\ref{p2:tab:hgbdetail}.} The HGB paper publishes only the totals of
+Table~\ref{p2:tab:hgb}; it never prints a per-type breakdown. The numbers above were therefore
+recomputed directly from the released \texttt{node.dat}/\texttt{link.dat}/\texttt{label.dat} files,
+and every one of the four datasets reproduces its published totals exactly (nodes, edges, number of
+node types, number of edge types and number of classes all match). That agreement is what licenses
+the table. Two incidental findings: HGB's own \texttt{info.dat} declares the DBLP author attribute
+dimension as $0$, but the data file actually carries $334$-dimensional author features --- and $334$
+is exactly the feature dimension HAN publishes for DBLP, which independently corroborates the data
+over the metadata; and ACM's $1{,}902$-dimensional bag-of-words is indexed by exactly the $1{,}902$
+\texttt{term} nodes.
+
+\subsubsection*{2.2 The individual benchmark graphs}
+
+\paragraph{DBLP (bibliographic).} A computer-science bibliography extract with types
+\emph{author}, \emph{paper}, \emph{term}, \emph{venue/conference}. Authors are labelled with one of
+4 research areas (database, data mining, AI, information retrieval); author features are a
+bag-of-words over the keywords of the papers they wrote. It is the canonical author-classification
+HIN and the standard testbed for $\mathrm{APA}$ vs.\ $\mathrm{APCPA}$ semantics.
+
+\paragraph{ACM (bibliographic).} Papers from ACM venues with types \emph{paper}, \emph{author},
+\emph{subject}, \emph{term}. Papers are labelled with 3 classes (database, wireless communication,
+data mining) and carry a bag-of-words feature. Distinctively, ACM has a \emph{paper--paper}
+citation relation in addition to the star structure, and HGB splits it into a citation and a
+reference direction --- so the schema is not a pure star.
+
+\paragraph{IMDB (movie).} Types \emph{movie}, \emph{director}, \emph{actor} and (in HGB)
+\emph{keyword}. Movies are labelled by genre. This is the benchmark where versions diverge most
+sharply: MAGNN's IMDb has 3 \emph{disjoint} genres (Action/Comedy/Drama), whereas HGB's has 5
+\emph{overlapping} genres, making it multi-label.
+
+\paragraph{Freebase.} \emph{The name denotes two unrelated graphs.} HGB's Freebase is a
+book-centric knowledge graph: 8 node types, 36 relations, 180{,}098 nodes, target type
+\textsc{book} with 7 classes, and \textbf{no node features whatsoever} --- so it isolates how much
+a model can extract from pure typed structure. HeCo's ``Freebase'' is instead a \emph{movie}
+dataset (3{,}492 movies, 33{,}401 actors, 2{,}502 directors, 4{,}459 writers; target movie, 3
+classes). Quoting a Freebase number without saying which one is meaningless.
+
+\paragraph{AMiner (bibliographic).} Two scales. metapath2vec's AMiner is web-scale: 1{,}693{,}531
+authors, 3{,}194{,}405 papers, 3{,}883 venues, with 8 Google-Scholar categories as labels and
+246{,}678 labelled authors. HeCo's AMiner is a small subset (6{,}564 papers, 13{,}329 authors,
+35{,}890 references; target paper, 4 classes). \emph{Erratum worth knowing:} metapath2vec's body
+text says the dataset ``consists of 9{,}323{,}739 computer scientists'', but the authors' own
+correction note states that 9{,}323{,}739 is the paper--author \emph{link} count and the author
+count is 1{,}693{,}531. The wrong figure is still widely re-quoted.
+
+\paragraph{Yelp and Douban (business / review).} HERec's Yelp has types \emph{user} (16{,}239),
+\emph{business} (14{,}284), \emph{city} (47), \emph{category} (511) and \emph{compliment} (11),
+with U--B 198{,}397, U--U 158{,}590, U--Co 76{,}875, B--Ci 14{,}267 and B--Ca 40{,}009 edges
+(density $0.08\%$). Douban Movie has \emph{user} (13{,}367), \emph{movie} (12{,}677),
+\emph{director} (2{,}449), \emph{actor} (6{,}311) and \emph{type} (38). Both are used for
+rating prediction / recommendation, reported with MAE and RMSE rather than F1.
+
+\paragraph{LastFM and MovieLens (user--item HINs).} MAGNN's Last.fm has \emph{user} (1{,}892),
+\emph{artist} (17{,}632) and \emph{tag} (1{,}088), with U--U 12{,}717, U--A 92{,}834 and A--T
+23{,}253; it carries \emph{no labels and no features}, so it is a pure link-prediction benchmark
+(predict user--artist), with one-hot IDs as dummy inputs. MovieLens/ML-100K is used analogously as
+a user--item bipartite HIN enriched with occupation/genre types. \textbf{PubMed}, in its HGB
+heterogeneous form, is a 4-type biomedical graph (63{,}109 nodes, 10 relation types) used for
+disease--disease link prediction --- not to be confused with the homogeneous PubMed citation
+network of Problem~1.
+
+\paragraph{OGB: \texttt{ogbn-mag} and MAG240M.} These supply the scale the older benchmarks lack.
+\texttt{ogbn-mag} is a Microsoft Academic Graph subset with \emph{paper} (736{,}389),
+\emph{author} (1{,}134{,}649), \emph{institution} (8{,}740) and \emph{field of study} (59{,}965)
+--- 1{,}939{,}743 nodes --- and four relations: author--affiliated\_with--institution
+(1{,}043{,}998), author--writes--paper (7{,}145{,}660), paper--cites--paper (5{,}416{,}271) and
+paper--has\_topic--field\_of\_study (7{,}505{,}078), totalling 21{,}111{,}007 edges. The task is
+predicting each paper's \textbf{venue} among \textbf{349 classes}; only \emph{paper} nodes have
+features (128-d word2vec), the rest are featureless. Crucially the split is \textbf{temporal}
+--- train $\le 2017$, validation 2018, test $\ge 2019$ --- not random, so it measures
+generalisation forward in time. The official metric is accuracy. \textbf{MAG240M} (OGB-LSC) is the
+same design two orders of magnitude larger: 121{,}751{,}666 papers, 122{,}383{,}112 authors and
+25{,}721 institutions (244{,}160{,}499 nodes) with 1{,}728{,}364{,}232 edges, 768-d RoBERTa
+features, and 153 arXiv subject classes.
+
+\subsubsection*{2.3 Version incompatibility --- the caveat that matters}
+
+The same dataset name denotes different graphs in different papers. Table~\ref{p2:tab:versions}
+makes this concrete; quoting a statistic without naming the version is an error.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{}
+\label{p2:tab:versions}
+\begin{tabular}{llrrrrl}
+\toprule
+Dataset & Version & \multicolumn{4}{c}{Node counts} & Note \\
+\midrule
+\multirow{3}{*}{DBLP}
+ & HAN   & \multicolumn{4}{l}{paper 14{,}328 / 14{,}327, author 4{,}057, term \textbf{8{,}789}, venue 20}
+         & P--T $=88{,}420$ \\
+ & MAGNN / HeCo / HGB & \multicolumn{4}{l}{paper 14{,}328, author 4{,}057, term \textbf{7{,}723}, venue 20}
+         & P--T $=85{,}810$ \\
+ & GTN   & \multicolumn{4}{l}{18{,}405 total (= paper + author + venue; \emph{term dropped})} & 4 edge types \\
+\midrule
+\multirow{3}{*}{ACM}
+ & HAN   & \multicolumn{4}{l}{paper 3{,}025, author 5{,}835, subject 56} & P--A $=9{,}744$ \\
+ & HGB   & \multicolumn{4}{l}{paper 3{,}025, author \textbf{5{,}959}, subject 56, term 1{,}902} & P--A $=9{,}949$ \\
+ & HeCo  & \multicolumn{4}{l}{paper \textbf{4{,}019}, author \textbf{7{,}167}, subject \textbf{60}} & P--A $=13{,}407$ \\
+\midrule
+\multirow{3}{*}{IMDB}
+ & HAN   & \multicolumn{4}{l}{movie 4{,}780, director 2{,}269, actor 5{,}841} & \\
+ & MAGNN & \multicolumn{4}{l}{movie 4{,}278, director 2{,}081, actor 5{,}257} & 3 classes, single-label \\
+ & HGB   & \multicolumn{4}{l}{movie 4{,}932, director 2{,}393, actor 6{,}124, keyword 7{,}971}
+         & 5 classes, \textbf{multi-label} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Four specific discrepancies are worth flagging.
+\begin{enumerate}\itemsep2pt
+\item \textbf{DBLP's term count.} HAN reports 8{,}789 terms; MAGNN, HeCo and HGB all use 7{,}723.
+  HGB's published total is only consistent with the latter
+  ($4{,}057+14{,}328+7{,}723+20=26{,}128$, whereas the HAN figure would give $27{,}194$). HAN's own
+  table is also internally inconsistent: it lists 14{,}328 papers in the Paper--Author and
+  Paper--Conference rows but 14{,}327 in the Paper--Term row.
+\item \textbf{HGB's ACM does not match its stated provenance.} HGB says it uses HAN's subset while
+  ``preserving all edges including paper citations and references'', but its author count
+  ($5{,}959$ vs.\ $5{,}835$) and P--A edge count ($9{,}949$ vs.\ $9{,}744$) differ from HAN's
+  published table. Re-adding citation edges cannot change the number of \emph{authors}, so the two
+  ACM graphs genuinely differ.
+\item \textbf{IMDB changes task type, not just size.} HGB's IMDB is multi-label with 5 overlapping
+  genres; MAGNN's is single-label with 3 disjoint ones. An F1 on one is not comparable to an F1 on
+  the other even in principle (Section~\ref{p2:sec:metrics}).
+\item \textbf{HGB's LastFM edge count double-counts one relation.} Its node total $20{,}612$
+  exactly equals MAGNN's $1{,}892+17{,}632+1{,}088$, but its edge total is $141{,}521$ against
+  MAGNN's $128{,}804$. The gap is exactly $12{,}717$, the U--U count:
+  $2\times12{,}717+92{,}834+23{,}253=141{,}521$. So the symmetric user--user relation is stored in
+  both directions while U--A and A--T are stored in one.
+\end{enumerate}
+
+% =====================================================================

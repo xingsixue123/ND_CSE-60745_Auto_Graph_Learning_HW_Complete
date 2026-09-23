@@ -1,0 +1,93 @@
+{
+  "Cora": {
+    "h_incl_selfloops": 0.81,
+    "h_excl_selfloops": 0.81,
+    "n_entries": 5278,
+    "n_selfloops": 0,
+    "published": 0.81
+  },
+  "CiteSeer": {
+    "h_incl_selfloops": 0.7355,
+    "h_excl_selfloops": 0.7355,
+    "n_entries": 4552,
+    "n_selfloops": 0,
+    "published": 0.74
+  },
+  "PubMed": {
+    "h_incl_selfloops": 0.8024,
+    "h_excl_selfloops": 0.8024,
+    "n_entries": 44324,
+    "n_selfloops": 0,
+    "published": 0.8
+  },
+  "Coauthor CS": {
+    "h_incl_selfloops": 0.8081,
+    "h_excl_selfloops": 0.8081,
+    "n_entries": 81894,
+    "n_selfloops": 0,
+    "published": null
+  },
+  "Coauthor Physics": {
+    "h_incl_selfloops": 0.9314,
+    "h_excl_selfloops": 0.9314,
+    "n_entries": 247962,
+    "n_selfloops": 0,
+    "published": null
+  },
+  "Amazon Computers": {
+    "h_incl_selfloops": 0.7772,
+    "h_excl_selfloops": 0.7772,
+    "n_entries": 245861,
+    "n_selfloops": 0,
+    "published": null
+  },
+  "Amazon Photo": {
+    "h_incl_selfloops": 0.8272,
+    "h_excl_selfloops": 0.8272,
+    "n_entries": 119081,
+    "n_selfloops": 0,
+    "published": null
+  },
+  "Cornell": {
+    "h_incl_selfloops": 0.1321,
+    "h_excl_selfloops": 0.1227,
+    "n_entries": 280,
+    "n_selfloops": 3,
+    "published": 0.3
+  },
+  "Texas": {
+    "h_incl_selfloops": 0.1119,
+    "h_excl_selfloops": 0.0609,
+    "n_entries": 295,
+    "n_selfloops": 16,
+    "published": 0.11
+  },
+  "Wisconsin": {
+    "h_incl_selfloops": 0.206,
+    "h_excl_selfloops": 0.1778,
+    "n_entries": 466,
+    "n_selfloops": 16,
+    "published": 0.21
+  },
+  "Actor": {
+    "h_incl_selfloops": 0.2195,
+    "h_excl_selfloops": 0.2167,
+    "n_entries": 26752,
+    "n_selfloops": 93,
+    "published": 0.22
+  },
+  "Chameleon": {
+    "h_incl_selfloops": 0.2312,
+    "h_excl_selfloops": 0.2299,
+    "n_entries": 31421,
+    "n_selfloops": 50,
+    "published": 0.23
+  },
+  "Squirrel": {
+    "h_incl_selfloops": 0.2227,
+    "h_excl_selfloops": 0.2221,
+    "n_entries": 198493,
+    "n_selfloops": 140,
+    "published": 0.22
+  }
+}

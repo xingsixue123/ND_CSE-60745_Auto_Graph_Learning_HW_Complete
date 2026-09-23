@@ -1,0 +1,155 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+2. Benchmarks
+2.1 The standardised suite: HGB
+Heterogeneous GNN papers before 2021 each preprocessed DBLP/ACM/IMDB their own way, so
+their reported numbers were not comparable. HGB (Heterogeneous Graph Benchmark; Lv, Ding,
+Liu et al., KDD 2021) exists precisely to fix this: fixed splits, fixed features, one leaderboard. Its
+headline statistics are Table 4; the per-type breakdown is Table 5.
+Table 4: HGB (Lv et al., KDD 2021) benchmark statistics, as published.
+Task
+Dataset
+#Nodes
+#N. types
+#Edges
+#E. types
+Target
+#Classes
+NC
+DBLP
+26,128
+4
+239,566
+6
+author
+4
+IMDB
+21,420
+4
+86,642
+6
+movie
+5†
+ACM
+10,942
+4
+547,872
+8
+paper
+3
+Freebase
+180,098
+8
+1,057,688
+36
+book
+7
+LP
+Amazon
+10,099
+1
+148,659
+2
+product–product
+—
+LastFM
+20,612
+3
+141,521
+3
+user–artist
+—
+PubMed
+63,109
+4
+244,986
+10
+disease–disease
+—
+† multi-label — see Section 5.
+Table 5: Per-node-type and per-relation breakdown of the four HGB node-classification benchmarks,
+recomputed from the released data files (see the note below).
+Dataset
+Node type
+Count
+Feat. dim
+Relation
+#Edges
+DBLP
+author ⋆
+4,057
+334
+author–paper
+19,645
+paper
+14,328
+4,231
+paper–term
+85,810
+term
+7,723
+50
+paper–venue
+14,328
+venue
+20
+—
+(+3 inverse relations)
+IMDB
+movie ⋆
+4,932
+3,489
+movie–director
+4,932
+director
+2,393
+3,341
+movie–actor
+14,779
+actor
+6,124
+3,341
+movie–keyword
+23,610
+keyword
+7,971
+—
+(+3 inverse relations)
+ACM
+paper ⋆
+3,025
+1,902
+paper–cite–paper
+5,343
+author
+5,959
+1,902
+paper–ref–paper
+5,343
+subject
+56
+1,902
+paper–author
+9,949
+term
+1,902
+—
+paper–subject
+3,025
+paper–term
+255,619
+(+3 inverse relations)
+Freebase
+book ⋆40,402
+film 19,427
+music 82,351
+sports 1,025
+people 17,641
+location 9,368
+organization 2,731
+business 7,153
+no features at all
+36 typed relations (book-and-book 202,674, music-and-music 283,670, . . . )
+⋆labelled target type. Labelled counts: DBLP 4,057/4,057 authors; ACM 3,025/3,025 papers; IMDB 4,573/4,932
+movies (of which 2,684 carry more than one label); Freebase 7,954/40,402 books. Split is 24% train / 6%
+validation / 70% test on the labelled target nodes.
+Page 17 of 28

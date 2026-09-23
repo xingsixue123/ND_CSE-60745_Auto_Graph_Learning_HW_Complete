@@ -1,0 +1,52 @@
+{
+  "input_dir": "/home/xing/project/auto_hw_complete_graph/input",
+  "entries": [
+    {
+      "source": "/home/xing/project/auto_hw_complete_graph/input/CSE 60745_Fall 2026_HW2-Part(A).doc",
+      "name": "CSE 60745_Fall 2026_HW2-Part(A).doc",
+      "relative_path": "CSE 60745_Fall 2026_HW2-Part(A).doc",
+      "role": "assignment",
+      "kind": "document",
+      "bytes": 77824,
+      "converted_pdf": "/home/xing/project/auto_hw_complete_graph/playground/cse60745_20260921_2c609b/ingest/pdf/CSE 60745_Fall 2026_HW2-Part(A).pdf",
+      "rendered": true,
+      "pages": [
+        {
+          "rendered_page": 1,
+          "png": "page_001.png",
+          "txt": "page_001.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 211,
+          "n_images": 1,
+          "n_vector_drawings": 14,
+          "figures": []
+        },
+        {
+          "rendered_page": 2,
+          "png": "page_002.png",
+          "txt": "page_002.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 1532,
+          "n_images": 1,
+          "n_vector_drawings": 10,
+          "figures": []
+        },
+        {
+          "rendered_page": 3,
+          "png": "page_003.png",
+          "txt": "page_003.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 616,
+          "n_images": 1,
+          "n_vector_drawings": 7,
+          "figures": []
+        }
+      ],
+      "pages_dir": "/home/xing/project/auto_hw_complete_graph/playground/cse60745_20260921_2c609b/ingest/pages/CSE 60745_Fall 2026_HW2-Part(A)",
+      "n_pages": 3
+    }
+  ]
+}

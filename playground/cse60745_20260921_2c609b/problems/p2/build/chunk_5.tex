@@ -1,0 +1,141 @@
+% ---- p2-namespaced TikZ styles (package loading happens in preamble.txt) ----
+\tikzset{
+  p2ent/.style={circle, draw=black!65, line width=0.7pt, minimum size=9.5mm,
+                inner sep=0pt, font=\small\bfseries},
+  p2lab/.style={font=\scriptsize},
+  p2rel/.style={draw=black!65, line width=0.7pt},
+  p2el/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+}
+\newcommand{\pTwoTgt}{orange!22}
+\newcommand{\pTwoAgt}{blue!12}
+\newcommand{\pTwoAtt}{green!14}
+\newcommand{\pTwoVen}{purple!12}
+
+\subsection*{5. Evaluation metrics}
+\label{p2:sec:metrics}
+
+Two conventions govern the whole literature. First, a HIN benchmark normally labels
+\textbf{exactly one node type} --- the author in DBLP, the paper in ACM, the movie in IMDB --- so
+``accuracy on DBLP'' always means accuracy on that one target type, the other types being context.
+Second, for \emph{unsupervised} methods the protocol is \textbf{embed $\to$ freeze $\to$ fit a
+linear classifier}: the embedding is learned without labels, then held fixed while a logistic
+regression is trained on a fraction of target nodes, the fraction varied over $20/40/60/80\%$ and
+mean $\pm$ std reported over repeated splits. HAN, MAGNN and HeCo all report in this form.
+
+\subsubsection*{5.1 Node classification}
+
+With class set $\mathcal{C}$ and per-class counts $\mathrm{TP}_c,\mathrm{FP}_c,\mathrm{FN}_c$,
+\textbf{Micro-F1} pools the confusion matrix \emph{before} scoring,
+\[
+  \mathrm{Micro\text{-}P}=\frac{\sum_{c}\mathrm{TP}_c}{\sum_{c}(\mathrm{TP}_c+\mathrm{FP}_c)},
+  \qquad
+  \mathrm{Micro\text{-}R}=\frac{\sum_{c}\mathrm{TP}_c}{\sum_{c}(\mathrm{TP}_c+\mathrm{FN}_c)},
+\]
+\[
+  \mathrm{Micro\text{-}F1}
+   =\frac{2\,\mathrm{Micro\text{-}P}\cdot\mathrm{Micro\text{-}R}}
+          {\mathrm{Micro\text{-}P}+\mathrm{Micro\text{-}R}},
+\]
+whereas \textbf{Macro-F1} scores each class and averages \emph{unweighted}:
+\[
+  \mathrm{F1}_c=\frac{2\,\mathrm{TP}_c}{2\,\mathrm{TP}_c+\mathrm{FP}_c+\mathrm{FN}_c},
+  \qquad
+  \mathrm{Macro\text{-}F1}=\frac{1}{|\mathcal{C}|}\sum_{c\in\mathcal{C}}\mathrm{F1}_c .
+\]
+In the \emph{single-label} multi-class setting every misclassification creates one false positive
+and one false negative, so $\mathrm{Micro\text{-}P}=\mathrm{Micro\text{-}R}$ and Micro-F1 equals
+plain \textbf{accuracy}. The pair is always reported together because they answer different
+questions: Micro-F1 is dominated by frequent classes, Macro-F1 weights a rare class as heavily as a
+common one, and a large gap between them signals a model that has learned the class prior rather
+than the graph.
+
+\paragraph{The multi-label caveat.} This equivalence \textbf{fails} for HGB's IMDB and Freebase
+tracks, where a node may carry several labels at once. Prediction is per-label thresholding (sigmoid
++ binary cross-entropy) rather than an $\arg\max$, and the pooled confusion matrix is taken over the
+flattened node~$\times$~label indicator matrix; there $\mathrm{Micro\text{-}P}\neq
+\mathrm{Micro\text{-}R}$ in general and Micro-F1 is \emph{not} accuracy. In HGB's IMDB, 2{,}684 of
+the 4{,}573 labelled movies carry more than one genre, so this is not a corner case --- and it is
+why a Micro-F1 on HGB's IMDB cannot be compared with one on MAGNN's single-label IMDB.
+
+\paragraph{Other classification metrics.} \textbf{Accuracy} is the official metric on OGB
+(\texttt{ogbn-mag}, MAG240M). \textbf{ROC-AUC} is used for binary or strongly imbalanced targets
+(and by HeCo alongside F1). For the \emph{clustering} probe that HAN, MAGNN, DMGI and HeCo all run
+--- $k$-means on the frozen embeddings with $k=|\mathcal{C}|$ --- the scores are
+\[
+  \mathrm{NMI}(Y,\hat{C})=\frac{2\,I(Y;\hat{C})}{H(Y)+H(\hat{C})}\in[0,1],
+  \qquad
+  \mathrm{ARI}=\frac{\mathrm{RI}-\mathbb{E}[\mathrm{RI}]}
+                    {\max(\mathrm{RI})-\mathbb{E}[\mathrm{RI}]},
+\]
+with $I$ mutual information, $H$ entropy and $\mathrm{RI}$ the Rand index. Both are $0$ in
+expectation for a chance partition and $1$ for a perfect one (ARI may go negative). These test
+whether the embedding geometry is class-structured with no classifier fitted at all.
+
+\subsubsection*{5.2 Link prediction}
+
+The essential difference from the homogeneous case is that in a HIN link prediction is stated
+\textbf{per relation type}: not ``is there an edge'' but ``is there an edge \emph{of type $R$}''
+--- predict Author--Paper, or Paper--Venue, or User--Artist. Two consequences follow.
+(i) \emph{Negatives must be sampled type-consistently}: a negative for an Author--Paper edge must
+join an author to a paper, never an author to a venue, since a type-violating negative is trivially
+rejected by any type-aware model and inflates its apparent margin over type-agnostic baselines.
+HGB samples negatives from 2-hop neighbours at a 1:1 ratio for exactly this reason.
+(ii) Scores are reported \emph{per relation} and then averaged, so a model can be strong on a dense
+relation and useless on a sparse one without that showing in a single number.
+
+Let $\mathrm{rank}_i$ be the position of the $i$-th true edge among its candidates, over query set
+$Q$:
+\[
+  \mathrm{MRR}=\frac{1}{|Q|}\sum_{i\in Q}\frac{1}{\mathrm{rank}_i},
+  \qquad
+  \mathrm{Hits}@K=\frac{1}{|Q|}\sum_{i\in Q}\mathbf{1}\!\left[\mathrm{rank}_i\le K\right],
+\]
+i.e.\ MRR is the mean reciprocal rank of the first true item and Hits@$K$ the fraction of positive
+edges ranked inside the top $K$ against their sampled negatives ($K\in\{1,3,10\}$ conventionally,
+inherited from the KG literature). \textbf{ROC-AUC} equals the probability that a random positive
+outranks a random negative. \textbf{Average precision} (equivalently AUPRC) is
+\[
+  \mathrm{AP}=\sum_{n}\left(R_n-R_{n-1}\right)P_n ,
+\]
+with $P_n,R_n$ precision and recall at the $n$-th threshold. AP is preferred to ROC-AUC when
+positives are rare --- always true for link prediction on a sparse graph --- because ROC-AUC is
+optimistic there, the enormous true-negative count sitting in its denominator.
+\textbf{Precision@$K$} / \textbf{Recall@$K$}, and MAE/RMSE for rating prediction, appear in the
+recommendation-flavoured HIN papers (HERec on Yelp/Douban). HGB's LP track standardises on
+\textbf{ROC-AUC and MRR}.
+
+\subsubsection*{5.3 Summary: dataset $\to$ target $\to$ task $\to$ metric}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{}
+\label{p2:tab:summary}
+\begin{tabular}{llllll}
+\toprule
+Dataset & Domain & Target & Task & Labels & Metrics normally reported \\
+\midrule
+DBLP      & bibliographic & author  & NC     & 4, single & Macro-F1, Micro-F1 (+NMI/ARI) \\
+ACM       & bibliographic & paper   & NC     & 3, single & Macro-F1, Micro-F1 (+NMI/ARI) \\
+IMDB (HGB)& movie         & movie   & NC     & 5, \textbf{multi} & Macro-F1, Micro-F1 \\
+IMDB (MAGNN)& movie       & movie   & NC     & 3, single & Macro-F1, Micro-F1 \\
+Freebase (HGB) & KG       & book    & NC     & 7, single & Macro-F1, Micro-F1 \\
+AMiner    & bibliographic & author/paper & NC & 8 / 4    & Macro-F1, Micro-F1, NMI \\
+\texttt{ogbn-mag} & bibliographic & paper & NC & 349, single & \textbf{Accuracy} (official) \\
+MAG240M   & bibliographic & paper   & NC     & 153, single & \textbf{Accuracy} (official) \\
+\midrule
+LastFM    & music         & user--artist & LP & ---      & ROC-AUC, MRR \\
+Amazon    & e-commerce    & product--product & LP & ---  & ROC-AUC, MRR \\
+PubMed (HGB) & biomedical & disease--disease & LP & ---  & ROC-AUC, MRR \\
+Yelp / Douban & review    & user--item & LP / rating & --- & Precision@K, Recall@K; MAE, RMSE \\
+OAG (HGT) & bibliographic & paper--field / venue & LP & --- & NDCG, MRR \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Closing remark.} The single most important methodological point is the one HGB was
+created to make: because DBLP, ACM and IMDB circulate in mutually incompatible preprocessed
+versions (Table~\ref{p2:tab:versions}), and because IMDB even changes from single-label to
+multi-label between versions, numbers copied across papers are frequently not comparable. Any
+credible evaluation must name the dataset \emph{version}, the split, and whether the protocol is
+end-to-end supervised or embed-freeze-classify.

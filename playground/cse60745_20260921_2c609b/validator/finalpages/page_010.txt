@@ -1,0 +1,51 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+• JK-Net — Xu, Li, Tian, Sonobe, Kawarabayashi & Jegelka, Representation Learning on Graphs
+with Jumping Knowledge Networks, ICML 2018. Observes that the right neighbourhood radius
+differs per node (hub vs. periphery), and lets the final representation “jump” by combining all
+intermediate layers h(1), . . . , h(L) via concatenation, max-pooling or an LSTM attention, rather
+than using only the last. A standard remedy for over-smoothing.
+• GIN — Xu, Hu, Leskovec & Jegelka, How Powerful are Graph Neural Networks?, ICLR 2019.
+Analyses message passing through the Weisfeiler–Lehman test and shows that mean and max
+aggregation lose information; a sum aggregator with an MLP update, h(l+1)
+v
+= MLP
+(︁(1 +
+ϵ)h(l)
+v + ∑︁
+u∈N(v) h(l)
+u
+)︁, is maximally expressive, i.e. as strong as 1-WL. The reference point for
+all expressive-power arguments.
+• SGC — Wu, Souza, Zhang, Fifty, Yu & Weinberger, Simplifying Graph Convolutional Net-
+works, ICML 2019. Removes every non-linearity from a K-layer GCN, collapsing it to ˆY =
+softmax(SKXW) with S = ˜D−1/2 ˜A ˜D−1/2. Since SKX is a fixed pre-computation, training is
+plain logistic regression — orders of magnitude faster, and on the homophilous citation bench-
+marks essentially as accurate. An important sanity baseline: it measures how much the non-
+linearity was really contributing.
+• APPNP — Gasteiger (formerly Klicpera), Bojchevski & Günnemann, Predict then Propagate:
+Graph Neural Networks meet Personalized PageRank, ICLR 2019. Decouples prediction from
+propagation: an MLP produces per-node predictions H, which are then diffused by a truncated
+personalized-PageRank iteration Z(k+1) = (1 −α) ˆAZ(k) + αH. The teleport term α keeps the
+node’s own signal alive, so a large propagation radius is possible without over-smoothing and
+without extra parameters.
+• GCNII — Chen, Wei, Huang, Ding & Li, Simple and Deep Graph Convolutional Networks,
+ICML 2020. Makes genuinely deep GCNs (32–64 layers) work using two ingredients: an initial
+residual connection to H(0) (the APPNP teleport idea) and identity mapping of the weight
+matrix, (1 −βl)I + βlW (l). Proves the result still expresses a polynomial filter of arbitrary order
+and so does not collapse to over-smoothing.
+• SEAL — Zhang & Chen, Link Prediction Based on Graph Neural Networks, NeurIPS 2018.
+Reframes link prediction as subgraph classification: for a candidate pair (u, v) it extracts the
+h-hop enclosing subgraph, applies a Double-Radius Node Labeling that encodes each node’s
+distance to both u and v, and classifies the labelled subgraph with a GNN. The γ-decaying
+theory in the paper shows such a GNN can learn any of the classical heuristics below rather
+than assuming one. The strongest general-purpose link-prediction baseline.
+• NBFNet — Zhu, Zhang, Xhonneux & Tang, Neural Bellman-Ford Networks: A General Graph
+Neural Network Framework for Link Prediction, NeurIPS 2021. Generalises the Bellman–Ford
+path formulation by replacing (min, +) with learned Indicator, Message and Aggregate
+operators, so the score for (u, v) is a learned sum over all paths from u to v. Inductive (it
+depends on structure relative to u, not on node identity) and applies to homogeneous graphs
+and knowledge graphs alike.
+3.5 Self-supervised and contrastive methods
+• DGI — Veličković, Fedus, Hamilton, Liò, Bengio & Hjelm, Deep Graph Infomax, ICLR 2019.
+Maximises the mutual information between patch representations hv and a global summary s
+Page 10 of 28

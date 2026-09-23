@@ -1,0 +1,49 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+B
+Book
+F
+Film
+M
+Music
+S
+Sports
+P
+People
+L
+Location
+O
+Organization
+Bu
+Business
+Freebase (HGB) — the schema is complete:
+(︁8
+2
+)︁
+= 28 pairwise relations + one self-relation
+per type = 36.
+Figure 5: Network schema of Freebase (HGB), drawn in full — all 36 relation types are shown, so
+unlike Figure 4 nothing is omitted here. Freebase is the one benchmark whose schema is complete:
+every one of the
+(︁8
+2
+)︁= 28 unordered type pairs carries exactly one relation, and every type carries
+one self-relation, giving 28 + 8 = 36. Note the contrast with DBLP/ACM/IMDB: none of these
+36 are inverses — all 36 are distinct forward relations, so this count is not inflated by the
+forward/inverse doubling of Section 1, whereas DBLP’s “6 edge types” is 3 relations plus their 3
+inverses. book (shaded) is the labelled target type; the largest single relation is music–music,
+283,670 edges or 27% of the graph.
+• GAT — Veličković, Cucurull, Casanova, Romero, Liò & Bengio, ICLR 2018. Replaces the
+fixed normalisation with multi-head self-attention over neighbours. (Commonly miscited as
+2017, the arXiv posting date.)
+• GraphSAGE — Hamilton, Ying & Leskovec, NIPS 2017. Inductive framework that samples
+a fixed number of neighbours and aggregates with mean/LSTM/max-pool, enabling embed-
+dings for unseen nodes.
+4.2 Meta-path and random-walk HIN embedding
+• metapath2vec — Dong, Chawla & Swami, KDD 2017. Random walks are meta-path-guided:
+at each step the walker must move to the node type prescribed by the meta-path scheme (e.g.
+APVPA), so the generated context is type-balanced instead of being dominated by the most
+frequent type. The walks feed a heterogeneous skip-gram. Note that the base model still
+normalises negative sampling over all nodes regardless of type; it is the metapath2vec++
+variant that normalises the softmax per node type.
+• HIN2Vec — Fu, Lee & Lei, CIKM 2017. Rather than fixing meta-paths in advance, it learns
+Page 23 of 28

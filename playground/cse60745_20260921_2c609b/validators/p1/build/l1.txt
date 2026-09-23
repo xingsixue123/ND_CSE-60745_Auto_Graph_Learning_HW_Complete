@@ -1,0 +1,100 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./wrap.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/size11.clo)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/geometry/geometry.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/keyval.sty) (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/ifvtex.sty (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amstext.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsgen.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsbsy.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsopn.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amssymb.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amsfonts.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/booktabs/booktabs.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/tools/longtable.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/tools/array.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/multirow/multirow.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/graphicx.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/graphics.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/trig.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-cfg/graphics.cfg) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-def/pdftex.def))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/xcolor/xcolor.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-cfg/color.cfg) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/mathcolor.ltx)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/enumitem/enumitem.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def)
+No file wrap.aux.
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+(/home/xing/.TinyTeX/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/home/xing/.TinyTeX/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg)) (./answer.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd)
+
+LaTeX Warning: Reference `p1:tab:nodecls' on page 1 undefined on input line 23.
+
+
+LaTeX Warning: Reference `p1:tab:ogbstats' on page 1 undefined on input line 24.
+
+[1{/home/xing/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
+
+LaTeX Warning: Reference `p1:tab:nodecls' on page 2 undefined on input line 92.
+
+
+LaTeX Warning: Reference `p1:fig:subgraphs' on page 2 undefined on input line 93.
+
+
+LaTeX Warning: Reference `p1:eq:homophily' on page 2 undefined on input line 110.
+
+[2]
+
+LaTeX Warning: Reference `p1:tab:ogbstats' on page 3 undefined on input line 162.
+
+
+LaTeX Warning: Reference `p1:tab:ogbstats' on page 3 undefined on input line 180.
+
+[3]
+
+LaTeX Warning: Reference `p1:fig:linkpred' on page 4 undefined on input line 206.
+
+
+LaTeX Warning: Reference `p1:eq:homophily' on page 4 undefined on input line 222.
+
+
+LaTeX Warning: Reference `p1:fn:cornell' on page 4 undefined on input line 222.
+
+
+LaTeX Warning: Reference `p1:eq:homophily' on page 4 undefined on input line 222.
+
+
+LaTeX Warning: Reference `p1:fn:cornell' on page 4 undefined on input line 222.
+
+
+Overfull \hbox (4.91046pt too wide) in paragraph at lines 224--261
+ [][] 
+
+Overfull \hbox (5.21825pt too wide) in paragraph at lines 270--287
+ [][] 
+[4]
+
+LaTeX Warning: Reference `p1:fig:schemas' on page 5 undefined on input line 304.
+
+
+LaTeX Warning: Reference `p1:fig:subgraphs' on page 5 undefined on input line 305.
+
+
+LaTeX Warning: Reference `p1:eq:homophily' on page 5 undefined on input line 307.
+
+
+LaTeX Warning: Reference `p1:tab:nodecls' on page 5 undefined on input line 323.
+
+
+LaTeX Warning: Reference `p1:tab:nodecls' on page 5 undefined on input line 323.
+
+[5] [6 <./fig_p1_schema_families.pdf> <./fig_p1_subgraphs.pdf>] [7] [8] [9] [10]
+
+LaTeX Warning: Reference `p1:fig:linkpred' on page 11 undefined on input line 632.
+
+[11]
+
+LaTeX Warning: Reference `p1:fig:schemas' on page 12 undefined on input line 735.
+
+
+LaTeX Warning: Reference `p1:eq:homophily' on page 12 undefined on input line 736.
+
+) [12 <./fig_p1_linkpred.pdf>] [13] [14] (./wrap.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)</home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbxti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmcsc10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/urw/helvetic/uhvro8a.pfb>
+Output written on wrap.pdf (14 pages, 428068 bytes).
+Transcript written on wrap.log.

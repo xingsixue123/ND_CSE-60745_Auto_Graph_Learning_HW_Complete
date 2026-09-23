@@ -1,0 +1,24 @@
+ CSE 60745 (Fall 2026): HW-2: Part (A)
+ 
+  
+* This assignment contains 70 points. You are encouraged to finish independently. Any submitted 
+work that it copied from any source or too similar to be an independent write-up will not be given 
+credit. Please submit this homework (as a PDF or Word file including the cover page) to ND 
+Canvas by 11:59pm on Wednesday, 
+ 
+ 9/30/2026
+ 
+ . 
+In this class, we have two-fold course objectives. The first one is to explore recent core techniques 
+and advances in graph learning research, in the forms of class lectures, selected paper presentations 
+and discussion, covering the topics of i) graph embedding techniques, ii) graph neural networks, iii) 
+knowledge graphs, and iv) advanced topics on graph learning. Through our learning, we want to 
+summarize the benchmarks and baselines that have been widely used for graph representation 
+learning for 1) homogeneous graphs, 2) heterogeneous graphs; and 3) knowledge graphs.
+Problem 1 (35 pts). Based on the above context, you are asked to summarize the benchmarks, 
+baselines, and commonly used evaluation metrics for graph embedding methods with homogeneous 
+graph structures for the task of node classification and link prediction as comprehensive as you can. 
+Note: (1) For the benchmarks, please describe each of the benchmark graphs (e.g., Cora) and draw 
+the related graph schema. (2) For the commonly used baselines, please provide the reference (i.e., 
+original paper) of each baseline and briefly describe the method.
+Page 1 of 4

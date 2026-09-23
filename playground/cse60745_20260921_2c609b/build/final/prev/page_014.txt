@@ -1,0 +1,47 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+this is precisely why OGB abandoned it in favour of Hits@K and MRR, which only reward ranking
+the positive above the hardest sampled negatives.
+AP is likewise more informative than AUC
+because it weights the high-precision region where the model actually operates. A corollary is that
+Hits@K numbers are only comparable when the negative set is identical, which is the reason OGB
+ships a fixed evaluator.
+(a) Split and negative sampling
+u
+v
+a
+b
+observed edges (message passing)
+held-out positive edge (u, v)
+sampled negative pairs (u, ·)
+(b) Ranking the positive against its negatives
+rank 1
+(u, n3) neg
+rank 2
+(u, v)
+pos
+rank 3
+(u, b)
+neg
+...
+predicted score ˆs(u, ·)
+Hits@1 = 0,
+Hits@3 = 1
+reciprocal rank = 1
+2
+MRR averages this over all queries
+Figure 3: The link-prediction evaluation protocol. The held-out positive edge must be removed
+from the message-passing graph, and is scored against a sampled set of negatives; Hits@K and
+MRR are read off the resulting ranking.
+4.3 Which metric is reported on which dataset
+5. Summary
+For homogeneous graphs the schema is degenerate — one node type, one edge type (Figure 1) — so
+what distinguishes the benchmarks is scale, feature type, and above all label homophily (Eq. (1)).
+The suite has moved in three waves: the small homophilous citation graphs with a fixed 20-per-class
+split, the re-splittable co-authorship/co-purchase graphs and the heterophilous WebKB/Wikipedia
+graphs introduced to expose the homophily assumption, and finally OGB, with realistic non-random
+splits and a shared evaluator at a scale where sampling-based training is mandatory. On metrics,
+the two points that matter most are that Micro-F1 equals accuracy in the single-label case while
+Macro-F1 is what exposes neglected rare classes, and that on sparse graphs AUC is optimistic, so
+ranking metrics against a fixed negative set (Hits@K, MRR) are what make link-prediction results
+comparable.
+Page 14 of 28

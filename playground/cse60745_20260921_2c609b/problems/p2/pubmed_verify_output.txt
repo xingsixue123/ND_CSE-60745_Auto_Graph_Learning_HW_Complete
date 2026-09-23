@@ -1,0 +1,24 @@
+== HGB/HNE PubMed schema, re-derived from hgb_info/PubMed.info.dat ==
+  [OK] 4 node types, named as drawn  ({0: 'GENE', 1: 'DISEASE', 2: 'CHEMICAL', 3: 'SPECIES'})
+  [OK] node counts sum to 63,109  (13,561 + 20,163 + 26,522 + 2,863)
+  [OK] 10 relation types  (got 10)
+  [OK] edge counts sum to published total 244,986  (got 244,986)
+  [OK] no relation is drawn twice (each unordered pair appears once)  (10 distinct of 10)
+  [OK] all C(4,2)=6 unordered type pairs are realised  (6 of 6)
+  [OK] all 4 types carry a self-relation  (4 of 4)
+  [OK] schema is COMPLETE: 6 pairwise + 4 self = 10  (6 + 4 = 10)
+  [OK] LP target is DISEASE-and-DISEASE, a self-relation on the labelled type  (Targeting Link Type (1,1,2) = DISEASE-and-DISEASE)
+
+-- relation list as drawn --
+   0: GENE     -- GENE      GENE-and-GENE               16,105
+   1: GENE     -- DISEASE   GENE-causing-DISEASE        25,962
+   2: DISEASE  -- DISEASE   DISEASE-and-DISEASE         42,637
+   3: CHEMICAL -- GENE      CHEMICAL-in-GENE            31,277
+   4: CHEMICAL -- DISEASE   CHEMICAL-in-DISEASE         51,323
+   5: CHEMICAL -- CHEMICAL  CHEMICAL-and-CHEMICAL       62,187
+   6: CHEMICAL -- SPECIES   CHEMICAL-in-SPECIES          6,297
+   7: SPECIES  -- GENE      SPECIES-with-GENE            3,155
+   8: SPECIES  -- DISEASE   SPECIES-with-DISEASE         5,245
+   9: SPECIES  -- SPECIES   SPECIES-and-SPECIES            798
+
+ALL INVARIANTS HOLD

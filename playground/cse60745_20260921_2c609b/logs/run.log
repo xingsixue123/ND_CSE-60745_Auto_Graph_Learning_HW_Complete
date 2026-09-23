@@ -1,0 +1,97 @@
+[2026-09-21 16:44:07] job cse60745_20260921_2c609b created
+[2026-09-21 16:44:07] ingesting input ...
+[2026-09-21 16:44:08] ingest done: 1 document(s)
+[2026-09-21 16:44:08] spawning master agent
+[2026-09-21 16:46:33] p1: worker round 1
+[2026-09-21 16:54:08] HEARTBEAT master running 10 min
+[2026-09-21 16:56:33] HEARTBEAT p1 worker round 1 running 10 min
+[2026-09-21 17:04:08] HEARTBEAT master running 20 min
+[2026-09-21 17:06:33] HEARTBEAT p1 worker round 1 running 20 min
+[2026-09-21 17:08:56] p1 worker r1: $14.89 (job total $14.89)
+[2026-09-21 17:08:56] p1: worker round 1 rc=0
+[2026-09-21 17:14:08] HEARTBEAT master running 30 min
+[2026-09-21 17:18:56] HEARTBEAT p1 validator round 1 running 10 min
+[2026-09-21 17:19:02] p1 validator r1: $4.16 (job total $19.05)
+[2026-09-21 17:19:02] p1: validator round 1 -> FAIL
+[2026-09-21 17:19:02] p1: worker round 2
+[2026-09-21 17:24:08] HEARTBEAT master running 40 min
+[2026-09-21 17:27:13] p1 worker r2: $11.04 (job total $30.09)
+[2026-09-21 17:27:13] p1: worker round 2 rc=0
+[2026-09-21 17:32:16] p1 validator r2: $3.58 (job total $33.68)
+[2026-09-21 17:32:16] p1: validator round 2 -> FAIL
+[2026-09-21 17:32:16] p1: worker round 3
+[2026-09-21 17:34:08] HEARTBEAT master running 50 min
+[2026-09-21 17:35:41] p1 worker r3: $5.19 (job total $38.87)
+[2026-09-21 17:35:41] p1: worker round 3 rc=0
+[2026-09-21 17:39:40] p1 validator r3: $3.78 (job total $42.65)
+[2026-09-21 17:39:40] p1: validator round 3 -> PASS
+[2026-09-21 17:39:46] p2: worker round 1
+[2026-09-21 17:44:08] HEARTBEAT master running 60 min
+[2026-09-21 17:49:46] HEARTBEAT p2 worker round 1 running 10 min
+[2026-09-21 17:54:08] HEARTBEAT master running 70 min
+[2026-09-21 17:59:46] HEARTBEAT p2 worker round 1 running 20 min
+[2026-09-21 18:04:08] HEARTBEAT master running 80 min
+[2026-09-21 18:07:22] master finished rc=-15
+[2026-09-21 18:08:23] resume: cleared stale running flag on p2
+[2026-09-21 18:08:23] resuming job cse60745_20260921_2c609b
+[2026-09-21 18:08:23] spawning master agent (resumed)
+[2026-09-21 18:09:36] p2: worker round 1
+[2026-09-21 18:18:23] HEARTBEAT master running 10 min
+[2026-09-21 18:19:36] HEARTBEAT p2 worker round 1 running 10 min
+[2026-09-21 18:23:14] p2 worker r1: $6.66 (job total $49.31)
+[2026-09-21 18:23:14] p2: worker round 1 rc=0
+[2026-09-21 18:28:23] HEARTBEAT master running 20 min
+[2026-09-21 18:33:14] HEARTBEAT p2 validator round 1 running 10 min
+[2026-09-21 18:36:42] p2 validator r1: $4.80 (job total $54.10)
+[2026-09-21 18:36:42] p2: validator round 1 -> FAIL
+[2026-09-21 18:36:42] p2: worker round 2
+[2026-09-21 18:38:23] HEARTBEAT master running 30 min
+[2026-09-21 18:46:42] HEARTBEAT p2 worker round 2 running 10 min
+[2026-09-21 18:48:11] p2 worker r2: $10.05 (job total $64.15)
+[2026-09-21 18:48:11] p2: worker round 2 rc=0
+[2026-09-21 18:48:23] HEARTBEAT master running 40 min
+[2026-09-21 18:52:53] p2 validator r2: $3.74 (job total $67.89)
+[2026-09-21 18:52:53] p2: validator round 2 -> PASS
+[2026-09-21 18:55:10] submitting to master validator (round 1)
+[2026-09-21 18:58:23] HEARTBEAT master running 50 min
+[2026-09-21 19:02:21] master validator r1: $2.72 (job total $70.61)
+[2026-09-21 19:02:21] master validator round 1 -> FAIL
+[2026-09-21 19:03:38] p2: worker round 1
+[2026-09-21 19:08:23] HEARTBEAT master running 60 min
+[2026-09-21 19:12:20] p2 worker r1: $3.46 (job total $74.07)
+[2026-09-21 19:12:20] p2: worker round 1 rc=1
+[2026-09-21 19:12:20] p2 validator r1: $0.00 (job total $74.07)
+[2026-09-21 19:12:20] p2: validator round 1 ERRORED -- fresh session, retry
+[2026-09-21 19:12:21] p2 validator r1 retry: $0.00 (job total $74.07)
+[2026-09-21 19:12:21] p2: validator round 1 -> FAIL
+[2026-09-21 19:12:21] p2: worker round 2
+[2026-09-21 19:12:22] p2 worker r2: $0.00 (job total $74.07)
+[2026-09-21 19:12:22] p2: worker round 2 rc=1
+[2026-09-21 19:12:22] p2 validator r2: $0.00 (job total $74.07)
+[2026-09-21 19:12:22] p2: validator round 2 ERRORED -- fresh session, retry
+[2026-09-21 19:12:23] p2 validator r2 retry: $0.00 (job total $74.07)
+[2026-09-21 19:12:23] p2: validator round 2 -> FAIL
+[2026-09-21 19:12:23] p2: worker round 3
+[2026-09-21 19:12:23] p2 worker r3: $0.00 (job total $74.07)
+[2026-09-21 19:12:23] p2: worker round 3 rc=1
+[2026-09-21 19:12:24] p2 validator r3: $0.00 (job total $74.07)
+[2026-09-21 19:12:24] p2: validator round 3 ERRORED -- fresh session, retry
+[2026-09-21 19:12:25] p2 validator r3 retry: $0.00 (job total $74.07)
+[2026-09-21 19:12:25] p2: validator round 3 -> FAIL
+[2026-09-21 19:12:25] p2: worker round 4
+[2026-09-21 19:12:25] p2 worker r4: $0.00 (job total $74.07)
+[2026-09-21 19:12:25] p2: worker round 4 rc=1
+[2026-09-21 19:12:26] p2 validator r4: $0.00 (job total $74.07)
+[2026-09-21 19:12:26] p2: validator round 4 ERRORED -- fresh session, retry
+[2026-09-21 19:12:26] p2 validator r4 retry: $0.00 (job total $74.07)
+[2026-09-21 19:12:26] p2: validator round 4 -> FAIL
+[2026-09-21 19:12:26] p2: worker round 5
+[2026-09-21 19:12:27] p2 worker r5: $0.00 (job total $74.07)
+[2026-09-21 19:12:27] p2: worker round 5 rc=1
+[2026-09-21 19:12:28] p2 validator r5: $0.00 (job total $74.07)
+[2026-09-21 19:12:28] p2: validator round 5 ERRORED -- fresh session, retry
+[2026-09-21 19:12:28] p2 validator r5 retry: $0.00 (job total $74.07)
+[2026-09-21 19:12:28] p2: validator round 5 -> FAIL
+[2026-09-21 19:18:23] HEARTBEAT master running 70 min
+[2026-09-21 19:21:28] master: $5.28 (job total $79.35)
+[2026-09-21 19:21:28] master finished rc=1

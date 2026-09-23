@@ -1,0 +1,63 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Other classification metrics.
+Accuracy is the official metric on OGB (ogbn-mag, MAG240M).
+ROC-AUC is used for binary or strongly imbalanced targets (and by HeCo alongside F1). For
+the clustering probe that HAN, MAGNN, DMGI and HeCo all run — k-means on the frozen
+embeddings with k = |C| — the scores are
+NMI(Y, ˆC) =
+2 I(Y ; ˆC)
+H(Y ) + H( ˆC)
+∈[0, 1],
+ARI =
+RI −E[RI]
+max(RI) −E[RI],
+with I mutual information, H entropy and RI the Rand index. Both are 0 in expectation for a
+chance partition and 1 for a perfect one (ARI may go negative). These test whether the embedding
+geometry is class-structured with no classifier fitted at all.
+5.2 Link prediction
+The essential difference from the homogeneous case is that in a HIN link prediction is stated per
+relation type: not “is there an edge” but “is there an edge of type R” — predict Author–Paper,
+or Paper–Venue, or User–Artist. Two consequences follow. (i) Negatives must be sampled type-
+consistently: a negative for an Author–Paper edge must join an author to a paper, never an author
+to a venue, since a type-violating negative is trivially rejected by any type-aware model and inflates
+its apparent margin over type-agnostic baselines. HGB samples negatives from 2-hop neighbours
+at a 1:1 ratio for exactly this reason. (ii) Scores are reported per relation and then averaged, so
+a model can be strong on a dense relation and useless on a sparse one without that showing in a
+single number.
+Let ranki be the position of the i-th true edge among its candidates, over query set Q:
+MRR =
+1
+|Q|
+∑︂
+i∈Q
+1
+ranki
+,
+Hits@K =
+1
+|Q|
+∑︂
+i∈Q
+1[ranki ≤K] ,
+i.e. MRR is the mean reciprocal rank of the first true item and Hits@K the fraction of positive edges
+ranked inside the top K against their sampled negatives (K ∈{1, 3, 10} conventionally, inherited
+from the KG literature). ROC-AUC equals the probability that a random positive outranks a
+random negative. Average precision (equivalently AUPRC) is
+AP =
+∑︂
+n
+(Rn −Rn−1) Pn,
+with Pn, Rn precision and recall at the n-th threshold. AP is preferred to ROC-AUC when pos-
+itives are rare — always true for link prediction on a sparse graph — because ROC-AUC is
+optimistic there, the enormous true-negative count sitting in its denominator. Precision@K /
+Recall@K, and MAE/RMSE for rating prediction, appear in the recommendation-flavoured HIN
+papers (HERec on Yelp/Douban). HGB’s LP track standardises on ROC-AUC and MRR.
+5.3 Summary: dataset →target →task →metric
+Closing remark.
+The single most important methodological point is the one HGB was created
+to make: because DBLP, ACM and IMDB circulate in mutually incompatible preprocessed ver-
+sions (Table 6), and because IMDB even changes from single-label to multi-label between versions,
+numbers copied across papers are frequently not comparable. Any credible evaluation must name
+the dataset version, the split, and whether the protocol is end-to-end supervised or embed-freeze-
+classify.
+Page 27 of 28

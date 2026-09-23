@@ -1,0 +1,63 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 3: Dataset →task →metric normally reported.
+Dataset
+Task
+Metric normally reported
+Cora / CiteSeer /
+PubMed
+node classification
+Accuracy (= Micro-F1), mean ± std over
+10–100 splits
+Cora / CiteSeer /
+PubMed
+link prediction
+AUC-ROC and AP (GAE protocol, 85/5/10
+edge split)
+Coauthor CS / Physics
+node classification
+Accuracy, mean ± std over 100 random
+splits
+Amazon Computers /
+Photo
+node classification
+Accuracy, mean ± std over 100 random
+splits
+WebKB, Actor,
+Chameleon, Squirrel
+node classification
+Accuracy over the 10 fixed 60/20/20 splits
+BlogCatalog / Flickr /
+YouTube
+node classification,
+multi-label
+Micro-F1 and Macro-F1 vs. training ratio
+PPI (24 graphs)
+inductive node
+classification,
+multi-label
+Micro-F1
+Reddit
+inductive node
+classification
+Micro-F1 (= Accuracy)
+ogbn-arxiv / products /
+papers100M
+node classification
+Accuracy (fixed OGB split)
+ogbn-proteins
+node classification, 112
+tasks
+ROC-AUC averaged over tasks
+ogbl-collab
+link prediction
+Hits@50 (100,000 shared negatives)
+ogbl-ddi
+link prediction
+Hits@20 (∼100,000 shared negatives)
+ogbl-ppa
+link prediction
+Hits@100 (3,000,000 shared negatives)
+ogbl-citation2
+link prediction
+MRR (1,000 negatives per source node)
+Page 15 of 28

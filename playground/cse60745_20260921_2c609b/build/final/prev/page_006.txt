@@ -1,0 +1,223 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 1: Homogeneous node-classification / link-prediction benchmarks. dir.: U = the stored edge
+set is symmetric (undirected), D = it is not (directed). |E| counts distinct unordered pairs, with
+self-loops counted once; the parenthesised figure is the number of entries in the stored edge list,
+which is 2|E| for the U rows but not for the D rows, since a directed graph stores only the arcs that
+exist. hedge is Eq. (1) measured on the graph, its denominator being exactly the |E| of the preceding
+column — the same distinct unordered pairs, self-loops included (see the footnote; this convention
+matters, and the alternatives are listed there). “bin.” = binary bag-of-words, “TF–IDF”/“real” =
+real-valued, ML = multi-label. †Cornell: see footnote 2.
+Family
+Dataset
+|V |
+|E|
+d
+#cls
+feat.
+dir. hedge
+Citation
+Cora
+2,708
+5,278 (10,556)
+1,433
+7
+bin.
+U
+0.81
+CiteSeer
+3,327
+4,552 (9,104)
+3,703
+6
+bin.
+U
+0.74
+PubMed
+19,717
+44,324 (88,648)
+500
+3
+TF–IDF
+U
+0.80
+Co-author
+Coauthor CS
+18,333
+81,894
+6,805
+15
+bin.
+U
+0.81
+Coauthor Physics
+34,493
+247,962
+8,415
+5
+bin.
+U
+0.93
+Co-purchase
+Amazon Computers
+13,752
+245,861
+767
+10
+bin.
+U
+0.78
+Amazon Photo
+7,650
+119,081
+745
+8
+bin.
+U
+0.83
+Web / hyperlink
+Cornell
+183
+280 (298)
+1,703
+5
+bin.
+D
+0.13†
+Texas
+183
+295 (325)
+1,703
+5
+bin.
+D
+0.11
+Wisconsin
+251
+466 (515)
+1,703
+5
+bin.
+D
+0.21
+Chameleon
+2,277
+31,421 (36,101)
+2,325
+5
+bin.
+D
+0.23
+Squirrel
+5,201
+198,493 (217,073)
+2,089
+5
+bin.
+D
+0.22
+Co-occurrence
+Actor
+7,600
+26,752 (30,019)
+932
+5
+bin.
+D
+0.22
+Social
+BlogCatalog
+10,312
+333,983
+—
+39
+none (ML)
+U
+—
+Flickr
+80,513
+5,899,882
+—
+195
+none (ML)
+U
+—
+YouTube
+1,138,499
+2,990,443
+—
+47
+none (ML)
+U
+—
+Reddit
+232,965
+57,307,946
+602
+41
+real
+U
+—
+Biological
+PPI (24 graphs)
+56,944
+793,632
+50
+121
+real (ML)
+U
+—
+Table 2: The homogeneous Open Graph Benchmark datasets. Edge counts are as published by
+OGB (undirected counts for undirected graphs).
+Dataset
+Domain
+|V |
+|E| Node features
+Split
+Metric
+Node classification
+ogbn-arxiv
+citation
+169,343
+1,166,243 128 word2vec
+time
+Accuracy
+ogbn-products
+co-purchase
+2,449,029
+61,859,140 100 BoW+PCA
+sales rank
+Accuracy
+ogbn-papers100M citation
+111,059,956 1,615,685,872 128 word2vec
+time
+Accuracy
+ogbn-proteins
+protein
+132,534
+39,561,252 none (8-d edges) species
+ROC-AUC
+Link prediction
+ogbl-collab
+co-authorship
+235,868
+1,285,465 128 word2vec
+time
+Hits@50
+ogbl-ppa
+protein
+576,289
+30,326,273 58-d one-hot
+throughput
+Hits@100
+ogbl-citation2
+citation
+2,927,963
+30,561,187 128 word2vec
+time
+MRR
+ogbl-ddi
+drug–drug
+4,267
+1,334,889 none
+protein target Hits@20
+Page 6 of 28

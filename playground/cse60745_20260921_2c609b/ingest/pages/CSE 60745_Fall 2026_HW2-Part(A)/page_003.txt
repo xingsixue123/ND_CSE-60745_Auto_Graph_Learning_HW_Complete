@@ -1,0 +1,11 @@
+ CSE 60745 (Fall 2026): HW-2: Part (A)
+ 
+  
+Problem 2 (35 pts). Based on the above context, you are asked to summarize the benchmarks, 
+baselines, and commonly used evaluation metrics for graph embedding methods with 
+heterogeneous graph structures for the task of node classification and link prediction as 
+comprehensive as you can. 
+Note: (1) For the benchmarks, please describe each of the benchmark graphs (e.g., DBLP/ACM) 
+and draw the related graph schema. (2) For the commonly used baselines, please provide the 
+reference (i.e., original paper) of each baseline and briefly describe the method.
+Page 2 of 4

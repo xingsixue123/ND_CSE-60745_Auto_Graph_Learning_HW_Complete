@@ -1,0 +1,135 @@
+====================================================================
+DBLP
+====================================================================
+  node types:
+    0 author              4,057   feat_dim=334
+    1 paper              14,328   feat_dim=4231
+    2 term                7,723   feat_dim=50
+    3 venue                  20   feat_dim=0
+    TOTAL                 26,128   published=26,128  MATCH
+  relation types:
+     0 author-paper                   19,645
+     1 paper-term                     85,810
+     2 paper-venue                    14,328
+     3 paper-author                   19,645
+     4 term-paper                     85,810
+     5 venue-paper                    14,328
+    TOTAL                            239,566   published=239,566  MATCH
+  #node types = 4 (published 4) MATCH
+  #edge types = 6 (published 6) MATCH
+  labels: target=author  labelled_nodes=4,057  distinct_classes=4 (published 4) MATCH
+          nodes with >1 label = 0 -> single-label
+          split sizes: {'train+val': 1217, 'test': 2840}
+          train+val fraction = 0.3000 (HGB states 24%+6% = 30%)
+
+====================================================================
+IMDB
+====================================================================
+  node types:
+    0 movie               4,932   feat_dim=3489
+    1 director            2,393   feat_dim=3341
+    2 actor               6,124   feat_dim=3341
+    3 keyword             7,971   feat_dim=0
+    TOTAL                 21,420   published=21,420  MATCH
+  relation types:
+     0 movie->director                 4,932
+     1 director->movie                 4,932
+     2 movie->actorh                  14,779
+     3 actor->movie                   14,779
+     4 movie->keyword                 23,610
+     5 keyword->movie                 23,610
+    TOTAL                             86,642   published=86,642  MATCH
+  #node types = 4 (published 4) MATCH
+  #edge types = 6 (published 6) MATCH
+  labels: target=movie  labelled_nodes=4,573  distinct_classes=5 (published 5) MATCH
+          nodes with >1 label = 2,684 -> MULTI-LABEL
+          split sizes: {'train+val': 1371, 'test': 3202}
+          train+val fraction = 0.2998 (HGB states 24%+6% = 30%)
+
+====================================================================
+ACM
+====================================================================
+  node types:
+    0 paper               3,025   feat_dim=1902
+    1 author              5,959   feat_dim=1902
+    2 subject                56   feat_dim=1902
+    3 term                1,902   feat_dim=0
+    TOTAL                 10,942   published=10,942  MATCH
+  relation types:
+     0 paper-cite-paper                5,343
+     1 paper-ref-paper                 5,343
+     2 paper-author                    9,949
+     3 author-paper                    9,949
+     4 paper-subject                   3,025
+     5 subject-paper                   3,025
+     6 paper-term                    255,619
+     7 term-paper                    255,619
+    TOTAL                            547,872   published=547,872  MATCH
+  #node types = 4 (published 4) MATCH
+  #edge types = 8 (published 8) MATCH
+  labels: target=paper  labelled_nodes=3,025  distinct_classes=3 (published 3) MATCH
+          nodes with >1 label = 0 -> single-label
+          split sizes: {'train+val': 907, 'test': 2118}
+          train+val fraction = 0.2998 (HGB states 24%+6% = 30%)
+
+====================================================================
+Freebase
+====================================================================
+  node types:
+    0 BOOK               40,402   feat_dim=0
+    1 FILM               19,427   feat_dim=0
+    2 MUSIC              82,351   feat_dim=0
+    3 SPORTS              1,025   feat_dim=0
+    4 PEOPLE             17,641   feat_dim=0
+    5 LOCATION            9,368   feat_dim=0
+    6 ORGANIZATION        2,731   feat_dim=0
+    7 BUSINESS            7,153   feat_dim=0
+    TOTAL                180,098   published=180,098  MATCH
+  relation types:
+     0 BOOK-and-BOOK                 202,674
+     1 BOOK-to-FILM                   38,299
+     2 BOOK-on-SPORTS                  6,615
+     3 BOOK-on-LOCATION               26,921
+     4 BOOK-about-ORGANIZATION        21,900
+     5 FILM-and-FILM                  87,838
+     6 MUSIC-in-BOOK                  31,486
+     7 MUSIC-in-FILM                  11,291
+     8 MUSIC-and-MUSIC               283,670
+     9 MUSIC-for-SPORTS                8,975
+    10 MUSIC-on-LOCATION              42,915
+    11 SPORTS-in-FILM                  6,763
+    12 SPORTS-and-SPORTS               1,290
+    13 SPORTS-on-LOCATION                656
+    14 PEOPLE-to-BOOK                 35,587
+    15 PEOPLE-to-FILM                 17,604
+    16 PEOPLE-to-MUSIC                10,948
+    17 PEOPLE-to-SPORTS               14,850
+    18 PEOPLE-and-PEOPLE              22,813
+    19 PEOPLE-on-LOCATION             15,134
+    20 PEOPLE-in-ORGANIZATION          2,215
+    21 PEOPLE-in-BUSINESS              5,378
+    22 LOCATION-in-FILM               21,299
+    23 LOCATION-and-LOCATION          47,817
+    24 ORGANIZATION-in-FILM           13,128
+    25 ORGANIZATION-to-MUSIC          10,702
+    26 ORGANIZATION-to-SPORTS            559
+    27 ORGANIZATION-on-LOCATION        2,696
+    28 ORGANIZATION-and-ORGANIZATION      1,101
+    29 ORGANIZATION-for-BUSINESS       1,073
+    30 BUSINESS-about-BOOK            18,625
+    31 BUSINESS-about-FILM             8,397
+    32 BUSINESS-about-MUSIC           24,764
+    33 BUSINESS-about-SPORTS             610
+    34 BUSINESS-on-LOCATION            6,647
+    35 BUSINESS-and-BUSINESS           4,448
+    TOTAL                          1,057,688   published=1,057,688  MATCH
+  #node types = 8 (published 8) MATCH
+  #edge types = 36 (published 36) MATCH
+  labels: target=BOOK  labelled_nodes=7,954  distinct_classes=7 (published 7) MATCH
+          nodes with >1 label = 0 -> single-label
+          split sizes: {'train+val': 2386, 'test': 5568}
+          train+val fraction = 0.3000 (HGB states 24%+6% = 30%)
+
+====================================================================
+ALL PUBLISHED TOTALS REPRODUCED
+====================================================================

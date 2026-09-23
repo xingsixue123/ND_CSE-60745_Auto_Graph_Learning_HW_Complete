@@ -1,0 +1,162 @@
+% ---- p2-namespaced TikZ styles (package loading happens in preamble.txt) ----
+\tikzset{
+  p2ent/.style={circle, draw=black!65, line width=0.7pt, minimum size=9.5mm,
+                inner sep=0pt, font=\small\bfseries},
+  p2lab/.style={font=\scriptsize},
+  p2rel/.style={draw=black!65, line width=0.7pt},
+  p2el/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+}
+\newcommand{\pTwoTgt}{orange!22}
+\newcommand{\pTwoAgt}{blue!12}
+\newcommand{\pTwoAtt}{green!14}
+\newcommand{\pTwoVen}{purple!12}
+
+\subsection*{4. Baselines}
+\label{p2:sec:baselines}
+
+\subsubsection*{4.1 Homogeneous methods, reported as type-agnostic baselines}
+
+These are reported in essentially every heterogeneous paper, and the \emph{point} of reporting
+them is that they \textbf{discard $\phi$ and $\psi$ entirely} --- they run on the graph with all
+type information erased (or on one meta-path-induced projection). They are the control condition:
+whatever a heterogeneous model gains over them is the measured value of modelling types. HGB's
+central and uncomfortable finding is that this gap is much smaller than the literature had
+claimed, and that a properly tuned GAT beats most specialised HGNNs.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{DeepWalk} --- Perozzi, Al-Rfou \& Skiena, KDD 2014. Truncated uniform random walks
+  treated as sentences, fed to skip-gram with hierarchical softmax.
+\item \textbf{LINE} --- Tang, Qu, Wang, Zhang, Yan \& Mei, WWW 2015. Explicitly preserves
+  first-order (observed edge) and second-order (shared-neighbourhood) proximity, optimised with
+  negative sampling and edge-sampling for large graphs.
+\item \textbf{node2vec} --- Grover \& Leskovec, KDD 2016. DeepWalk with a biased second-order walk
+  whose $p,q$ parameters interpolate between BFS-like (structural equivalence) and DFS-like
+  (homophily) exploration.
+\item \textbf{GCN} --- Kipf \& Welling, ICLR 2017. First-order spectral convolution: a layer is a
+  symmetrically normalised neighbourhood average followed by a linear map and nonlinearity.
+\item \textbf{GAT} --- Veli\v{c}kovi\'{c}, Cucurull, Casanova, Romero, Li\`{o} \& Bengio, ICLR
+  \textbf{2018}. Replaces the fixed normalisation with multi-head self-attention over neighbours.
+  (Commonly miscited as 2017, the arXiv posting date.)
+\item \textbf{GraphSAGE} --- Hamilton, Ying \& Leskovec, NIPS 2017. Inductive framework that
+  samples a fixed number of neighbours and aggregates with mean/LSTM/max-pool, enabling embeddings
+  for unseen nodes.
+\end{itemize}
+
+\subsubsection*{4.2 Meta-path and random-walk HIN embedding}
+
+\begin{itemize}\itemsep3pt
+\item \textbf{metapath2vec} --- Dong, Chawla \& Swami, KDD 2017. Random walks are
+  \emph{meta-path-guided}: at each step the walker must move to the node type prescribed by the
+  meta-path scheme (e.g.\ APVPA), so the generated context is type-balanced instead of being
+  dominated by the most frequent type. The walks feed a heterogeneous skip-gram. Note that the
+  base model still normalises negative sampling over \emph{all} nodes regardless of type; it is the
+  \textbf{metapath2vec++} variant that normalises the softmax per node type.
+\item \textbf{HIN2Vec} --- Fu, Lee \& Lei, CIKM 2017. Rather than fixing meta-paths in advance, it
+  learns node \emph{and} relation (meta-path) vectors jointly by training a multi-task binary
+  classifier that predicts, for a node pair, which relations hold between them.
+\item \textbf{ESim} --- Shang, Qu, Liu, Kaplan, Han \& Peng, arXiv:1610.09769, 2016
+  (\emph{preprint only --- never published in a peer-reviewed venue}). Embeds nodes by sampling
+  positive and negative path instances of user-supplied weighted meta-paths and optimising a
+  noise-contrastive objective for similarity search.
+\item \textbf{HERec} --- Shi, Hu, Zhao \& Yu, IEEE TKDE 31(2):357--370, \textbf{2019}. Performs
+  meta-path-guided random walks, but first \emph{filters} each walk to the target type, producing
+  homogeneous sequences per meta-path; the resulting embeddings are fused by a nonlinear function
+  and injected into an extended matrix-factorisation recommender.
+\item \textbf{PTE} --- Tang, Qu \& Mei, KDD 2015. Decomposes a heterogeneous text network
+  (word--word, word--document, word--label) into bipartite graphs and jointly embeds them with the
+  LINE objective, giving semi-supervised, task-tuned text embeddings.
+\end{itemize}
+
+\subsubsection*{4.3 Heterogeneous graph neural networks}
+
+\begin{itemize}\itemsep3pt
+\item \textbf{R-GCN} --- Schlichtkrull, Kipf, Bloem, van den Berg, Titov \& Welling, ESWC
+  \textbf{2018}. Relation-specific message passing: each layer aggregates neighbours separately per
+  relation $r$ with its own weight matrix $W_r$, normalised by $c_{i,r}=|\mathcal{N}_i^r|$, plus a
+  self-loop term. Because $|\mathcal{R}|$ weight matrices overfit, it offers two \emph{alternative}
+  regularisers --- \emph{basis decomposition} ($W_r$ a linear combination of $B$ shared bases) and
+  \emph{block-diagonal decomposition} ($W_r$ a direct sum of small dense blocks). For link
+  prediction it is used as an encoder with a \textbf{DistMult} decoder.
+\item \textbf{HAN} --- Wang, Ji, Shi, Wang, Ye, Cui \& Yu, WWW 2019. Two-level attention:
+  \emph{node-level} GAT-style attention within each meta-path-induced neighbour set, then
+  \emph{semantic-level} attention learning a scalar importance per meta-path to fuse them. Its
+  limitation --- the one MAGNN attacks --- is that it operates on meta-path-\emph{induced} graphs,
+  so intermediate nodes along the meta-path are discarded.
+\item \textbf{MAGNN} --- Fu, Zhang, Meng \& King, WWW 2020. Three stages: node-content
+  transformation projecting differently-dimensioned type attributes into a shared space;
+  \emph{intra}-meta-path aggregation that encodes the \textbf{entire path instance including
+  intermediate nodes} (mean, linear, or a relational-rotation encoder borrowed from RotatE) with
+  attention over instances; and \emph{inter}-meta-path semantic attention.
+\item \textbf{GTN} --- Yun, Jeong, Kim, Kang \& Kim, NeurIPS 2019. \emph{Learns} meta-paths instead
+  of accepting them. A $1\times1$ convolution with softmax weights forms a soft convex combination
+  $Q_i$ of the per-edge-type adjacency matrices; multiplying $A=Q_1Q_2\cdots Q_l$ yields new
+  meta-path adjacencies differentiably. Including the identity among the candidates lets it learn
+  paths \emph{shorter} than $l$. A GCN then runs on the learned graph.
+\item \textbf{HetGNN} --- Zhang, Song, Huang, Swami \& Chawla, KDD 2019. Restart-based random walks
+  sample a fixed-size, type-balanced neighbour set; content of each node is encoded with a
+  Bi-LSTM over its heterogeneous attributes, neighbours are aggregated per type, and types are
+  combined by attention.
+\item \textbf{HGT} --- Hu, Dong, Wang \& Sun, WWW 2020. Node-type-specific projections produce
+  Key/Query/Value, and attention and message matrices are indexed by the \emph{meta-relation}
+  $\langle\tau(s),\phi(e),\tau(t)\rangle$, with a learnable scalar prior $\mu$ per meta-relation.
+  It needs no hand-designed meta-paths. Adds \emph{relative temporal encoding} for dynamic graphs
+  and \emph{HGSampling} for web-scale mini-batch training.
+\item \textbf{simple-HGN / HGB} --- Lv, Ding, Liu et al., KDD 2021. A deliberately minimal
+  baseline: GAT plus (i) a learnable \textbf{edge-type embedding} concatenated into the attention
+  logit, (ii) residual connections on \emph{both} node representations and attention scores, and
+  (iii) $L_2$ normalisation of the output embeddings. The paper's larger contribution is the HGB
+  benchmark itself and the finding that this simple model matches or beats most specialised HGNNs.
+\item \textbf{ie-HGCN} --- Yang, Guan, Li, Zhao, Cui \& Wang, IEEE TKDE 35(2):1637--1650, 2023.
+  Hierarchical object-level then type-level aggregation which, as a by-product, \emph{ranks} the
+  useful meta-paths, making the model interpretable while avoiding an exhaustive meta-path search.
+\item \textbf{RSHN} --- Zhu, Zhou, Pan, Zhu \& Wang, IEEE ICDM 2019. Builds a coarsened
+  \emph{edge-centric} ``relation structure graph'' to embed relation types themselves, then
+  propagates with those relation embeddings rather than treating relations as bare labels.
+\item \textbf{HPN} --- Ji, Wang, Shi, Wang \& Yu, IEEE TKDE 35(1):521--532, 2023. Analyses
+  semantic confusion (the HIN analogue of over-smoothing) and replaces the propagation step with a
+  personalised-PageRank-like update that retains a fraction of the node's own representation,
+  enabling deeper meta-path propagation.
+\end{itemize}
+
+\subsubsection*{4.4 Self-supervised / contrastive heterogeneous methods}
+
+\begin{itemize}\itemsep3pt
+\item \textbf{DMGI} --- Park, Kim, Han \& Yu, AAAI 2020. Extends Deep Graph Infomax to
+  \emph{attributed multiplex} networks: one DGI mutual-information objective per relation type,
+  with a consensus regularisation that pulls the per-relation embeddings towards a shared
+  representation.
+\item \textbf{HDGI} --- Ren, Liu, Huang, Dai, Bo \& Zhang, arXiv:1911.08538, 2019 (AAAI-20 DLGMA
+  workshop, under a different title; \emph{no archival venue}). Applies mutual-information
+  maximisation between local node embeddings and a global summary, using meta-path-based
+  convolution plus semantic attention as the encoder.
+\item \textbf{HeCo} --- Wang, Liu, Han \& Shi, KDD 2021. Contrasts two \emph{views} of the same
+  node: a \emph{network-schema} view (attention over directly-connected neighbours of each other
+  type) and a \emph{meta-path} view (meta-path-specific GCNs with semantic attention). Positives
+  are not merely the node's counterpart view --- HeCo selects multiple positives by counting how
+  many meta-path instances connect two nodes and taking the top ones.
+\end{itemize}
+
+\subsubsection*{4.5 Knowledge-graph embeddings as relation-aware LP baselines}
+
+A HIN with many relation types is close to a knowledge graph, so heterogeneous link-prediction
+papers (and HGB's LP track) routinely report KG embedding models, which score a typed triple
+$(h,r,t)$ directly.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{TransE} --- Bordes, Usunier, Garcia-Duran, Weston \& Yakhnenko, NIPS 2013. Models a
+  relation as a translation, $\mathbf{h}+\mathbf{r}\approx\mathbf{t}$, scoring
+  $-\|\mathbf{h}+\mathbf{r}-\mathbf{t}\|$. Cannot represent 1-to-N or symmetric relations.
+\item \textbf{DistMult} --- Yang, Yih, He, Gao \& Deng, ICLR 2015. Bilinear score
+  $\langle\mathbf{h},\mathrm{diag}(\mathbf{r}),\mathbf{t}\rangle$; efficient but necessarily
+  \emph{symmetric}.
+\item \textbf{ComplEx} --- Trouillon, Welbl, Riedel, Gaussier \& Bouchard, ICML 2016. Moves
+  DistMult into $\mathbb{C}$ and takes the real part of a Hermitian product, so asymmetric
+  relations become representable at the same cost.
+\item \textbf{ConvE} --- Dettmers, Minervini, Stenetorp \& Riedel, AAAI 2018. Reshapes $h$ and $r$
+  into 2-D and applies a convolution, giving a parameter-efficient, highly expressive scorer.
+\item \textbf{RotatE} --- Sun, Deng, Nie \& Tang, ICLR 2019. Treats a relation as an element-wise
+  \emph{rotation} in complex space, $\mathbf{t}=\mathbf{h}\circ\mathbf{r}$ with
+  $|r_i|=1$, capturing symmetry, antisymmetry, inversion and composition simultaneously.
+\end{itemize}
+
+% =====================================================================

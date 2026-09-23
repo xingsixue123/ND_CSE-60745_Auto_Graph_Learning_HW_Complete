@@ -1,0 +1,47 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+a single fixed split are not statistically reliable.
+Coauthor CS and Coauthor Physics come from the KDD Cup 2016 Microsoft Academic Graph:
+an edge means two authors co-authored a paper, features are binary keyword indicators over an
+author’s papers, and the label is the author’s most active field of study. Amazon Computers and
+Amazon Photo are segments of the Amazon co-purchase graph: an edge means two products are
+frequently bought together, features are binary bag-of-words over product reviews, and the label is
+the product category. All four are used for node classification and, being attributed and undirected,
+also serve as link prediction benchmarks.
+1.3 Web-page and heterophilous benchmarks (the counterexamples)
+The benchmarks above are strongly homophilous, and a GNN that simply averages over neighbour-
+hoods does well on them almost by construction. The suite assembled by Pei et al. (Geom-GCN,
+ICLR 2020) and popularised by Zhu et al. (Beyond Homophily in Graph Neural Networks, NeurIPS
+2020) exists to break that assumption.
+WebKB (Cornell, Texas, Wisconsin) are university web pages linked by hyperlinks, with binary
+bag-of-words features and 5 page classes (student, project, course, staff, faculty); they are very small
+and very heterophilous, so variance across splits is large and results must be averaged over the 10
+standard splits. Actor is the actor-only induced subgraph of a film–director–actor–writer network,
+where an edge means two actors are co-mentioned on the same Wikipedia page. Chameleon and
+Squirrel are Wikipedia page–page networks on those topics, with nodes binned into 5 classes by
+average monthly traffic. All six are used almost exclusively for node classification.
+The quantity that separates the two groups is the edge homophily ratio
+hedge(G) =⃓⃓
+{(u, v) ∈E : yu = yv}⃓⃓
+|E|
+,
+(1)
+which we measured directly on each graph. The values appear in the last column of Table 1 and
+range from 0.93 (Coauthor Physics) down to 0.11 (Texas); Figure 2 illustrates the two regimes.
+The edge set used must be stated, because two choices in it move these numbers.2 The
+ordering of the datasets is unaffected either way: the six web/Wikipedia/co-occurrence graphs sit
+far below the citation, co-authorship and co-purchase graphs on any of these definitions, which is
+the only claim the rest of this answer relies on.
+2(i) Which edge set. We evaluate Eq. (1) over distinct unordered pairs — precisely the set counted by the |E|
+column of Table 1, so the ratio and its denominator refer to the same object. The six directed graphs also admit
+a count over the stored directed entries, which weights a reciprocated arc twice as heavily as a one-way arc; that
+gives slightly different values (e.g. Chameleon 0.235 rather than 0.231) and agrees less well with the literature. (ii)
+Self-loops. Texas and Wisconsin carry 16 each, Actor 93 and Squirrel 140, and a self-loop trivially satisfies yu = yv,
+so it always counts as homophilous. Following Zhu et al. we include them; excluding them would give Texas 0.06
+rather than 0.11 and Wisconsin 0.18 rather than 0.21 — a large relative change on exactly the datasets whose
+heterophily is the point. Under the stated convention our values reproduce Zhu et al.’s published figures exactly to
+two decimal places for Cora, CiteSeer, PubMed, Texas, Wisconsin, Actor, Chameleon and Squirrel. Cornell is the
+sole exception: Zhu et al. report 0.30 and we measure 0.13. We could not reproduce 0.30 under any definition we
+tried — over unordered pairs 0.132, the same excluding self-loops 0.123, over the stored directed entries 0.131, or
+node homophily in the sense of Pei et al. 0.186 — so we report the measured value and flag the disagreement rather
+than repeating a figure we cannot reproduce.
+Page 3 of 28

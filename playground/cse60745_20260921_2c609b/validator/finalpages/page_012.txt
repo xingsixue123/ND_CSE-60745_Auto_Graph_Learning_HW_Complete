@@ -1,0 +1,61 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+The first five are local (2-hop) and therefore cheap but blind to long-range structure; Katz, PPR
+and SimRank are global and stronger but cost a matrix inverse or an iterative solve. On ogbl-ddi
+and ogbl-ppa, Common Neighbors and Adamic–Adar remain competitive with many GNNs, which
+is the usual argument for reporting them.
+4. Evaluation metrics
+4.1 Node classification
+Let C be the number of classes and TPc, FPc, FNc the per-class counts.
+• Accuracy =
+1
+|Vtest|
+∑︁
+v 1[ˆyv = yv]. The default for single-label benchmarks (Planetoid, OGB
+node tasks). Misleading under class imbalance.
+• Precision / Recall / F1 per class: Pc =
+TPc
+TPc+FPc , Rc =
+TPc
+TPc+FNc , F1c = 2PcRc
+Pc+Rc .
+• Micro-F1 — pool the confusion matrix over all classes first, then compute one F1:
+Micro-F1 =
+2 ∑︁
+c TPc
+2 ∑︁
+c TPc + ∑︁
+c FPc + ∑︁
+c FNc
+.
+(2)
+In single-label multi-class classification every error is simultaneously one FP and one FN, so
+Micro-F1 = Accuracy. It is dominated by the frequent classes.
+• Macro-F1 — the unweighted mean of the per-class F1 scores:
+Macro-F1 =
+1
+C
+C
+∑︂
+c=1
+F1c.
+(3)
+Because every class contributes equally regardless of size, a model that ignores a rare class is
+punished. This is why Macro-F1 matters: on BlogCatalog or Flickr, where label frequencies
+span orders of magnitude, a model can score well on Micro-F1 while never predicting most of
+the 39 (resp. 195) labels — the gap between the two numbers is the diagnostic, and reporting
+only Micro-F1 hides it.
+• ROC-AUC, computed one-vs-rest and averaged over classes for multi-class problems, and av-
+eraged over tasks for multi-label problems (this is the ogbn-proteins metric). It is threshold-free,
+so it measures ranking quality rather than the quality of a particular decision threshold.
+• Reporting convention. A single number is not a result. The convention is mean ± standard
+deviation over 10 (OGB, fixed split, 10 seeds) or 100 (Shchur et al., random splits)
+runs, since the spread across splits on the small benchmarks routinely exceeds the differences
+between published methods.
+• Protocol for unsupervised embeddings. DeepWalk/LINE/node2vec/DGI are evaluated by
+the linear-probe protocol: learn the embedding with no labels, freeze it, train a one-vs-rest ℓ2-
+regularised logistic regression on the embeddings of a fraction ρ of nodes, and report Micro-F1
+and Macro-F1 on the rest. Results are given as a curve over training ratios ρ ∈{10%, . . . , 90%}
+(BlogCatalog) or {1%, . . . , 10%} (Flickr, YouTube).
+Freezing is essential — fine-tuning the
+encoder would measure something else.
+Page 12 of 28

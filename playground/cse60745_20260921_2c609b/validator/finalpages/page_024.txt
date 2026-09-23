@@ -1,0 +1,47 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+node and relation (meta-path) vectors jointly by training a multi-task binary classifier that
+predicts, for a node pair, which relations hold between them.
+• ESim — Shang, Qu, Liu, Kaplan, Han & Peng, arXiv:1610.09769, 2016 (preprint only —
+never published in a peer-reviewed venue). Embeds nodes by sampling positive and nega-
+tive path instances of user-supplied weighted meta-paths and optimising a noise-contrastive
+objective for similarity search.
+• HERec — Shi, Hu, Zhao & Yu, IEEE TKDE 31(2):357–370, 2019. Performs meta-path-
+guided random walks, but first filters each walk to the target type, producing homogeneous
+sequences per meta-path; the resulting embeddings are fused by a nonlinear function and
+injected into an extended matrix-factorisation recommender.
+• PTE — Tang, Qu & Mei, KDD 2015. Decomposes a heterogeneous text network (word–word,
+word–document, word–label) into bipartite graphs and jointly embeds them with the LINE
+objective, giving semi-supervised, task-tuned text embeddings.
+4.3 Heterogeneous graph neural networks
+• R-GCN — Schlichtkrull, Kipf, Bloem, van den Berg, Titov & Welling, ESWC 2018. Relation-
+specific message passing: each layer aggregates neighbours separately per relation r with its
+own weight matrix Wr, normalised by ci,r = |N r
+i |, plus a self-loop term. Because |R| weight
+matrices overfit, it offers two alternative regularisers — basis decomposition (Wr a linear com-
+bination of B shared bases) and block-diagonal decomposition (Wr a direct sum of small dense
+blocks). For link prediction it is used as an encoder with a DistMult decoder.
+• HAN — Wang, Ji, Shi, Wang, Ye, Cui & Yu, WWW 2019.
+Two-level attention: node-
+level GAT-style attention within each meta-path-induced neighbour set, then semantic-level
+attention learning a scalar importance per meta-path to fuse them. Its limitation — the one
+MAGNN attacks — is that it operates on meta-path-induced graphs, so intermediate nodes
+along the meta-path are discarded.
+• MAGNN — Fu, Zhang, Meng & King, WWW 2020. Three stages: node-content transforma-
+tion projecting differently-dimensioned type attributes into a shared space; intra-meta-path
+aggregation that encodes the entire path instance including intermediate nodes (mean,
+linear, or a relational-rotation encoder borrowed from RotatE) with attention over instances;
+and inter-meta-path semantic attention.
+• GTN — Yun, Jeong, Kim, Kang & Kim, NeurIPS 2019.
+Learns meta-paths instead of
+accepting them. A 1 × 1 convolution with softmax weights forms a soft convex combination
+Qi of the per-edge-type adjacency matrices; multiplying A = Q1Q2 · · · Ql yields new meta-
+path adjacencies differentiably. Including the identity among the candidates lets it learn paths
+shorter than l. A GCN then runs on the learned graph.
+• HetGNN — Zhang, Song, Huang, Swami & Chawla, KDD 2019. Restart-based random
+walks sample a fixed-size, type-balanced neighbour set; content of each node is encoded with
+a Bi-LSTM over its heterogeneous attributes, neighbours are aggregated per type, and types
+are combined by attention.
+• HGT — Hu, Dong, Wang & Sun, WWW 2020.
+Node-type-specific projections produce
+Key/Query/Value, and attention and message matrices are indexed by the meta-relation
+Page 24 of 28

@@ -25,3 +25,9 @@ playground/*.log
 playground/*.pid
 .last_run.pid
 **/.session_id
+
+# Datasets downloaded by workers to verify statistics (re-downloadable;
+# Reddit/Coauthor/Flickr alone are >5 GB and exceed GitHub's 100 MB file limit).
+# The scripts and the recorded provenance in downloads.md are what matter.
+**/data/
+**/hgb_info/

@@ -1,0 +1,49 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Provenance of Table 5.
+The HGB paper publishes only the totals of Table 4; it never prints
+a per-type breakdown. The numbers above were therefore recomputed directly from the released
+node.dat/link.dat/label.dat files, and every one of the four datasets reproduces its published
+totals exactly (nodes, edges, number of node types, number of edge types and number of classes
+all match).
+That agreement is what licenses the table.
+Two incidental findings: HGB’s own
+info.dat declares the DBLP author attribute dimension as 0, but the data file actually carries 334-
+dimensional author features — and 334 is exactly the feature dimension HAN publishes for DBLP,
+which independently corroborates the data over the metadata; and ACM’s 1,902-dimensional bag-
+of-words is indexed by exactly the 1,902 term nodes.
+2.2 The individual benchmark graphs
+DBLP (bibliographic).
+A computer-science bibliography extract with types author, paper, term,
+venue/conference. Authors are labelled with one of 4 research areas (database, data mining, AI,
+information retrieval); author features are a bag-of-words over the keywords of the papers they
+wrote. It is the canonical author-classification HIN and the standard testbed for APA vs. APCPA
+semantics.
+ACM (bibliographic).
+Papers from ACM venues with types paper, author, subject, term. Papers
+are labelled with 3 classes (database, wireless communication, data mining) and carry a bag-of-
+words feature.
+Distinctively, ACM has a paper–paper citation relation in addition to the star
+structure, and HGB splits it into a citation and a reference direction — so the schema is not a pure
+star.
+IMDB (movie).
+Types movie, director, actor and (in HGB) keyword. Movies are labelled by
+genre. This is the benchmark where versions diverge most sharply: MAGNN’s IMDb has 3 disjoint
+genres (Action/Comedy/Drama), whereas HGB’s has 5 overlapping genres, making it multi-label.
+Freebase.
+The name denotes two unrelated graphs. HGB’s Freebase is a general knowledge graph:
+8 node types, 36 relations, 180,098 nodes, target type book with 7 classes, and no node features
+whatsoever — so it isolates how much a model can extract from pure typed structure.
+It is
+book-centric only in the sense that book is the labelled type; its schema is not a star but is in fact
+complete (Figure 5). HeCo’s “Freebase” is instead a movie dataset (3,492 movies, 33,401 actors,
+2,502 directors, 4,459 writers; target movie, 3 classes). Quoting a Freebase number without saying
+which one is meaningless.
+AMiner (bibliographic).
+Two scales. metapath2vec’s AMiner is web-scale: 1,693,531 authors,
+3,194,405 papers, 3,883 venues, with 8 Google-Scholar categories as labels and 246,678 labelled
+authors. HeCo’s AMiner is a small subset (6,564 papers, 13,329 authors, 35,890 references; target
+paper, 4 classes). Erratum worth knowing: metapath2vec’s body text says the dataset “consists
+of 9,323,739 computer scientists”, but the authors’ own correction note states that 9,323,739 is
+the paper–author link count and the author count is 1,693,531. The wrong figure is still widely
+re-quoted.
+Page 18 of 28

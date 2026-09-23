@@ -1,0 +1,47 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Yelp and Douban (business / review).
+HERec’s Yelp has types user (16,239), business
+(14,284), city (47), category (511) and compliment (11), with U–B 198,397, U–U 158,590, U–Co
+76,875, B–Ci 14,267 and B–Ca 40,009 edges (density 0.08%). Douban Movie has user (13,367),
+movie (12,677), director (2,449), actor (6,311) and type (38). Both are used for rating prediction /
+recommendation, reported with MAE and RMSE rather than F1.
+Amazon (e-commerce) — heterogeneous in R only.
+HGB’s Amazon is the limiting case
+of the definition in Section 1, and worth stating for that reason. It has one node type (product,
+10,099 nodes) and two relation types, co-viewing and co-purchasing, over 148,659 edges — the
+electronics subset preprocessed by GATNE (Cen et al., KDD 2019). So |A| = 1 but |R| = 2,
+giving |A| + |R| = 3 > 2: it is a heterogeneous network even though every node is the same type,
+which is precisely why the condition in Section 1 is stated as a sum rather than as “more than one
+node type”. Its network schema is therefore a single node carrying two distinct self-relations. It
+is used for link prediction only (it has no node labels), scored with ROC-AUC and MRR. It is
+also the cleanest illustration of the limit of meta-path methods: with one node type there is no
+type alternation to define a meta-path over, and HGB’s link-prediction table accordingly leaves
+MAGNN’s Amazon entry blank, noting that vacancies are “due to lack of meta-paths on those
+datasets”. Relation-aware but meta-path-free models (R-GCN, GATNE, simple-HGN) are the ones
+that can run on it at all.
+LastFM and MovieLens (user–item HINs).
+MAGNN’s Last.fm has user (1,892), artist
+(17,632) and tag (1,088), with U–U 12,717, U–A 92,834 and A–T 23,253; it carries no labels and no
+features, so it is a pure link-prediction benchmark (predict user–artist), with one-hot IDs as dummy
+inputs. MovieLens/ML-100K is used analogously as a user–item bipartite HIN enriched with oc-
+cupation/genre types. PubMed, in its HGB heterogeneous form, is a 4-type biomedical graph
+(63,109 nodes, 10 relation types) used for disease–disease link prediction — not to be confused with
+the homogeneous PubMed citation network of Problem 1.
+OGB: ogbn-mag and MAG240M.
+These supply the scale the older benchmarks lack. ogbn-mag
+is a Microsoft Academic Graph subset with paper (736,389), author (1,134,649), institution (8,740)
+and field of study (59,965) — 1,939,743 nodes — and four relations:
+author–affiliated_with–
+institution (1,043,998), author–writes–paper (7,145,660), paper–cites–paper (5,416,271) and paper–
+has_topic–field_of_study (7,505,078), totalling 21,111,007 edges. The task is predicting each pa-
+per’s venue among 349 classes; only paper nodes have features (128-d word2vec), the rest are
+featureless. Crucially the split is temporal — train ≤2017, validation 2018, test ≥2019 — not
+random, so it measures generalisation forward in time. The official metric is accuracy. MAG240M
+(OGB-LSC) is the same design two orders of magnitude larger: 121,751,666 papers, 122,383,112
+authors and 25,721 institutions (244,160,499 nodes) with 1,728,364,232 edges, 768-d RoBERTa
+features, and 153 arXiv subject classes.
+2.3 Version incompatibility — the caveat that matters
+The same dataset name denotes different graphs in different papers. Table 6 makes this concrete;
+quoting a statistic without naming the version is an error.
+Four specific discrepancies are worth flagging.
+Page 19 of 28

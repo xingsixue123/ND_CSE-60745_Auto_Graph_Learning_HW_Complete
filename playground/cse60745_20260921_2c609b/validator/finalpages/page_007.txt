@@ -1,0 +1,66 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+CITATION
+Paper
+cites
+Cora, CiteSeer,
+PubMed, ogbn-arxiv,
+ogbn-papers100M,
+ogbl-citation2
+CO-AUTHORSHIP
+Author
+co-authors
+Coauthor CS,
+Coauthor Physics,
+ogbl-collab
+CO-PURCHASE
+Product
+co-bought
+Amazon Computers,
+Amazon Photo,
+ogbn-products
+SOCIAL
+User
+follows
+BlogCatalog, Flickr,
+YouTube; Reddit
+(post–post)
+BIOLOGICAL
+Protein
+interacts
+PPI, ogbn-proteins,
+ogbl-ppa;
+ogbl-ddi (Drug–Drug)
+WEB HYPERLINK
+Web
+page
+links to
+Cornell, Texas,
+Wisconsin;
+Chameleon, Squirrel
+CO-OCCURRENCE
+Actor
+co-occurs with
+Actor (co-mention
+on the same
+Wikipedia page)
+Figure 1: Graph schemas of the homogeneous benchmarks, grouped into seven families. Every
+schema is a single node type with a single self-relation; only the interpretation of the node and the
+edge changes between families.
+(a) Homophilous
+citation / co-authorship / co-purchase
+e.g. Cora, hedge = 0.81
+most edges join same-class nodes
+⇒neighbourhood averaging helps
+(b) Heterophilous
+web-page hyperlink / actor co-occurrence
+e.g. Texas, hedge = 0.11
+edges mostly join different-class nodes
+⇒plain GCN averaging destroys signal
+class 1
+class 2
+class 3
+All nodes are of one type and all edges of one type, so the graph is homoge-
+neous in both panels: homophily is a property of the labels, not of the schema.
+Figure 2: Illustrative subgraphs. Both graphs have the same (degenerate) schema; they differ in
+how labels are distributed over edges. The measured hedge values are those of Table 1.
+Page 7 of 28

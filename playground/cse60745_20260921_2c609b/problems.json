@@ -1,0 +1,39 @@
+{
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Problem 1 — Benchmarks, baselines and evaluation metrics for homogeneous graph embedding (node classification & link prediction)",
+      "points": 35,
+      "rendered_pages": [2],
+      "anchor_text": "Problem 1 (35 pts). Based on the above context, you are asked to summarize the benchmarks, baselines, and commonly used evaluation metrics for graph embedding methods with homogeneous graph structures for the task of node classification and link prediction as comprehensive as you can.",
+      "input_files": [],
+      "subparts": [
+        "Summarize the benchmark datasets for homogeneous graphs; describe each benchmark graph (e.g., Cora) and draw its related graph schema",
+        "Summarize the commonly used baselines, giving the original-paper reference for each and briefly describing the method",
+        "Summarize the commonly used evaluation metrics for node classification and for link prediction"
+      ],
+      "needs": ["plain", "diagram"],
+      "grouped_with_reason": "Not grouped. Problem 1 is self-contained (homogeneous graphs only) and shares no constructed object with Problem 2."
+    },
+    {
+      "id": "p2",
+      "title": "Problem 2 — Benchmarks, baselines and evaluation metrics for heterogeneous graph embedding (node classification & link prediction)",
+      "points": 35,
+      "rendered_pages": [3],
+      "anchor_text": "Problem 2 (35 pts). Based on the above context, you are asked to summarize the benchmarks, baselines, and commonly used evaluation metrics for graph embedding methods with heterogeneous graph structures for the task of node classification and link prediction as comprehensive as you can.",
+      "input_files": [],
+      "subparts": [
+        "Summarize the benchmark datasets for heterogeneous graphs; describe each benchmark graph (e.g., DBLP/ACM) and draw its related graph schema (network schema with node types and relation types)",
+        "Summarize the commonly used baselines, giving the original-paper reference for each and briefly describing the method",
+        "Summarize the commonly used evaluation metrics for node classification and for link prediction on heterogeneous graphs"
+      ],
+      "needs": ["plain", "diagram"],
+      "grouped_with_reason": "Not grouped. Problem 2 is self-contained (heterogeneous graphs only). Splitting from Problem 1 is safe because the two problems cover disjoint dataset families and baseline families; the only shared material is the generic definition of evaluation metrics, which each answer states in its own task context."
+    }
+  ],
+  "uncovered": [
+    "Rendered page 1 is the course cover page (University of Notre Dame / CSE 60745 / Assignment Date / Submission Date / Student Name). It carries no question. The assignment text on rendered page 2 requires the submission to include the cover page, so the master reproduces it in output/final/main.tex rather than assigning it to a worker.",
+    "The preamble paragraph on rendered page 2 ('In this class, we have two-fold course objectives ...') is context for both problems, not a question of its own. It is quoted in both problem briefs.",
+    "The document footer reads 'Page 1 of 4' / 'Page 2 of 4' while LibreOffice renders only 3 pages. The stated total of 70 points is exactly accounted for by Problem 1 (35) + Problem 2 (35), so no question is missing; the footer count reflects the original Word section numbering, not missing content."
+  ]
+}

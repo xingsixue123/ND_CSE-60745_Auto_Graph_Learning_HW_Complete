@@ -1,0 +1,65 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 6: The same dataset name denotes different graphs in different papers. Figures that differ
+from the majority version are bolded.
+Dataset
+Version
+Node counts
+Note
+DBLP
+HAN
+paper 14,328 / 14,327, author 4,057, term
+8,789, venue 20
+P–T = 88,420
+MAGNN / HeCo / HGB
+paper 14,328, author 4,057, term 7,723, venue
+20
+P–T = 85,810
+GTN
+18,405 total (= paper + author + venue; term
+dropped)
+4 edge types
+ACM
+HAN
+paper 3,025, author 5,835, subject 56
+P–A = 9,744
+HGB
+paper 3,025, author 5,959, subject 56, term
+1,902
+P–A = 9,949
+HeCo
+paper 4,019, author 7,167, subject 60
+P–A = 13,407
+IMDB
+HAN
+movie 4,780, director 2,269, actor 5,841
+MAGNN
+movie 4,278, director 2,081, actor 5,257
+3 classes, single-label
+HGB
+movie 4,932, director 2,393, actor 6,124, key-
+word 7,971
+5 classes, multi-label
+1. DBLP’s term count. HAN reports 8,789 terms; MAGNN, HeCo and HGB all use 7,723.
+HGB’s published total is only consistent with the latter (4,057+14,328+7,723+20 = 26,128,
+whereas the HAN figure would give 27,194). HAN’s own table is also internally inconsistent:
+it lists 14,328 papers in the Paper–Author and Paper–Conference rows but 14,327 in the
+Paper–Term row.
+2. HGB’s ACM does not match its stated provenance. HGB says it uses HAN’s subset
+while “preserving all edges including paper citations and references”, but its author count
+(5,959 vs. 5,835) and P–A edge count (9,949 vs. 9,744) differ from HAN’s published table. Re-
+adding citation edges cannot change the number of authors, so the two ACM graphs genuinely
+differ.
+3. IMDB changes task type, not just size. HGB’s IMDB is multi-label with 5 overlapping
+genres; MAGNN’s is single-label with 3 disjoint ones. An F1 on one is not comparable to an
+F1 on the other even in principle (Section 5).
+4. HGB’s LastFM edge count double-counts one relation. Its node total 20,612 exactly
+equals MAGNN’s 1,892 + 17,632 + 1,088, but its edge total is 141,521 against MAGNN’s
+128,804. The gap is exactly 12,717, the U–U count: 2 × 12,717 + 92,834 + 23,253 = 141,521.
+So the symmetric user–user relation is stored in both directions while U–A and A–T are
+stored in one.
+3. Network schemas and meta-paths
+Each schema in Figures 4 and 5 is TG = (A, R) for one benchmark family: circles are node types
+(letter = the initial used in meta-path notation), edges are relation types. Inverse relations are
+omitted for readability in Figure 4; Freebase (Figure 5) has no inverse relations at all and is drawn
+complete.
+Page 20 of 28

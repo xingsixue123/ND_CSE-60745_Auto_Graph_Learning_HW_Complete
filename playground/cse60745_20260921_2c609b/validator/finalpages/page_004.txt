@@ -1,0 +1,48 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+1.4 Social and interaction networks
+These are the benchmarks of the unsupervised embedding literature (DeepWalk, LINE, node2vec).
+They are typically feature-less and multi-label, which is why Micro-F1/Macro-F1 rather than
+accuracy became the standard metric in that line of work.
+BlogCatalog is a friendship network of bloggers labelled with overlapping interests and Flickr is
+a contact network labelled with the groups each user joined; both are from Tang & Liu, Relational
+Learning via Latent Social Dimensions, KDD 2009. YouTube is a user–user social network labelled
+with group memberships, from the companion paper Tang & Liu, Scalable Learning of Collective
+Behavior based on Sparse Social Dimensions, CIKM 2009, and is the scalability stress test of that
+literature.
+(Statistics for all three are as tabulated in the DeepWalk paper.)
+None has node
+attributes, so structure is the only signal. Reddit (Hamilton, Ying & Leskovec, NIPS 2017) links
+two posts when the same user commented on both, labels each post with its community, and is the
+standard inductive, large-scale node-classification benchmark.3
+Warning — three names, six graphs. BlogCatalog, Flickr and PPI each denote two genuinely
+different graphs in this literature, and numbers are frequently mixed up between them. The feature-
+less multi-label versions above are the ones used by DeepWalk/node2vec; the attributed versions
+(BlogCatalog with 5,196 nodes / 171,743 edges / 8,189 features / 6 classes; the GraphSAINT Flickr
+with 89,250 nodes / 449,878 edges / 500 features / 7 classes) are the ones shipped by modern GNN
+libraries. A paper’s numbers are only comparable to another’s if the same version is used.
+1.5 Biological networks
+PPI (protein–protein interaction, GraphSAGE version) is 24 separate graphs, one per human
+tissue, whose node features are positional gene sets, motif gene sets and immunological signatures,
+and whose 121 binary labels are gene ontology terms. The split is inductive across graphs — 20
+train, 2 validate, 2 test — so the test graphs are never seen during training. This is the canonical
+test of whether a method generalises to unseen graphs at all, which transductive methods such as
+DeepWalk cannot do by construction. The node2vec PPI is a different graph: a single Homo
+sapiens subgraph with 3,890 nodes, 76,584 edges and 50 labels.
+1.6 The Open Graph Benchmark (OGB)
+Hu et al. (Open Graph Benchmark: Datasets for Machine Learning on Graphs, NeurIPS 2020)
+introduced OGB to fix the two standing problems with the classic benchmarks: they are tiny, and
+their random splits are unrealistically easy. OGB fixes the split, fixes the metric, and provides
+a shared evaluator, so numbers are comparable across papers.
+Statistics are in Table 2.
+The
+homogeneous members are:
+• ogbn-arxiv — directed citation graph of CS arXiv papers, node features the averaged
+word2vec embedding of title and abstract, labels the 40 subject areas.
+Time split: train
+up to 2017, validate on 2018, test from 2019.
+• ogbn-products — Amazon co-purchase graph, bag-of-words-plus-PCA features, 47 top-level
+categories. Sales-rank split: the most popular products train and the rest are validation/test,
+3We measured 57,307,946 distinct undirected edges (114,615,892 directed entries). This reproduces the average
+degree of 492 stated in the GraphSAGE paper (2 × 57,307,946/232,965 = 492.0); the figure of 11.6M edges that
+appears on some dataset pages refers to a sparsified copy of the graph.
+Page 4 of 28

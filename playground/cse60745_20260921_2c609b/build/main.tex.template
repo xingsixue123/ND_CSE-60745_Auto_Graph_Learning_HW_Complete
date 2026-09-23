@@ -1,0 +1,77 @@
+\documentclass[11pt]{article}
+
+\usepackage[letterpaper,margin=1in,top=1in,bottom=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+% ---- merged worker preambles ----
+\input{preamble.tex}
+% ---------------------------------
+
+\definecolor{ndgold}{RGB}{198,147,2}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{\raisebox{-0.30\height}{\includegraphics[height=2.6ex]{fig_nd_logo.pdf}}\;\underline{CSE 60745 (Fall 2026): HW-2: Part (A)}}
+\fancyfoot[C]{\small Page \thepage\ of \pageref{LastPage}}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+% ======================= COVER PAGE =======================
+% The assignment requires the submission to include the cover page
+% ("Please submit this homework (as a PDF or Word file including the cover page)").
+\thispagestyle{fancy}
+\begin{center}
+\vspace*{2.2cm}
+{\fontsize{28}{34}\selectfont\bfseries\sffamily University of Notre Dame}\\[0.9cm]
+{\fontsize{22}{28}\selectfont Department of Computer Science and Engineering}\\[2.6cm]
+{\fontsize{22}{28}\selectfont CSE 60745}\\[0.7cm]
+{\fontsize{22}{28}\selectfont Graph Learning: Techn \& Apps}\\[2.2cm]
+
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{3.0}
+\begin{tabular}{|p{0.30\textwidth}|p{0.52\textwidth}|}
+\hline
+Assignment Date: & \\
+\hline
+Sumission Date: & 9/30/2026 \\
+\hline
+Student Name: & \\
+\hline
+\end{tabular}
+\end{center}
+\clearpage
+% ==========================================================
+
+\begin{center}
+{\large\bfseries HW-2: Part (A) --- Solutions}\\[0.3em]
+{\small This assignment contains 70 points: Problem 1 (35 pts) and Problem 2 (35 pts).}
+\end{center}
+
+\vspace{0.6em}
+
+\input{p1.tex}
+
+\clearpage
+
+\input{p2.tex}
+
+\label{LastPage}
+\end{document}

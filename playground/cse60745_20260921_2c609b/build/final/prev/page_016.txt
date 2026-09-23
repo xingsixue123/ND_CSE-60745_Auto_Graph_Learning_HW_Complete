@@ -1,0 +1,55 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Problem 2: Benchmarks, Baselines and Evaluation Metrics for Het-
+erogeneous Graph Embedding
+This answer covers graph embedding on heterogeneous graph structures for node classification (NC)
+and link prediction (LP). The homogeneous case is treated in Problem 1; homogeneous methods
+appear here only in their role as type-agnostic baselines.
+1. Set-up: HINs, network schemas and meta-paths
+Heterogeneous information network (HIN).
+Following Sun et al. (PathSim, PVLDB
+4(11):992–1003, 2011) and the survey of Shi, Li, Zhang, Sun & Yu (A Survey of Heterogeneous
+Information Network Analysis, IEEE TKDE 29(1):17–37, 2017), a heterogeneous information
+network is a graph
+G = (V, E, ϕ, ψ),
+ϕ : V →A,
+ψ : E →R,
+in which every node v ∈V carries exactly one node type ϕ(v) from the type set A, every edge e ∈E
+carries exactly one relation type ψ(e) from R, and
+|A| + |R| > 2
+This inequality is the definition of heterogeneity: when |A| = |R| = 1 the network degenerates
+to the homogeneous graph of Problem 1. Each relation is typed at both ends, inducing a map
+Ai
+R
+−→Aj between two specific node types; its inverse R−1 is in general a different relation (writes
+vs. written-by), which is why the released benchmarks below count 6 or 8 “edge types” where a
+reader might expect 3 or 4.
+Network schema.
+The network schema TG = (A, R) is the directed graph whose vertices are
+the node types A and whose edges are the relation types R. It is a meta-template of which G is an
+instantiation: every node and edge of G maps to some type in TG, so the schema states which kinds
+of connection the dataset can express at all. This is the object Section 3 draws for each benchmark.
+Note that the drawing carries real information here whereas it does not in the homogeneous case:
+Cora’s schema is a single node type with one self-relation, while DBLP’s is a four-type star.
+Meta-path.
+A meta-path P of length ℓis a path defined on the schema,
+P : A1
+R1
+−−→A2
+R2
+−−→· · ·
+Rℓ
+−→Aℓ+1,
+denoting the composite relation R = R1 ◦R2 ◦· · ·◦Rℓfrom type A1 to type Aℓ+1. A node sequence
+v1v2 · · · vℓ+1 in G with ϕ(vi) = Ai and ψ(vivi+1) = Ri is a path instance. Meta-paths are written
+by type initials, so on DBLP APA abbreviates Author writes
+−−−→Paper
+written-by
+−−−−−−→Author.
+Meta-paths matter because each defines a different homogeneous projection of the same HIN, and
+the projections carry different semantics: on DBLP APA means co-authorship while APCPA means
+published at the same venue, and two authors may be strongly related under one and unrelated
+under the other. Nearly every method in Section 4 is a different answer to “how should meta-path
+structure be used?” — fixed and hand-chosen (metapath2vec, HAN), aggregated with attention
+(MAGNN), learned (GTN), or discarded in favour of per-relation parameters (R-GCN, HGT, simple-
+HGN).
+Page 16 of 28

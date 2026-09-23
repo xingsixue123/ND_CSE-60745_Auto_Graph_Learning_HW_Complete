@@ -1,0 +1,50 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+interpolating between breadth-first search (which captures structural equivalence) and depth-
+first search (which captures homophily). Tuning (p, q) per dataset is what buys its consistent
+gain over DeepWalk. It also defines the standard Hadamard/L1/L2 binary operators for turning
+node embeddings into edge features for link prediction.
+• struc2vec — Ribeiro, Savarese & Figueiredo, struc2vec: Learning Node Representations from
+Structural Identity, KDD 2017. Argues that nodes with similar roles should embed together even
+if they are far apart in the graph — something no proximity-based method can do. It builds a
+multilayer context graph whose layer-k edge weights compare the ordered degree sequences of
+k-hop neighbourhoods, then runs skip-gram on walks over that auxiliary graph.
+3.3 Autoencoder methods
+• SDNE — Wang, Cui & Zhu, Structural Deep Network Embedding, KDD 2016. A deep au-
+toencoder whose input is a node’s adjacency row. It combines a reconstruction loss on that
+row (second-order proximity), re-weighted so that the many zeros do not dominate the few ones,
+with a Laplacian-eigenmaps-style penalty tying connected nodes together (first-order proximity).
+The first non-linear (deep) network embedding method.
+• GAE / VGAE — Kipf & Welling, Variational Graph Auto-Encoders, NIPS 2016 Bayesian Deep
+Learning Workshop. Uses a two-layer GCN as the encoder, Z = GCN(X, A), and a simple inner-
+product decoder ˆA = σ(ZZ⊤), trained by reconstruction cross-entropy; the variational version
+places a Gaussian prior on Z and adds a KL term. It is the default unsupervised baseline for
+link prediction on Cora/CiteSeer/PubMed.
+3.4 Graph neural networks (message passing)
+All of these compute h(l+1)
+v
+= UPDATE
+(︁h(l)
+v , AGGREGATE({h(l)
+u : u ∈N(v)})
+)︁and differ in the
+two functions.
+• GCN — Kipf & Welling, Semi-Supervised Classification with Graph Convolutional Networks,
+ICLR 2017. A first-order approximation of a Chebyshev spectral filter, giving the layer H(l+1) =
+σ
+(︁˜D−1/2 ˜A ˜D−1/2H(l)W (l))︁with ˜A = A + I. It is a symmetrically-normalised neighbourhood
+average followed by a linear map; two layers is the standard configuration. The single most
+reported baseline in the field.
+• GraphSAGE — Hamilton, Ying & Leskovec, Inductive Representation Learning on Large
+Graphs, NIPS 2017. Makes GNNs inductive and scalable: instead of using the full adjacency
+it samples a fixed number of neighbours per hop and learns an aggregator (mean, LSTM or
+max-pool) plus a concatenation with the node’s own previous representation. Because the ag-
+gregator is shared, embeddings can be produced for nodes — and graphs — never seen in training.
+Introduced the Reddit and PPI benchmarks.
+• GAT — Veličković, Cucurull, Casanova, Romero, Liò & Bengio, Graph Attention Networks,
+ICLR 2018. Replaces the fixed normalisation coefficient 1/√dudv with a learned attention weight
+αuv = softmaxu
+(︁LeakyReLU(a⊤[Whv∥Whu])
+)︁, so a node can weight its neighbours unequally.
+Multi-head attention stabilises training. No spectral decomposition and no knowledge of the full
+graph is required, so it too is inductive.
+Page 9 of 28

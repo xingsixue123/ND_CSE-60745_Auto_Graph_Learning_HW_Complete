@@ -1,0 +1,39 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+HW-2: Part (A) — Solutions
+This assignment contains 70 points: Problem 1 (35 pts) and Problem 2 (35 pts).
+Problem 1. Benchmarks, baselines and evaluation metrics for graph
+embedding on homogeneous graphs
+A homogeneous graph G = (V, E) carries a single node type and a single edge type: the type-
+mapping functions ϕ : V →A and ψ : E →R satisfy |A| = |R| = 1. Optionally each node carries
+an attribute vector xv ∈Rd and a label yv. Graph embedding learns a map f : V →Rk with
+k ≪|V | such that proximity in Rk reflects proximity in G; the embeddings are then evaluated on
+• node classification — predict yv for held-out nodes, and
+• link prediction — score unobserved pairs (u, v) so that true missing edges rank above
+non-edges.
+The heterogeneous counterpart (multiple node/edge types, metapath-based methods) is the subject
+of Problem 2 and is deliberately not covered here.
+Statistics in Table 1 were obtained by loading each graph and counting; the OGB figures in Table 2
+are from the official OGB documentation.
+Where the literature reports conflicting values, the
+discrepancy is footnoted rather than silently resolved.
+1. Benchmark datasets
+1.1 Citation networks (the default benchmarks)
+Cora, CiteSeer, PubMed (Sen et al., Collective Classification in Network Data, AI Magazine
+29(3), 2008; split protocol from Yang, Cohen & Salakhutdinov, Revisiting Semi-Supervised Learning
+with Graph Embeddings, ICML 2016) are the three Planetoid citation graphs and remain the default
+testbed for semi-supervised node classification. Nodes are scientific publications, an undirected edge
+joins two papers when one cites the other, and the label is the paper’s topic.
+Cora collects machine-learning papers and uses binary bag-of-words features.1 CiteSeer is the
+sparsest of the three and has a number of isolated nodes, which is why absolute accuracies are
+lowest on it. PubMed collects diabetes-related biomedical abstracts and, unlike the other two,
+uses real-valued TF–IDF weights rather than binary indicators. All three are also standard link
+prediction benchmarks: the GAE/VGAE protocol hides 5% of edges for validation and 10% for
+test, samples an equal number of non-edges, and reports AUC and AP.
+1.2 Co-authorship and co-purchase networks
+Introduced by Shchur et al. (Pitfalls of Graph Neural Network Evaluation, NeurIPS 2018 Relational
+Representation Learning Workshop) precisely because results on the three Planetoid graphs with
+1The Cora edge count is reported inconsistently: 5,429 is the number of lines in the original cora.cites file (which
+contains duplicate and self-referential entries), 5,278 is the number of distinct undirected edges after de-duplication,
+and 10,556 is the number of directed entries stored when each undirected edge is materialised in both directions. All
+three describe the same graph.
+Page 2 of 28

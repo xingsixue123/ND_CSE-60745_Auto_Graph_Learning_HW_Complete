@@ -1,0 +1,87 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 8: Dataset →target node type →task →metric normally reported.
+Dataset
+Domain
+Target
+Task
+Labels
+Metrics normally reported
+DBLP
+bibliographic
+author
+NC
+4, single
+Macro-F1, Micro-F1 (+NMI/ARI)
+ACM
+bibliographic
+paper
+NC
+3, single
+Macro-F1, Micro-F1 (+NMI/ARI)
+IMDB (HGB)
+movie
+movie
+NC
+5, multi
+Macro-F1, Micro-F1
+IMDB (MAGNN)
+movie
+movie
+NC
+3, single
+Macro-F1, Micro-F1
+Freebase (HGB)
+KG
+book
+NC
+7, single
+Macro-F1, Micro-F1
+AMiner
+bibliographic
+author/paper
+NC
+8 / 4
+Macro-F1, Micro-F1, NMI
+ogbn-mag
+bibliographic
+paper
+NC
+349, single
+Accuracy (official)
+MAG240M
+bibliographic
+paper
+NC
+153, single
+Accuracy (official)
+LastFM
+music
+user–artist
+LP
+—
+ROC-AUC, MRR
+Amazon
+e-commerce
+product–product
+LP
+—
+ROC-AUC, MRR
+PubMed (HGB)
+biomedical
+disease–disease
+LP
+—
+ROC-AUC, MRR
+Yelp / Douban
+review
+user–item
+LP / rating
+—
+Prec@K, Rec@K; MAE, RMSE
+OAG (HGT)
+bibliographic
+paper–field/venue
+LP
+—
+NDCG, MRR
+Page 28 of 28

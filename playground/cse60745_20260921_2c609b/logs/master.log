@@ -1,0 +1,174 @@
+[master] 2026-09-21 — run start, JOB cse60745_20260921_2c609b
+
+INGEST / READING (rule R7, all three channels)
+  Source: input/CSE 60745_Fall 2026_HW2-Part(A).doc -> 3 rendered pages.
+  ch1 text : ingest/pages/.../alltext.txt  — cover page (p1), intro + Problem 1 (p2), Problem 2 (p3).
+  ch2 image: read page_001.png, page_002.png, page_003.png. Confirms the text; page 2 shows
+             "Cora" and page 3 shows "DBLP/ACM" as blue hyperlinks (the text channel kept the words
+             but dropped the link styling).
+  ch3 figs : manifest.json reports n_images=1 per page but figures=[] for all three pages. The one
+             image per page is the gold ND monogram in the running header (visible in every page
+             PNG); pdf_pages extracted no content figures because there are none. CONCLUSION: this
+             assignment has NO content figures, so no figure file needs reading. This is confirmed
+             across channels — the page renders show pure text, and the questions ask the student to
+             *draw* schemas rather than to read one.
+  Discrepancy noted: footer says "Page 1 of 4"/"Page 2 of 4" but only 3 pages render. Points
+  reconcile exactly (70 = 35 + 35), so nothing is missing. Recorded in problems.json/uncovered.
+
+SPECS
+  specs.md only names the .doc as the instruction file. No extra format constraints beyond what the
+  assignment itself states: "submit this homework (as a PDF or Word file including the cover page)".
+  => the assembled document MUST carry a reproduction of the cover page. Master handles this.
+
+CUT
+  Two problems, cut on independence:
+    p1 = Problem 1 (35 pts, rendered page 2) homogeneous graphs.
+    p2 = Problem 2 (35 pts, rendered page 3) heterogeneous graphs.
+  Not merged: disjoint dataset families (Cora/Citeseer/PubMed/OGB vs DBLP/ACM/IMDB/Yelp), disjoint
+  baseline families (DeepWalk/node2vec/GCN/GAT vs metapath2vec/HAN/HGT), no shared constructed
+  object. Merging would produce one over-long worker answer for 70 pts; splitting is safe here.
+  Each is `plain` + `diagram` (both explicitly say "draw the related graph schema"). Neither needs
+  `code` — nothing computational is asked; the deliverable is a survey with references + schemas.
+  Risk flagged to both workers: the two answers must not contradict each other on the definition of
+  shared metrics (Micro/Macro-F1, AUC-ROC, AP, MRR/Hits@K). Briefs pin the definitions so both
+  workers state the same thing.
+
+ARTEFACT PREPARED BY MASTER (not a worker deliverable)
+  The cover page must be reproduced (assignment says "including the cover page"). The ND monogram
+  is the only image in the source .doc; extracted it by rendering page 1 clipped to the image rect
+  at 16x on a white ground (a raw Pixmap of xref 5 comes out on a black ground because the alpha is
+  in a separate SMask, xref 34). Result: build/fig_nd_logo.pdf, ~20.6pt square, matching the
+  original 21.4pt placement. Copied into final/ as fig_nd_logo.pdf (lint-legal: fig_*.pdf).
+  Template for the assembled document drafted at build/main.tex.template. lastpage.sty confirmed
+  installed, so the footer can reproduce the original "Page N of M" form.
+
+SPAWN
+  [16:46] fw spawn-worker p1 -- started (blocking; runs worker + its validator to convergence).
+  [17:39] p1 -> PASS after 3 worker rounds (v1 FAIL, v2 FAIL, v3 PASS). Cost to here $42.65.
+          Validator's blocking defects across r1/r2 were about edge-homophily numbers in the
+          heterophily table: the worker was recomputing them without canonicalising (min,max) pairs,
+          so the denominators disagreed with its own |E| column. Fixed in r3 by correcting the
+          computation (not by weakening the claim); the validator re-derived the numbers with its own
+          code and got exact agreement on all six directed graphs, 8/9 matching Zhu et al. to two
+          decimals with Cornell documented as the exception.
+          Residual items are ALL playground documentation hygiene (a stale line in the worker's
+          verified_numbers.md, a "14 pages" that should read 13, an unsaved verification script).
+          None touches the graded artefact. Accepted as-is; nothing for the master to fix.
+          Deliverable: answer.tex (13 pp) + fig_p1_linkpred.pdf, fig_p1_schema_families.pdf,
+          fig_p1_subgraphs.pdf + preamble.txt (9 \usepackage lines, all in the base set I already
+          load in main.tex -- de-duplication will absorb them).
+
+  [17:41] fw spawn-worker p2 -- started.
+
+TRIAL ASSEMBLY (p1 only, in playground build/final -- deliberately NOT in output/final yet)
+  Built the real main.tex against p1 + a p2 placeholder, to find compile faults before p2 lands
+  rather than after.
+  FAULT 1 (fatal): "pdfTeX error (font expansion): auto expansion is only possible with scalable
+    fonts". Cause: microtype's font expansion + [T1]{fontenc} with the default CM fonts, which only
+    exist as bitmaps at T1; the cover page's \fontsize{28} \sffamily was the trigger. Fixed by
+    loading lmodern (scalable T1 CM) AND setting microtype to [protrusion=true,expansion=false].
+    Either alone would do; both is belt-and-braces and costs nothing.
+  FAULT 2 (warning): fancyhdr \headheight too small for the 2.6ex logo. Fixed \headheight = 15pt.
+  Also: \label{LastPage} hand-rolled at the end was redundant once lastpage.sty was confirmed
+    present -- dropped it and let the package set the label.
+  Result: 16 pp, 0 undefined references, 2 overfull hboxes of ~5pt (invisible, left alone).
+  Visual check: cover page matches the original layout; Figure 1 (seven schema families) and
+  Figure 2 (homophilous vs heterophilous subgraphs) render legibly at the sizes the worker chose.
+  Preamble de-duplication: p1's 9 \usepackage lines collapse to just multirow against my base set.
+
+INTERRUPTION AND RESUME
+  [18:07] master killed (rc=-15) with p2 at worker round 1, ~27 min in. state.json marks p2
+  "interrupted", rounds=0. [18:08] master resumed.
+  Assessed p2's partial work before deciding respawn vs. spawn:
+    - problems/p2/answer.tex  43 KB, structurally complete (tikzset -> section -> formalism ->
+      benchmark tables -> per-dataset prose -> TikZ schemas -> baselines -> metrics -> closing).
+    - build/test_wrapper.log: "Output written ... (12 pages)", zero "^!" errors, zero undefined refs.
+    - build/pg-01..12.png exist, timestamped 18:06-18:07 -- the worker was killed *during its own
+      visual inspection*, i.e. at the last step before copy-out.
+    - output/.../p2/ is EMPTY, which is why rounds=0. Nothing was ever delivered.
+  DECISION: `fw spawn-worker p2`, NOT `fw respawn-worker p2`. respawn discards the playground, which
+  would throw away ~$12 of verified research (verify_hgb.py + hgb_verify_output.txt + hgb_info/ are
+  the sourced dataset statistics, and the brief's #1 risk was exactly unsourced statistics).
+  cmd_spawn_worker mints a fresh worker session id, so the new session has no memory of the old one
+  even though the files survive -- left to itself it would plausibly start over. Mitigated by
+  appending a RESUME NOTICE to problems/p2/problem.md (the worker's entire view of the world),
+  enumerating what is on disk and stating that the only mandatory remaining act is the copy-out.
+  Also told it the stale missfont.log is a pre-lmodern artefact, so it does not chase a non-bug.
+  Spot-checked build/pg-03.png myself: dataset prose is dense and correctly sourced. Quality is fine.
+  [18:1x] Plain `fw spawn-worker p2` REFUSED: "p2 was interrupted mid-run ... Either respawn-worker
+  to start clean, or spawn-worker --force to continue from what is there." The framework encodes
+  exactly the choice I had already reasoned through, and --force is the option matching my decision.
+  Re-issued as `fw spawn-worker p2 --force`.
+  [18:52] p2 -> PASS after 2 worker rounds (v1 FAIL, v2 PASS). Job total $67.89.
+  The --force resume paid off: worker round 1 cost $6.66 (vs $14.89 for p1's round 1) precisely
+  because it did not re-run the research. Validator's two r1 defects were substantive:
+    [1.1] the Freebase network schema was drawn as a star; the worker re-parsed Freebase.info.dat
+          and found the true schema is K_8 plus a self-loop at every vertex (28 cross-type + 8
+          self-relations = 36 link types, no inverses). The validator re-derived this independently
+          and noted its own r1 diagnosis had been *weaker* than the truth.
+    [1.2] the Amazon description is now sourced verbatim to HGB 4.2.2 (GATNE-preprocessed
+          electronics subset, co-view + co-purchase).
+  Residual, explicitly not worth another round per the validator: three consecutive float pages in
+  its section 3 -- and it correctly observed that pagination changes anyway once I \input the
+  fragment, so tuning it inside the worker would have been wasted work. I will check the floats in
+  the assembled document instead, where the question is actually decidable.
+  p2 is 13 pp standalone; p1 is 13 pp. Expect ~27 pp assembled incl. cover.
+
+ASSEMBLY (round 1)
+  final/ = main.tex, main.pdf, preamble.tex, p1.tex, p2.tex, fig_nd_logo.pdf, fig_p1_{linkpred,
+  schema_families,subgraphs}.pdf. p2 ships no external figures -- all its schemas are inline TikZ.
+  Merged preamble: 12 distinct worker lines collapse to 2 not already in my base set (multirow,
+  tikz). Compile: latexmk -pdf, 28 pp, 0 errors, 0 undefined refs, 0 label collisions, worst
+  overfull hbox 5.2pt. p1 occupies pp. 2-15, p2 pp. 16-28.
+  FLOAT FIX: stock float parameters put Table 7, Figure 4 and Figure 5 on three consecutive
+  float-only pages, two of them half white. This is exactly the item p2's validator declined to fix
+  in the worker ("pagination changes entirely once the master \input s the fragment"), and it was
+  right to leave it to me. Loosened topfraction/bottomfraction/textfraction/floatpagefraction and
+  raised the float counters. Result: 29 pp -> 28 pp, Table 7 now shares its page with the start of
+  Section 4, Figure 5 shares with body text, and the only remaining float-only page is Figure 4 --
+  six network schemas that genuinely fill the page. Verified by rendering, not by page count alone.
+  Cross-check verification of the p1/p2 seam: p2 references "the homogeneous case is treated in
+  Problem 1" and "the homogeneous PubMed citation network of Problem 1"; both land correctly, so
+  the shared-metric consistency constraint in the briefs held.
+
+  lint_output --final: OK. crosscheck: OK, 0 collisions, 70 points declared, 6 warnings -- ALL
+  investigated and all false positives:
+   - "70 + 0 = 70, not 100": the tool assumes a 100-point assignment. Rendered page 2 states
+     verbatim "This assignment contains 70 points". Not a defect.
+   - four "near-miss value" pairs (2009/2011, 2013/2014, 2021/2022, 2022/2023): publication years
+     in the reference lists, not quantities. Not disagreements.
+   - "198397 (p2) vs 198493 (p1)": checked the actual lines. p1:253 is Squirrel's edge count in the
+     heterophily table; p2:207 is Yelp's User--Business edge count. Unrelated quantities that happen
+     to be numerically adjacent. The heuristic is purely numeric so it cannot tell them apart.
+  Submitting round 1.
+
+MASTER VALIDATOR ROUND 1 -> FAIL ($2.72, job total $70.61). 4 submissions left.
+  The validator verified hard and found the *content* sound: it enumerated the questions itself
+  rather than trusting problems.json, independently re-converted the .doc and scanned its raw bytes
+  in latin-1 and utf-16 to prove there is no hidden Problem 3 behind the "of 4" footer (stale Word
+  field -- this independently confirms the reading I recorded at ingest), built a torch_geometric
+  venv and recomputed all 13 rows of p1's Table 1 plus footnote 2's alternative conventions (all
+  match), reconciled p2's Table 5 to HGB's published totals, and spot-checked ~55 citations with no
+  errors. It read the figures at native/400dpi rather than the downscaled page render.
+  All four defects are presentational, and all share ONE root cause: a \label with no \ref gives
+  LaTeX no anchor, so the float drifts.
+    [D1.1 major] p1 4.3 is a heading followed immediately by a table and nothing else;
+      p1:tab:metrics is never \ref'd, so Table 3 drifts to p.15 and "5. Summary" ends up preceding
+      the material it summarises. Reads as a dropped section.
+    [D1.2 minor] p2 Tables 7 and 8 likewise never \ref'd; Table 8 floats alone onto the last page.
+    [D1.3 minor] p2 describes AMiner, Douban, HGB-PubMed, MovieLens, Amazon without drawing their
+      schemas -- a partial miss on the explicitly graded "draw the related graph schema". Amazon is
+      the sharp case: p2's own 2.2 specifies its schema verbally and uses it to motivate |A|+|R|>2.
+    [D1.4] duplicate baselines across p1/p2 -- validator itself says no action; each fragment must
+      stand alone. Agreed, no action.
+  SPLIT OF WORK -- deliberate:
+   - D1.1 fixed by ME, in place: added a one-sentence lead-in to 4.3 that references the table, and
+     [htbp] -> [H]. Purely editorial and unambiguous. Respawning p1 would have re-run a validator
+     that re-derives 13 rows of graph statistics (~$9) to land one sentence. Synced the same edit
+     back into output/p1/answer.tex so fragment and final copy cannot diverge; lint still OK.
+   - D1.2 + D1.3 handed BACK to the p2 worker via `fw spawn-worker p2 --force`. D1.3 is content, not
+     typography: each new schema is a factual claim about node/relation types, and the worker owns
+     the verified sources (hgb_info/, hgb_verify_output.txt) and has its own validator to check it.
+     Me hand-drawing five schemas from memory is exactly the failure mode both briefs warn against.
+     Brief tells it explicitly: additive only, no re-research, no restructuring, and if a schema
+     cannot be sourced then say so in the caption and omit it rather than guess.

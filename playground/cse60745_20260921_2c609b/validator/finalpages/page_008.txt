@@ -1,0 +1,52 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+3. Baselines
+3.1 Matrix factorisation and spectral methods
+• Laplacian Eigenmaps — Belkin & Niyogi, Laplacian Eigenmaps and Spectral Techniques for
+Embedding and Clustering, NIPS 2001; expanded as Laplacian Eigenmaps for Dimensionality
+Reduction and Data Representation, Neural Computation 15(6):1373–1396, 2003 (the canonical
+citation).
+Embeds nodes by the eigenvectors of the graph Laplacian L = D −A belonging
+to the smallest non-zero eigenvalues, i.e. it minimises ∑︁
+(u,v)∈E wuv∥f(u) −f(v)∥2 subject to
+an orthogonality constraint ruling out the trivial solution. The ancestor of essentially every
+proximity-preserving embedding; spectral clustering is the same computation.
+• GraRep — Cao, Lu & Xu, GraRep: Learning Graph Representations with Global Structural
+Information, CIKM 2015.
+Observes that first-order proximity is not enough, and factorises
+the k-step transition matrices P 1, . . . , P K (via SVD of their log-transformed positive entries)
+separately, concatenating the K resulting embeddings. This captures k-hop structure explicitly,
+at the cost of dense |V | × |V | powers.
+• HOPE — Ou, Cui, Pei, Zhang & Zhu, Asymmetric Transitivity Preserving Graph Embedding,
+KDD 2016.
+Targets directed graphs, where proximity is asymmetric.
+It learns two vectors
+per node (source and target) and factorises a high-order proximity matrix — Katz, Rooted
+PageRank, Common Neighbors or Adamic–Adar — which it shows can be written in a sparse
+form S = M−1
+g Mℓadmitting a generalised SVD, so the cost is linear in |E|.
+• NetMF — Qiu, Dong, Ma, Li, Wang & Tang, Network Embedding as Matrix Factorization:
+Unifying DeepWalk, LINE, PTE, and node2vec, WSDM 2018. Proves that the skip-gram-with-
+negative-sampling objectives of DeepWalk, LINE, PTE and node2vec all implicitly factorise a
+closed-form matrix, for DeepWalk log
+(︁vol(G)
+bT
+(∑︁T
+r=1 P r)D−1)︁. Factorising that matrix directly
+gives better embeddings than running the sampler, and the paper is the standard theoretical
+bridge between the random-walk and factorisation families.
+3.2 Random-walk / skip-gram methods
+• DeepWalk — Perozzi, Al-Rfou & Skiena, DeepWalk: Online Learning of Social Representations,
+KDD 2014. The paper that started the field. It samples uniform random walks from each node,
+treats each walk as a “sentence” and each node as a “word”, and runs word2vec/skip-gram with
+hierarchical softmax over them. Nodes appearing in similar walk contexts receive similar vectors.
+It requires no node attributes and is trivially parallel, but is transductive: unseen nodes have
+no embedding.
+• LINE — Tang, Qu, Wang, Zhang, Yan & Mei, LINE: Large-scale Information Network Embed-
+ding, WWW 2015. Dispenses with walks and optimises two explicit objectives: first-order prox-
+imity (observed edges, p1(u, v) = σ(f(u)⊤f(v))) and second-order proximity (shared neighbour-
+hoods, a context embedding per node), each trained by negative sampling with edge-sampling
+to handle weights. The two embeddings are concatenated. It scales to millions of nodes and is
+the standard “no-walk” baseline.
+• node2vec — Grover & Leskovec, node2vec: Scalable Feature Learning for Networks, KDD 2016.
+Generalises DeepWalk by biasing the walk with return parameter p and in-out parameter q,
+Page 8 of 28

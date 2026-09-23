@@ -1,0 +1,1871 @@
+
+===== rendered page 1 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+University of Notre Dame
+Department of Computer Science and Engineering
+CSE 60745
+Graph Learning: Techn & Apps
+Assignment Date:
+Sumission Date:
+9/30/2026
+Student Name:
+Page 1 of 28
+
+===== rendered page 2 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+HW-2: Part (A) — Solutions
+This assignment contains 70 points: Problem 1 (35 pts) and Problem 2 (35 pts).
+Problem 1. Benchmarks, baselines and evaluation metrics for graph
+embedding on homogeneous graphs
+A homogeneous graph G = (V, E) carries a single node type and a single edge type: the type-
+mapping functions ϕ : V →A and ψ : E →R satisfy |A| = |R| = 1. Optionally each node carries
+an attribute vector xv ∈Rd and a label yv. Graph embedding learns a map f : V →Rk with
+k ≪|V | such that proximity in Rk reflects proximity in G; the embeddings are then evaluated on
+• node classification — predict yv for held-out nodes, and
+• link prediction — score unobserved pairs (u, v) so that true missing edges rank above
+non-edges.
+The heterogeneous counterpart (multiple node/edge types, metapath-based methods) is the subject
+of Problem 2 and is deliberately not covered here.
+Statistics in Table 1 were obtained by loading each graph and counting; the OGB figures in Table 2
+are from the official OGB documentation.
+Where the literature reports conflicting values, the
+discrepancy is footnoted rather than silently resolved.
+1. Benchmark datasets
+1.1 Citation networks (the default benchmarks)
+Cora, CiteSeer, PubMed (Sen et al., Collective Classification in Network Data, AI Magazine
+29(3), 2008; split protocol from Yang, Cohen & Salakhutdinov, Revisiting Semi-Supervised Learning
+with Graph Embeddings, ICML 2016) are the three Planetoid citation graphs and remain the default
+testbed for semi-supervised node classification. Nodes are scientific publications, an undirected edge
+joins two papers when one cites the other, and the label is the paper’s topic.
+Cora collects machine-learning papers and uses binary bag-of-words features.1 CiteSeer is the
+sparsest of the three and has a number of isolated nodes, which is why absolute accuracies are
+lowest on it. PubMed collects diabetes-related biomedical abstracts and, unlike the other two,
+uses real-valued TF–IDF weights rather than binary indicators. All three are also standard link
+prediction benchmarks: the GAE/VGAE protocol hides 5% of edges for validation and 10% for
+test, samples an equal number of non-edges, and reports AUC and AP.
+1.2 Co-authorship and co-purchase networks
+Introduced by Shchur et al. (Pitfalls of Graph Neural Network Evaluation, NeurIPS 2018 Relational
+Representation Learning Workshop) precisely because results on the three Planetoid graphs with
+1The Cora edge count is reported inconsistently: 5,429 is the number of lines in the original cora.cites file (which
+contains duplicate and self-referential entries), 5,278 is the number of distinct undirected edges after de-duplication,
+and 10,556 is the number of directed entries stored when each undirected edge is materialised in both directions. All
+three describe the same graph.
+Page 2 of 28
+
+===== rendered page 3 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+a single fixed split are not statistically reliable.
+Coauthor CS and Coauthor Physics come from the KDD Cup 2016 Microsoft Academic Graph:
+an edge means two authors co-authored a paper, features are binary keyword indicators over an
+author’s papers, and the label is the author’s most active field of study. Amazon Computers and
+Amazon Photo are segments of the Amazon co-purchase graph: an edge means two products are
+frequently bought together, features are binary bag-of-words over product reviews, and the label is
+the product category. All four are used for node classification and, being attributed and undirected,
+also serve as link prediction benchmarks.
+1.3 Web-page and heterophilous benchmarks (the counterexamples)
+The benchmarks above are strongly homophilous, and a GNN that simply averages over neighbour-
+hoods does well on them almost by construction. The suite assembled by Pei et al. (Geom-GCN,
+ICLR 2020) and popularised by Zhu et al. (Beyond Homophily in Graph Neural Networks, NeurIPS
+2020) exists to break that assumption.
+WebKB (Cornell, Texas, Wisconsin) are university web pages linked by hyperlinks, with binary
+bag-of-words features and 5 page classes (student, project, course, staff, faculty); they are very small
+and very heterophilous, so variance across splits is large and results must be averaged over the 10
+standard splits. Actor is the actor-only induced subgraph of a film–director–actor–writer network,
+where an edge means two actors are co-mentioned on the same Wikipedia page. Chameleon and
+Squirrel are Wikipedia page–page networks on those topics, with nodes binned into 5 classes by
+average monthly traffic. All six are used almost exclusively for node classification.
+The quantity that separates the two groups is the edge homophily ratio
+hedge(G) =⃓⃓
+{(u, v) ∈E : yu = yv}⃓⃓
+|E|
+,
+(1)
+which we measured directly on each graph. The values appear in the last column of Table 1 and
+range from 0.93 (Coauthor Physics) down to 0.11 (Texas); Figure 2 illustrates the two regimes.
+The edge set used must be stated, because two choices in it move these numbers.2 The
+ordering of the datasets is unaffected either way: the six web/Wikipedia/co-occurrence graphs sit
+far below the citation, co-authorship and co-purchase graphs on any of these definitions, which is
+the only claim the rest of this answer relies on.
+2(i) Which edge set. We evaluate Eq. (1) over distinct unordered pairs — precisely the set counted by the |E|
+column of Table 1, so the ratio and its denominator refer to the same object. The six directed graphs also admit
+a count over the stored directed entries, which weights a reciprocated arc twice as heavily as a one-way arc; that
+gives slightly different values (e.g. Chameleon 0.235 rather than 0.231) and agrees less well with the literature. (ii)
+Self-loops. Texas and Wisconsin carry 16 each, Actor 93 and Squirrel 140, and a self-loop trivially satisfies yu = yv,
+so it always counts as homophilous. Following Zhu et al. we include them; excluding them would give Texas 0.06
+rather than 0.11 and Wisconsin 0.18 rather than 0.21 — a large relative change on exactly the datasets whose
+heterophily is the point. Under the stated convention our values reproduce Zhu et al.’s published figures exactly to
+two decimal places for Cora, CiteSeer, PubMed, Texas, Wisconsin, Actor, Chameleon and Squirrel. Cornell is the
+sole exception: Zhu et al. report 0.30 and we measure 0.13. We could not reproduce 0.30 under any definition we
+tried — over unordered pairs 0.132, the same excluding self-loops 0.123, over the stored directed entries 0.131, or
+node homophily in the sense of Pei et al. 0.186 — so we report the measured value and flag the disagreement rather
+than repeating a figure we cannot reproduce.
+Page 3 of 28
+
+===== rendered page 4 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+1.4 Social and interaction networks
+These are the benchmarks of the unsupervised embedding literature (DeepWalk, LINE, node2vec).
+They are typically feature-less and multi-label, which is why Micro-F1/Macro-F1 rather than
+accuracy became the standard metric in that line of work.
+BlogCatalog is a friendship network of bloggers labelled with overlapping interests and Flickr is
+a contact network labelled with the groups each user joined; both are from Tang & Liu, Relational
+Learning via Latent Social Dimensions, KDD 2009. YouTube is a user–user social network labelled
+with group memberships, from the companion paper Tang & Liu, Scalable Learning of Collective
+Behavior based on Sparse Social Dimensions, CIKM 2009, and is the scalability stress test of that
+literature.
+(Statistics for all three are as tabulated in the DeepWalk paper.)
+None has node
+attributes, so structure is the only signal. Reddit (Hamilton, Ying & Leskovec, NIPS 2017) links
+two posts when the same user commented on both, labels each post with its community, and is the
+standard inductive, large-scale node-classification benchmark.3
+Warning — three names, six graphs. BlogCatalog, Flickr and PPI each denote two genuinely
+different graphs in this literature, and numbers are frequently mixed up between them. The feature-
+less multi-label versions above are the ones used by DeepWalk/node2vec; the attributed versions
+(BlogCatalog with 5,196 nodes / 171,743 edges / 8,189 features / 6 classes; the GraphSAINT Flickr
+with 89,250 nodes / 449,878 edges / 500 features / 7 classes) are the ones shipped by modern GNN
+libraries. A paper’s numbers are only comparable to another’s if the same version is used.
+1.5 Biological networks
+PPI (protein–protein interaction, GraphSAGE version) is 24 separate graphs, one per human
+tissue, whose node features are positional gene sets, motif gene sets and immunological signatures,
+and whose 121 binary labels are gene ontology terms. The split is inductive across graphs — 20
+train, 2 validate, 2 test — so the test graphs are never seen during training. This is the canonical
+test of whether a method generalises to unseen graphs at all, which transductive methods such as
+DeepWalk cannot do by construction. The node2vec PPI is a different graph: a single Homo
+sapiens subgraph with 3,890 nodes, 76,584 edges and 50 labels.
+1.6 The Open Graph Benchmark (OGB)
+Hu et al. (Open Graph Benchmark: Datasets for Machine Learning on Graphs, NeurIPS 2020)
+introduced OGB to fix the two standing problems with the classic benchmarks: they are tiny, and
+their random splits are unrealistically easy. OGB fixes the split, fixes the metric, and provides
+a shared evaluator, so numbers are comparable across papers.
+Statistics are in Table 2.
+The
+homogeneous members are:
+• ogbn-arxiv — directed citation graph of CS arXiv papers, node features the averaged
+word2vec embedding of title and abstract, labels the 40 subject areas.
+Time split: train
+up to 2017, validate on 2018, test from 2019.
+• ogbn-products — Amazon co-purchase graph, bag-of-words-plus-PCA features, 47 top-level
+categories. Sales-rank split: the most popular products train and the rest are validation/test,
+3We measured 57,307,946 distinct undirected edges (114,615,892 directed entries). This reproduces the average
+degree of 492 stated in the GraphSAGE paper (2 × 57,307,946/232,965 = 492.0); the figure of 11.6M edges that
+appears on some dataset pages refers to a sparsified copy of the graph.
+Page 4 of 28
+
+===== rendered page 5 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+which is much harder than a random split.
+• ogbn-papers100M — the same construction as ogbn-arxiv at 111M nodes; only ∼1.5M are
+labelled (172 subject areas). The standard scalability benchmark.
+• ogbn-proteins — proteins from 8 species joined by weighted association edges. It carries
+edge features and no node features, and its 112 binary function-prediction tasks are split by
+species and scored by average ROC-AUC.
+• ogbl-collab (author collaboration), ogbl-ppa (protein association), ogbl-citation2 (paper
+citation) and ogbl-ddi (drug–drug interaction) are the four homogeneous link prediction
+tasks. Each fixes its own split, metric and negative set in Table 2; ogbl-ddi is notable for
+having no node features at all, so only structure can be used.
+1.7 Split protocols — and why they must be stated
+A result is meaningless without its split, because the same model can differ by many accuracy
+points across protocols on the same graph:
+• Planetoid semi-supervised split: exactly 20 labelled nodes per class for training, 500
+for validation, 1,000 for test. This is the split on which the familiar Cora ≈81.5% figure for
+GCN is reported.
+• Full-supervised / “Geom-GCN” split: 60/20/20% of nodes per class, averaged over 10
+random splits. Standard for the heterophilous benchmarks and typically 5–10 points higher
+than the 20-per-class numbers.
+• Random splits with fixed label budget (Shchur et al.): the Planetoid budget but re-
+randomised, reported as mean ± std over ≥100 splits. This was the paper’s central recom-
+mendation, since the single fixed Planetoid split does not support the ranking of methods
+usually claimed from it.
+• OGB splits are fixed and non-random — by time, by sales rank, by species, by experimental
+throughput, by protein target — and deliberately induce distribution shift between train and
+test.
+• Link prediction: edges, not nodes, are split. The message-passing graph must contain only
+training edges, otherwise the held-out edge leaks into its own prediction. See Figure 3.
+2. Graph schemas of the benchmarks
+The graph schema is the meta-template of a network: the graph over node types whose edges are
+the permitted relation types. For a homogeneous graph the schema is by definition degenerate —
+one node type and one edge type — so it is a single vertex with a single self-loop:
+TG =
+(︁{A}, {A
+R
+−−→A}
+)︁,
+|A| = |R| = 1.
+This is the honest answer to “draw the related graph schema” for these benchmarks, and it is
+exactly what distinguishes them from the heterogeneous datasets of Problem 2, whose schemas
+have several node types and several relation types. What actually differs between the homogeneous
+benchmarks is the semantics instantiated into A and R, so the benchmarks are grouped into seven
+schema families in Figure 1. Because a one-node schema is visually vacuous on its own, Figure 2
+additionally sketches the local structure that the schema does not capture and which nevertheless
+drives model performance: the label homophily of Eq. (1).
+Page 5 of 28
+
+===== rendered page 6 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 1: Homogeneous node-classification / link-prediction benchmarks. dir.: U = the stored edge
+set is symmetric (undirected), D = it is not (directed). |E| counts distinct unordered pairs, with
+self-loops counted once; the parenthesised figure is the number of entries in the stored edge list,
+which is 2|E| for the U rows but not for the D rows, since a directed graph stores only the arcs that
+exist. hedge is Eq. (1) measured on the graph, its denominator being exactly the |E| of the preceding
+column — the same distinct unordered pairs, self-loops included (see the footnote; this convention
+matters, and the alternatives are listed there). “bin.” = binary bag-of-words, “TF–IDF”/“real” =
+real-valued, ML = multi-label. †Cornell: see footnote 2.
+Family
+Dataset
+|V |
+|E|
+d
+#cls
+feat.
+dir. hedge
+Citation
+Cora
+2,708
+5,278 (10,556)
+1,433
+7
+bin.
+U
+0.81
+CiteSeer
+3,327
+4,552 (9,104)
+3,703
+6
+bin.
+U
+0.74
+PubMed
+19,717
+44,324 (88,648)
+500
+3
+TF–IDF
+U
+0.80
+Co-author
+Coauthor CS
+18,333
+81,894
+6,805
+15
+bin.
+U
+0.81
+Coauthor Physics
+34,493
+247,962
+8,415
+5
+bin.
+U
+0.93
+Co-purchase
+Amazon Computers
+13,752
+245,861
+767
+10
+bin.
+U
+0.78
+Amazon Photo
+7,650
+119,081
+745
+8
+bin.
+U
+0.83
+Web / hyperlink
+Cornell
+183
+280 (298)
+1,703
+5
+bin.
+D
+0.13†
+Texas
+183
+295 (325)
+1,703
+5
+bin.
+D
+0.11
+Wisconsin
+251
+466 (515)
+1,703
+5
+bin.
+D
+0.21
+Chameleon
+2,277
+31,421 (36,101)
+2,325
+5
+bin.
+D
+0.23
+Squirrel
+5,201
+198,493 (217,073)
+2,089
+5
+bin.
+D
+0.22
+Co-occurrence
+Actor
+7,600
+26,752 (30,019)
+932
+5
+bin.
+D
+0.22
+Social
+BlogCatalog
+10,312
+333,983
+—
+39
+none (ML)
+U
+—
+Flickr
+80,513
+5,899,882
+—
+195
+none (ML)
+U
+—
+YouTube
+1,138,499
+2,990,443
+—
+47
+none (ML)
+U
+—
+Reddit
+232,965
+57,307,946
+602
+41
+real
+U
+—
+Biological
+PPI (24 graphs)
+56,944
+793,632
+50
+121
+real (ML)
+U
+—
+Table 2: The homogeneous Open Graph Benchmark datasets. Edge counts are as published by
+OGB (undirected counts for undirected graphs).
+Dataset
+Domain
+|V |
+|E| Node features
+Split
+Metric
+Node classification
+ogbn-arxiv
+citation
+169,343
+1,166,243 128 word2vec
+time
+Accuracy
+ogbn-products
+co-purchase
+2,449,029
+61,859,140 100 BoW+PCA
+sales rank
+Accuracy
+ogbn-papers100M citation
+111,059,956 1,615,685,872 128 word2vec
+time
+Accuracy
+ogbn-proteins
+protein
+132,534
+39,561,252 none (8-d edges) species
+ROC-AUC
+Link prediction
+ogbl-collab
+co-authorship
+235,868
+1,285,465 128 word2vec
+time
+Hits@50
+ogbl-ppa
+protein
+576,289
+30,326,273 58-d one-hot
+throughput
+Hits@100
+ogbl-citation2
+citation
+2,927,963
+30,561,187 128 word2vec
+time
+MRR
+ogbl-ddi
+drug–drug
+4,267
+1,334,889 none
+protein target Hits@20
+Page 6 of 28
+
+===== rendered page 7 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+CITATION
+Paper
+cites
+Cora, CiteSeer,
+PubMed, ogbn-arxiv,
+ogbn-papers100M,
+ogbl-citation2
+CO-AUTHORSHIP
+Author
+co-authors
+Coauthor CS,
+Coauthor Physics,
+ogbl-collab
+CO-PURCHASE
+Product
+co-bought
+Amazon Computers,
+Amazon Photo,
+ogbn-products
+SOCIAL
+User
+follows
+BlogCatalog, Flickr,
+YouTube; Reddit
+(post–post)
+BIOLOGICAL
+Protein
+interacts
+PPI, ogbn-proteins,
+ogbl-ppa;
+ogbl-ddi (Drug–Drug)
+WEB HYPERLINK
+Web
+page
+links to
+Cornell, Texas,
+Wisconsin;
+Chameleon, Squirrel
+CO-OCCURRENCE
+Actor
+co-occurs with
+Actor (co-mention
+on the same
+Wikipedia page)
+Figure 1: Graph schemas of the homogeneous benchmarks, grouped into seven families. Every
+schema is a single node type with a single self-relation; only the interpretation of the node and the
+edge changes between families.
+(a) Homophilous
+citation / co-authorship / co-purchase
+e.g. Cora, hedge = 0.81
+most edges join same-class nodes
+⇒neighbourhood averaging helps
+(b) Heterophilous
+web-page hyperlink / actor co-occurrence
+e.g. Texas, hedge = 0.11
+edges mostly join different-class nodes
+⇒plain GCN averaging destroys signal
+class 1
+class 2
+class 3
+All nodes are of one type and all edges of one type, so the graph is homoge-
+neous in both panels: homophily is a property of the labels, not of the schema.
+Figure 2: Illustrative subgraphs. Both graphs have the same (degenerate) schema; they differ in
+how labels are distributed over edges. The measured hedge values are those of Table 1.
+Page 7 of 28
+
+===== rendered page 8 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+3. Baselines
+3.1 Matrix factorisation and spectral methods
+• Laplacian Eigenmaps — Belkin & Niyogi, Laplacian Eigenmaps and Spectral Techniques for
+Embedding and Clustering, NIPS 2001; expanded as Laplacian Eigenmaps for Dimensionality
+Reduction and Data Representation, Neural Computation 15(6):1373–1396, 2003 (the canonical
+citation).
+Embeds nodes by the eigenvectors of the graph Laplacian L = D −A belonging
+to the smallest non-zero eigenvalues, i.e. it minimises ∑︁
+(u,v)∈E wuv∥f(u) −f(v)∥2 subject to
+an orthogonality constraint ruling out the trivial solution. The ancestor of essentially every
+proximity-preserving embedding; spectral clustering is the same computation.
+• GraRep — Cao, Lu & Xu, GraRep: Learning Graph Representations with Global Structural
+Information, CIKM 2015.
+Observes that first-order proximity is not enough, and factorises
+the k-step transition matrices P 1, . . . , P K (via SVD of their log-transformed positive entries)
+separately, concatenating the K resulting embeddings. This captures k-hop structure explicitly,
+at the cost of dense |V | × |V | powers.
+• HOPE — Ou, Cui, Pei, Zhang & Zhu, Asymmetric Transitivity Preserving Graph Embedding,
+KDD 2016.
+Targets directed graphs, where proximity is asymmetric.
+It learns two vectors
+per node (source and target) and factorises a high-order proximity matrix — Katz, Rooted
+PageRank, Common Neighbors or Adamic–Adar — which it shows can be written in a sparse
+form S = M−1
+g Mℓadmitting a generalised SVD, so the cost is linear in |E|.
+• NetMF — Qiu, Dong, Ma, Li, Wang & Tang, Network Embedding as Matrix Factorization:
+Unifying DeepWalk, LINE, PTE, and node2vec, WSDM 2018. Proves that the skip-gram-with-
+negative-sampling objectives of DeepWalk, LINE, PTE and node2vec all implicitly factorise a
+closed-form matrix, for DeepWalk log
+(︁vol(G)
+bT
+(∑︁T
+r=1 P r)D−1)︁. Factorising that matrix directly
+gives better embeddings than running the sampler, and the paper is the standard theoretical
+bridge between the random-walk and factorisation families.
+3.2 Random-walk / skip-gram methods
+• DeepWalk — Perozzi, Al-Rfou & Skiena, DeepWalk: Online Learning of Social Representations,
+KDD 2014. The paper that started the field. It samples uniform random walks from each node,
+treats each walk as a “sentence” and each node as a “word”, and runs word2vec/skip-gram with
+hierarchical softmax over them. Nodes appearing in similar walk contexts receive similar vectors.
+It requires no node attributes and is trivially parallel, but is transductive: unseen nodes have
+no embedding.
+• LINE — Tang, Qu, Wang, Zhang, Yan & Mei, LINE: Large-scale Information Network Embed-
+ding, WWW 2015. Dispenses with walks and optimises two explicit objectives: first-order prox-
+imity (observed edges, p1(u, v) = σ(f(u)⊤f(v))) and second-order proximity (shared neighbour-
+hoods, a context embedding per node), each trained by negative sampling with edge-sampling
+to handle weights. The two embeddings are concatenated. It scales to millions of nodes and is
+the standard “no-walk” baseline.
+• node2vec — Grover & Leskovec, node2vec: Scalable Feature Learning for Networks, KDD 2016.
+Generalises DeepWalk by biasing the walk with return parameter p and in-out parameter q,
+Page 8 of 28
+
+===== rendered page 9 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+interpolating between breadth-first search (which captures structural equivalence) and depth-
+first search (which captures homophily). Tuning (p, q) per dataset is what buys its consistent
+gain over DeepWalk. It also defines the standard Hadamard/L1/L2 binary operators for turning
+node embeddings into edge features for link prediction.
+• struc2vec — Ribeiro, Savarese & Figueiredo, struc2vec: Learning Node Representations from
+Structural Identity, KDD 2017. Argues that nodes with similar roles should embed together even
+if they are far apart in the graph — something no proximity-based method can do. It builds a
+multilayer context graph whose layer-k edge weights compare the ordered degree sequences of
+k-hop neighbourhoods, then runs skip-gram on walks over that auxiliary graph.
+3.3 Autoencoder methods
+• SDNE — Wang, Cui & Zhu, Structural Deep Network Embedding, KDD 2016. A deep au-
+toencoder whose input is a node’s adjacency row. It combines a reconstruction loss on that
+row (second-order proximity), re-weighted so that the many zeros do not dominate the few ones,
+with a Laplacian-eigenmaps-style penalty tying connected nodes together (first-order proximity).
+The first non-linear (deep) network embedding method.
+• GAE / VGAE — Kipf & Welling, Variational Graph Auto-Encoders, NIPS 2016 Bayesian Deep
+Learning Workshop. Uses a two-layer GCN as the encoder, Z = GCN(X, A), and a simple inner-
+product decoder ˆA = σ(ZZ⊤), trained by reconstruction cross-entropy; the variational version
+places a Gaussian prior on Z and adds a KL term. It is the default unsupervised baseline for
+link prediction on Cora/CiteSeer/PubMed.
+3.4 Graph neural networks (message passing)
+All of these compute h(l+1)
+v
+= UPDATE
+(︁h(l)
+v , AGGREGATE({h(l)
+u : u ∈N(v)})
+)︁and differ in the
+two functions.
+• GCN — Kipf & Welling, Semi-Supervised Classification with Graph Convolutional Networks,
+ICLR 2017. A first-order approximation of a Chebyshev spectral filter, giving the layer H(l+1) =
+σ
+(︁˜D−1/2 ˜A ˜D−1/2H(l)W (l))︁with ˜A = A + I. It is a symmetrically-normalised neighbourhood
+average followed by a linear map; two layers is the standard configuration. The single most
+reported baseline in the field.
+• GraphSAGE — Hamilton, Ying & Leskovec, Inductive Representation Learning on Large
+Graphs, NIPS 2017. Makes GNNs inductive and scalable: instead of using the full adjacency
+it samples a fixed number of neighbours per hop and learns an aggregator (mean, LSTM or
+max-pool) plus a concatenation with the node’s own previous representation. Because the ag-
+gregator is shared, embeddings can be produced for nodes — and graphs — never seen in training.
+Introduced the Reddit and PPI benchmarks.
+• GAT — Veličković, Cucurull, Casanova, Romero, Liò & Bengio, Graph Attention Networks,
+ICLR 2018. Replaces the fixed normalisation coefficient 1/√dudv with a learned attention weight
+αuv = softmaxu
+(︁LeakyReLU(a⊤[Whv∥Whu])
+)︁, so a node can weight its neighbours unequally.
+Multi-head attention stabilises training. No spectral decomposition and no knowledge of the full
+graph is required, so it too is inductive.
+Page 9 of 28
+
+===== rendered page 10 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+• JK-Net — Xu, Li, Tian, Sonobe, Kawarabayashi & Jegelka, Representation Learning on Graphs
+with Jumping Knowledge Networks, ICML 2018. Observes that the right neighbourhood radius
+differs per node (hub vs. periphery), and lets the final representation “jump” by combining all
+intermediate layers h(1), . . . , h(L) via concatenation, max-pooling or an LSTM attention, rather
+than using only the last. A standard remedy for over-smoothing.
+• GIN — Xu, Hu, Leskovec & Jegelka, How Powerful are Graph Neural Networks?, ICLR 2019.
+Analyses message passing through the Weisfeiler–Lehman test and shows that mean and max
+aggregation lose information; a sum aggregator with an MLP update, h(l+1)
+v
+= MLP
+(︁(1 +
+ϵ)h(l)
+v + ∑︁
+u∈N(v) h(l)
+u
+)︁, is maximally expressive, i.e. as strong as 1-WL. The reference point for
+all expressive-power arguments.
+• SGC — Wu, Souza, Zhang, Fifty, Yu & Weinberger, Simplifying Graph Convolutional Net-
+works, ICML 2019. Removes every non-linearity from a K-layer GCN, collapsing it to ˆY =
+softmax(SKXW) with S = ˜D−1/2 ˜A ˜D−1/2. Since SKX is a fixed pre-computation, training is
+plain logistic regression — orders of magnitude faster, and on the homophilous citation bench-
+marks essentially as accurate. An important sanity baseline: it measures how much the non-
+linearity was really contributing.
+• APPNP — Gasteiger (formerly Klicpera), Bojchevski & Günnemann, Predict then Propagate:
+Graph Neural Networks meet Personalized PageRank, ICLR 2019. Decouples prediction from
+propagation: an MLP produces per-node predictions H, which are then diffused by a truncated
+personalized-PageRank iteration Z(k+1) = (1 −α) ˆAZ(k) + αH. The teleport term α keeps the
+node’s own signal alive, so a large propagation radius is possible without over-smoothing and
+without extra parameters.
+• GCNII — Chen, Wei, Huang, Ding & Li, Simple and Deep Graph Convolutional Networks,
+ICML 2020. Makes genuinely deep GCNs (32–64 layers) work using two ingredients: an initial
+residual connection to H(0) (the APPNP teleport idea) and identity mapping of the weight
+matrix, (1 −βl)I + βlW (l). Proves the result still expresses a polynomial filter of arbitrary order
+and so does not collapse to over-smoothing.
+• SEAL — Zhang & Chen, Link Prediction Based on Graph Neural Networks, NeurIPS 2018.
+Reframes link prediction as subgraph classification: for a candidate pair (u, v) it extracts the
+h-hop enclosing subgraph, applies a Double-Radius Node Labeling that encodes each node’s
+distance to both u and v, and classifies the labelled subgraph with a GNN. The γ-decaying
+theory in the paper shows such a GNN can learn any of the classical heuristics below rather
+than assuming one. The strongest general-purpose link-prediction baseline.
+• NBFNet — Zhu, Zhang, Xhonneux & Tang, Neural Bellman-Ford Networks: A General Graph
+Neural Network Framework for Link Prediction, NeurIPS 2021. Generalises the Bellman–Ford
+path formulation by replacing (min, +) with learned Indicator, Message and Aggregate
+operators, so the score for (u, v) is a learned sum over all paths from u to v. Inductive (it
+depends on structure relative to u, not on node identity) and applies to homogeneous graphs
+and knowledge graphs alike.
+3.5 Self-supervised and contrastive methods
+• DGI — Veličković, Fedus, Hamilton, Liò, Bengio & Hjelm, Deep Graph Infomax, ICLR 2019.
+Maximises the mutual information between patch representations hv and a global summary s
+Page 10 of 28
+
+===== rendered page 11 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+of the graph, using a discriminator trained to tell real (hv, s) pairs from corrupted ones (the
+corruption shuffles the node features). Needs no random walks and no labels, and was the first
+unsupervised method to match supervised GCN on the citation benchmarks.
+• GRACE — Zhu, Xu, Yu, Liu, Wu & Wang, Deep Graph Contrastive Representation Learning,
+ICML 2020 Workshop on Graph Representation Learning and Beyond. A node-level SimCLR
+analogue: generate two views by removing edges and masking features, then maximise agreement
+between the two representations of the same node against all other nodes as negatives (InfoNCE).
+Contrasts at node rather than graph-summary level, which DGI does not.
+• GraphCL — You, Chen, Sui, Chen, Wang & Shen, Graph Contrastive Learning with Augmen-
+tations, NeurIPS 2020. Systematically studies four graph augmentations — node dropping, edge
+perturbation, attribute masking and subgraph sampling — and shows which combinations help
+on which domain. Mostly graph-level, but its augmentation study is the reference for the whole
+contrastive family.
+• BGRL — Thakoor, Tallec, Azar, Azabou, Dyer, Munos, Veličković & Valko, Large-Scale Rep-
+resentation Learning on Graphs via Bootstrapping, ICLR 2022. Removes negative samples al-
+together using a BYOL-style online/target encoder pair with a stop-gradient, cutting memory
+from quadratic to linear in the number of nodes. This is what makes self-supervised learning
+feasible at OGB scale.
+3.6 Non-learned link-prediction heuristics
+Every link-prediction paper reports these; they are strong, free, and a learned method that does
+not beat them is not worth its compute. The framing is due to Liben-Nowell & Kleinberg (The
+Link Prediction Problem for Social Networks, CIKM 2003; journal version JASIST 58(7), 2007).
+Let Γ(u) be the neighbour set of u and A the adjacency matrix.
+Heuristic
+Score s(u, v)
+Reference / note
+Common
+Neighbors
+|Γ(u) ∩Γ(v)|
+Liben-Nowell & Kleinberg, CIKM 2003
+Jaccard
+|Γ(u) ∩Γ(v)| / |Γ(u) ∪Γ(v)|
+normalises CN by degree
+Adamic–Adar
+∑︁
+w∈Γ(u)∩Γ(v) 1/ log |Γ(w)|
+Adamic & Adar, Friends and Neighbors on
+the Web, Social Networks 25(3), 2003
+Resource
+Allocation
+∑︁
+w∈Γ(u)∩Γ(v) 1/|Γ(w)|
+Zhou, Lü & Zhang, Eur. Phys. J. B 71(4),
+2009; penalises hubs harder than AA
+Preferential
+Attachment
+|Γ(u)| · |Γ(v)|
+Barabási & Albert, Science 286, 1999
+Katz
+∑︁
+ℓ≥1 βℓ⃓⃓paths⟨ℓ⟩
+u,v⃓⃓=
+(︁
+(I −βA)−1 −I)︁
+uv
+Katz, Psychometrika 18(1), 1953; global,
+needs β < 1/λmax
+Personalized
+PageRank
+stationary probability at v of a
+random walk from u with restart
+Jeh & Widom, Scaling Personalized Web
+Search, WWW 2003; PageRank itself: Page,
+Brin, Motwani & Winograd, Stanford
+InfoLab TR, 1999
+SimRank
+γ
+|Γ(u)||Γ(v)|
+∑︁
+a∈Γ(u)
+∑︁
+b∈Γ(v) s(a, b)
+Jeh & Widom, KDD 2002; “similar if
+referenced by similar nodes”
+Page 11 of 28
+
+===== rendered page 12 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+The first five are local (2-hop) and therefore cheap but blind to long-range structure; Katz, PPR
+and SimRank are global and stronger but cost a matrix inverse or an iterative solve. On ogbl-ddi
+and ogbl-ppa, Common Neighbors and Adamic–Adar remain competitive with many GNNs, which
+is the usual argument for reporting them.
+4. Evaluation metrics
+4.1 Node classification
+Let C be the number of classes and TPc, FPc, FNc the per-class counts.
+• Accuracy =
+1
+|Vtest|
+∑︁
+v 1[ˆyv = yv]. The default for single-label benchmarks (Planetoid, OGB
+node tasks). Misleading under class imbalance.
+• Precision / Recall / F1 per class: Pc =
+TPc
+TPc+FPc , Rc =
+TPc
+TPc+FNc , F1c = 2PcRc
+Pc+Rc .
+• Micro-F1 — pool the confusion matrix over all classes first, then compute one F1:
+Micro-F1 =
+2 ∑︁
+c TPc
+2 ∑︁
+c TPc + ∑︁
+c FPc + ∑︁
+c FNc
+.
+(2)
+In single-label multi-class classification every error is simultaneously one FP and one FN, so
+Micro-F1 = Accuracy. It is dominated by the frequent classes.
+• Macro-F1 — the unweighted mean of the per-class F1 scores:
+Macro-F1 =
+1
+C
+C
+∑︂
+c=1
+F1c.
+(3)
+Because every class contributes equally regardless of size, a model that ignores a rare class is
+punished. This is why Macro-F1 matters: on BlogCatalog or Flickr, where label frequencies
+span orders of magnitude, a model can score well on Micro-F1 while never predicting most of
+the 39 (resp. 195) labels — the gap between the two numbers is the diagnostic, and reporting
+only Micro-F1 hides it.
+• ROC-AUC, computed one-vs-rest and averaged over classes for multi-class problems, and av-
+eraged over tasks for multi-label problems (this is the ogbn-proteins metric). It is threshold-free,
+so it measures ranking quality rather than the quality of a particular decision threshold.
+• Reporting convention. A single number is not a result. The convention is mean ± standard
+deviation over 10 (OGB, fixed split, 10 seeds) or 100 (Shchur et al., random splits)
+runs, since the spread across splits on the small benchmarks routinely exceeds the differences
+between published methods.
+• Protocol for unsupervised embeddings. DeepWalk/LINE/node2vec/DGI are evaluated by
+the linear-probe protocol: learn the embedding with no labels, freeze it, train a one-vs-rest ℓ2-
+regularised logistic regression on the embeddings of a fraction ρ of nodes, and report Micro-F1
+and Macro-F1 on the rest. Results are given as a curve over training ratios ρ ∈{10%, . . . , 90%}
+(BlogCatalog) or {1%, . . . , 10%} (Flickr, YouTube).
+Freezing is essential — fine-tuning the
+encoder would measure something else.
+Page 12 of 28
+
+===== rendered page 13 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+4.2 Link prediction
+Link prediction is extremely class-imbalanced (a graph with |V | nodes has
+(︁|V |
+2
+)︁−|E| non-edges),
+so the metric choice matters far more than for node classification. Positives are held-out edges;
+negatives are sampled node pairs that are not edges (Figure 3).
+• AUC-ROC — the probability that a random positive outranks a random negative. Standard
+in the GAE/VGAE protocol with a 1:1 positive:negative ratio.
+• Average Precision (AP / AUPRC) —
+AP =
+∑︂
+k
+(︁Rk −Rk−1
+)︁Pk,
+(4)
+with Pk, Rk the precision and recall at threshold rank k. Unlike AUC it does not credit a model
+for correctly ranking the vast easy majority of negatives.
+• Precision@K / Recall@K — the fraction of the top-K predicted pairs that are true edges,
+and the fraction of true edges recovered in the top K.
+• Hits@K — the fraction of positive edges ranked in the top K against the sampled negatives:
+Hits@K =
+1
+|Etest|
+∑︂
+e∈Etest
+1
+[︁rank(e) ≤K
+]︁.
+(5)
+OGB fixes K per dataset so that numbers are comparable: Hits@50 for ogbl-collab (against
+100,000 shared negatives), Hits@20 for ogbl-ddi, Hits@100 for ogbl-ppa (against 3,000,000
+negatives).
+• MRR — for each query (in ogbl-citation2, each source paper, ranked against 1,000 sampled
+negative references),
+MRR =
+1
+|Q|
+∑︂
+q∈Q
+1
+rankq
+,
+(6)
+where rankq is the position of the first true item for query q. Rewards getting the answer at the
+very top far more than at position 10.
+• NDCG@K — with reli the relevance of the item at rank i,
+DCG@K =
+K
+∑︂
+i=1
+2reli −1
+log2(i + 1),
+NDCG@K = DCG@K
+IDCG@K ,
+(7)
+IDCG@K being the DCG of the ideal ordering.
+Used when a node has many true links of
+differing importance (recommendation-style evaluation).
+Negative sampling, and why AUC is optimistic.
+The negatives define the metric. Three
+conventions are in use: (i) 1:1 random negatives (the GAE protocol), (ii) a shared fixed negative set
+for all positives (ogbl-collab, ogbl-ddi, ogbl-ppa), and (iii) per-query negatives (ogbl-citation2: 1,000
+previously-published papers per source node). Real graphs are sparse, so a uniformly sampled pair
+is almost always a pair of distant, low-degree nodes that any model rejects trivially. AUC averages
+over all such pairs and therefore saturates near 1.0 and stops discriminating between methods —
+Page 13 of 28
+
+===== rendered page 14 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+this is precisely why OGB abandoned it in favour of Hits@K and MRR, which only reward ranking
+the positive above the hardest sampled negatives.
+AP is likewise more informative than AUC
+because it weights the high-precision region where the model actually operates. A corollary is that
+Hits@K numbers are only comparable when the negative set is identical, which is the reason OGB
+ships a fixed evaluator.
+(a) Split and negative sampling
+u
+v
+a
+b
+observed edges (message passing)
+held-out positive edge (u, v)
+sampled negative pairs (u, ·)
+(b) Ranking the positive against its negatives
+rank 1
+(u, n3) neg
+rank 2
+(u, v)
+pos
+rank 3
+(u, b)
+neg
+...
+predicted score ˆs(u, ·)
+Hits@1 = 0,
+Hits@3 = 1
+reciprocal rank = 1
+2
+MRR averages this over all queries
+Figure 3: The link-prediction evaluation protocol. The held-out positive edge must be removed
+from the message-passing graph, and is scored against a sampled set of negatives; Hits@K and
+MRR are read off the resulting ranking.
+4.3 Which metric is reported on which dataset
+5. Summary
+For homogeneous graphs the schema is degenerate — one node type, one edge type (Figure 1) — so
+what distinguishes the benchmarks is scale, feature type, and above all label homophily (Eq. (1)).
+The suite has moved in three waves: the small homophilous citation graphs with a fixed 20-per-class
+split, the re-splittable co-authorship/co-purchase graphs and the heterophilous WebKB/Wikipedia
+graphs introduced to expose the homophily assumption, and finally OGB, with realistic non-random
+splits and a shared evaluator at a scale where sampling-based training is mandatory. On metrics,
+the two points that matter most are that Micro-F1 equals accuracy in the single-label case while
+Macro-F1 is what exposes neglected rare classes, and that on sparse graphs AUC is optimistic, so
+ranking metrics against a fixed negative set (Hits@K, MRR) are what make link-prediction results
+comparable.
+Page 14 of 28
+
+===== rendered page 15 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 3: Dataset →task →metric normally reported.
+Dataset
+Task
+Metric normally reported
+Cora / CiteSeer /
+PubMed
+node classification
+Accuracy (= Micro-F1), mean ± std over
+10–100 splits
+Cora / CiteSeer /
+PubMed
+link prediction
+AUC-ROC and AP (GAE protocol, 85/5/10
+edge split)
+Coauthor CS / Physics
+node classification
+Accuracy, mean ± std over 100 random
+splits
+Amazon Computers /
+Photo
+node classification
+Accuracy, mean ± std over 100 random
+splits
+WebKB, Actor,
+Chameleon, Squirrel
+node classification
+Accuracy over the 10 fixed 60/20/20 splits
+BlogCatalog / Flickr /
+YouTube
+node classification,
+multi-label
+Micro-F1 and Macro-F1 vs. training ratio
+PPI (24 graphs)
+inductive node
+classification,
+multi-label
+Micro-F1
+Reddit
+inductive node
+classification
+Micro-F1 (= Accuracy)
+ogbn-arxiv / products /
+papers100M
+node classification
+Accuracy (fixed OGB split)
+ogbn-proteins
+node classification, 112
+tasks
+ROC-AUC averaged over tasks
+ogbl-collab
+link prediction
+Hits@50 (100,000 shared negatives)
+ogbl-ddi
+link prediction
+Hits@20 (∼100,000 shared negatives)
+ogbl-ppa
+link prediction
+Hits@100 (3,000,000 shared negatives)
+ogbl-citation2
+link prediction
+MRR (1,000 negatives per source node)
+Page 15 of 28
+
+===== rendered page 16 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Problem 2: Benchmarks, Baselines and Evaluation Metrics for Het-
+erogeneous Graph Embedding
+This answer covers graph embedding on heterogeneous graph structures for node classification (NC)
+and link prediction (LP). The homogeneous case is treated in Problem 1; homogeneous methods
+appear here only in their role as type-agnostic baselines.
+1. Set-up: HINs, network schemas and meta-paths
+Heterogeneous information network (HIN).
+Following Sun et al. (PathSim, PVLDB
+4(11):992–1003, 2011) and the survey of Shi, Li, Zhang, Sun & Yu (A Survey of Heterogeneous
+Information Network Analysis, IEEE TKDE 29(1):17–37, 2017), a heterogeneous information
+network is a graph
+G = (V, E, ϕ, ψ),
+ϕ : V →A,
+ψ : E →R,
+in which every node v ∈V carries exactly one node type ϕ(v) from the type set A, every edge e ∈E
+carries exactly one relation type ψ(e) from R, and
+|A| + |R| > 2
+This inequality is the definition of heterogeneity: when |A| = |R| = 1 the network degenerates
+to the homogeneous graph of Problem 1. Each relation is typed at both ends, inducing a map
+Ai
+R
+−→Aj between two specific node types; its inverse R−1 is in general a different relation (writes
+vs. written-by), which is why the released benchmarks below count 6 or 8 “edge types” where a
+reader might expect 3 or 4.
+Network schema.
+The network schema TG = (A, R) is the directed graph whose vertices are
+the node types A and whose edges are the relation types R. It is a meta-template of which G is an
+instantiation: every node and edge of G maps to some type in TG, so the schema states which kinds
+of connection the dataset can express at all. This is the object Section 3 draws for each benchmark.
+Note that the drawing carries real information here whereas it does not in the homogeneous case:
+Cora’s schema is a single node type with one self-relation, while DBLP’s is a four-type star.
+Meta-path.
+A meta-path P of length ℓis a path defined on the schema,
+P : A1
+R1
+−−→A2
+R2
+−−→· · ·
+Rℓ
+−→Aℓ+1,
+denoting the composite relation R = R1 ◦R2 ◦· · ·◦Rℓfrom type A1 to type Aℓ+1. A node sequence
+v1v2 · · · vℓ+1 in G with ϕ(vi) = Ai and ψ(vivi+1) = Ri is a path instance. Meta-paths are written
+by type initials, so on DBLP APA abbreviates Author writes
+−−−→Paper
+written-by
+−−−−−−→Author.
+Meta-paths matter because each defines a different homogeneous projection of the same HIN, and
+the projections carry different semantics: on DBLP APA means co-authorship while APCPA means
+published at the same venue, and two authors may be strongly related under one and unrelated
+under the other. Nearly every method in Section 4 is a different answer to “how should meta-path
+structure be used?” — fixed and hand-chosen (metapath2vec, HAN), aggregated with attention
+(MAGNN), learned (GTN), or discarded in favour of per-relation parameters (R-GCN, HGT, simple-
+HGN).
+Page 16 of 28
+
+===== rendered page 17 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+2. Benchmarks
+2.1 The standardised suite: HGB
+Heterogeneous GNN papers before 2021 each preprocessed DBLP/ACM/IMDB their own way, so
+their reported numbers were not comparable. HGB (Heterogeneous Graph Benchmark; Lv, Ding,
+Liu et al., KDD 2021) exists precisely to fix this: fixed splits, fixed features, one leaderboard. Its
+headline statistics are Table 4; the per-type breakdown is Table 5.
+Table 4: HGB (Lv et al., KDD 2021) benchmark statistics, as published.
+Task
+Dataset
+#Nodes
+#N. types
+#Edges
+#E. types
+Target
+#Classes
+NC
+DBLP
+26,128
+4
+239,566
+6
+author
+4
+IMDB
+21,420
+4
+86,642
+6
+movie
+5†
+ACM
+10,942
+4
+547,872
+8
+paper
+3
+Freebase
+180,098
+8
+1,057,688
+36
+book
+7
+LP
+Amazon
+10,099
+1
+148,659
+2
+product–product
+—
+LastFM
+20,612
+3
+141,521
+3
+user–artist
+—
+PubMed
+63,109
+4
+244,986
+10
+disease–disease
+—
+† multi-label — see Section 5.
+Table 5: Per-node-type and per-relation breakdown of the four HGB node-classification benchmarks,
+recomputed from the released data files (see the note below).
+Dataset
+Node type
+Count
+Feat. dim
+Relation
+#Edges
+DBLP
+author ⋆
+4,057
+334
+author–paper
+19,645
+paper
+14,328
+4,231
+paper–term
+85,810
+term
+7,723
+50
+paper–venue
+14,328
+venue
+20
+—
+(+3 inverse relations)
+IMDB
+movie ⋆
+4,932
+3,489
+movie–director
+4,932
+director
+2,393
+3,341
+movie–actor
+14,779
+actor
+6,124
+3,341
+movie–keyword
+23,610
+keyword
+7,971
+—
+(+3 inverse relations)
+ACM
+paper ⋆
+3,025
+1,902
+paper–cite–paper
+5,343
+author
+5,959
+1,902
+paper–ref–paper
+5,343
+subject
+56
+1,902
+paper–author
+9,949
+term
+1,902
+—
+paper–subject
+3,025
+paper–term
+255,619
+(+3 inverse relations)
+Freebase
+book ⋆40,402
+film 19,427
+music 82,351
+sports 1,025
+people 17,641
+location 9,368
+organization 2,731
+business 7,153
+no features at all
+36 typed relations (book-and-book 202,674, music-and-music 283,670, . . . )
+⋆labelled target type. Labelled counts: DBLP 4,057/4,057 authors; ACM 3,025/3,025 papers; IMDB 4,573/4,932
+movies (of which 2,684 carry more than one label); Freebase 7,954/40,402 books. Split is 24% train / 6%
+validation / 70% test on the labelled target nodes.
+Page 17 of 28
+
+===== rendered page 18 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Provenance of Table 5.
+The HGB paper publishes only the totals of Table 4; it never prints
+a per-type breakdown. The numbers above were therefore recomputed directly from the released
+node.dat/link.dat/label.dat files, and every one of the four datasets reproduces its published
+totals exactly (nodes, edges, number of node types, number of edge types and number of classes
+all match).
+That agreement is what licenses the table.
+Two incidental findings: HGB’s own
+info.dat declares the DBLP author attribute dimension as 0, but the data file actually carries 334-
+dimensional author features — and 334 is exactly the feature dimension HAN publishes for DBLP,
+which independently corroborates the data over the metadata; and ACM’s 1,902-dimensional bag-
+of-words is indexed by exactly the 1,902 term nodes.
+2.2 The individual benchmark graphs
+DBLP (bibliographic).
+A computer-science bibliography extract with types author, paper, term,
+venue/conference. Authors are labelled with one of 4 research areas (database, data mining, AI,
+information retrieval); author features are a bag-of-words over the keywords of the papers they
+wrote. It is the canonical author-classification HIN and the standard testbed for APA vs. APCPA
+semantics.
+ACM (bibliographic).
+Papers from ACM venues with types paper, author, subject, term. Papers
+are labelled with 3 classes (database, wireless communication, data mining) and carry a bag-of-
+words feature.
+Distinctively, ACM has a paper–paper citation relation in addition to the star
+structure, and HGB splits it into a citation and a reference direction — so the schema is not a pure
+star.
+IMDB (movie).
+Types movie, director, actor and (in HGB) keyword. Movies are labelled by
+genre. This is the benchmark where versions diverge most sharply: MAGNN’s IMDb has 3 disjoint
+genres (Action/Comedy/Drama), whereas HGB’s has 5 overlapping genres, making it multi-label.
+Freebase.
+The name denotes two unrelated graphs. HGB’s Freebase is a general knowledge graph:
+8 node types, 36 relations, 180,098 nodes, target type book with 7 classes, and no node features
+whatsoever — so it isolates how much a model can extract from pure typed structure.
+It is
+book-centric only in the sense that book is the labelled type; its schema is not a star but is in fact
+complete (Figure 5). HeCo’s “Freebase” is instead a movie dataset (3,492 movies, 33,401 actors,
+2,502 directors, 4,459 writers; target movie, 3 classes). Quoting a Freebase number without saying
+which one is meaningless.
+AMiner (bibliographic).
+Two scales. metapath2vec’s AMiner is web-scale: 1,693,531 authors,
+3,194,405 papers, 3,883 venues, with 8 Google-Scholar categories as labels and 246,678 labelled
+authors. HeCo’s AMiner is a small subset (6,564 papers, 13,329 authors, 35,890 references; target
+paper, 4 classes). Erratum worth knowing: metapath2vec’s body text says the dataset “consists
+of 9,323,739 computer scientists”, but the authors’ own correction note states that 9,323,739 is
+the paper–author link count and the author count is 1,693,531. The wrong figure is still widely
+re-quoted.
+Page 18 of 28
+
+===== rendered page 19 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Yelp and Douban (business / review).
+HERec’s Yelp has types user (16,239), business
+(14,284), city (47), category (511) and compliment (11), with U–B 198,397, U–U 158,590, U–Co
+76,875, B–Ci 14,267 and B–Ca 40,009 edges (density 0.08%). Douban Movie has user (13,367),
+movie (12,677), director (2,449), actor (6,311) and type (38). Both are used for rating prediction /
+recommendation, reported with MAE and RMSE rather than F1.
+Amazon (e-commerce) — heterogeneous in R only.
+HGB’s Amazon is the limiting case
+of the definition in Section 1, and worth stating for that reason. It has one node type (product,
+10,099 nodes) and two relation types, co-viewing and co-purchasing, over 148,659 edges — the
+electronics subset preprocessed by GATNE (Cen et al., KDD 2019). So |A| = 1 but |R| = 2,
+giving |A| + |R| = 3 > 2: it is a heterogeneous network even though every node is the same type,
+which is precisely why the condition in Section 1 is stated as a sum rather than as “more than one
+node type”. Its network schema is therefore a single node carrying two distinct self-relations. It
+is used for link prediction only (it has no node labels), scored with ROC-AUC and MRR. It is
+also the cleanest illustration of the limit of meta-path methods: with one node type there is no
+type alternation to define a meta-path over, and HGB’s link-prediction table accordingly leaves
+MAGNN’s Amazon entry blank, noting that vacancies are “due to lack of meta-paths on those
+datasets”. Relation-aware but meta-path-free models (R-GCN, GATNE, simple-HGN) are the ones
+that can run on it at all.
+LastFM and MovieLens (user–item HINs).
+MAGNN’s Last.fm has user (1,892), artist
+(17,632) and tag (1,088), with U–U 12,717, U–A 92,834 and A–T 23,253; it carries no labels and no
+features, so it is a pure link-prediction benchmark (predict user–artist), with one-hot IDs as dummy
+inputs. MovieLens/ML-100K is used analogously as a user–item bipartite HIN enriched with oc-
+cupation/genre types. PubMed, in its HGB heterogeneous form, is a 4-type biomedical graph
+(63,109 nodes, 10 relation types) used for disease–disease link prediction — not to be confused with
+the homogeneous PubMed citation network of Problem 1.
+OGB: ogbn-mag and MAG240M.
+These supply the scale the older benchmarks lack. ogbn-mag
+is a Microsoft Academic Graph subset with paper (736,389), author (1,134,649), institution (8,740)
+and field of study (59,965) — 1,939,743 nodes — and four relations:
+author–affiliated_with–
+institution (1,043,998), author–writes–paper (7,145,660), paper–cites–paper (5,416,271) and paper–
+has_topic–field_of_study (7,505,078), totalling 21,111,007 edges. The task is predicting each pa-
+per’s venue among 349 classes; only paper nodes have features (128-d word2vec), the rest are
+featureless. Crucially the split is temporal — train ≤2017, validation 2018, test ≥2019 — not
+random, so it measures generalisation forward in time. The official metric is accuracy. MAG240M
+(OGB-LSC) is the same design two orders of magnitude larger: 121,751,666 papers, 122,383,112
+authors and 25,721 institutions (244,160,499 nodes) with 1,728,364,232 edges, 768-d RoBERTa
+features, and 153 arXiv subject classes.
+2.3 Version incompatibility — the caveat that matters
+The same dataset name denotes different graphs in different papers. Table 6 makes this concrete;
+quoting a statistic without naming the version is an error.
+Four specific discrepancies are worth flagging.
+Page 19 of 28
+
+===== rendered page 20 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 6: The same dataset name denotes different graphs in different papers. Figures that differ
+from the majority version are bolded.
+Dataset
+Version
+Node counts
+Note
+DBLP
+HAN
+paper 14,328 / 14,327, author 4,057, term
+8,789, venue 20
+P–T = 88,420
+MAGNN / HeCo / HGB
+paper 14,328, author 4,057, term 7,723, venue
+20
+P–T = 85,810
+GTN
+18,405 total (= paper + author + venue; term
+dropped)
+4 edge types
+ACM
+HAN
+paper 3,025, author 5,835, subject 56
+P–A = 9,744
+HGB
+paper 3,025, author 5,959, subject 56, term
+1,902
+P–A = 9,949
+HeCo
+paper 4,019, author 7,167, subject 60
+P–A = 13,407
+IMDB
+HAN
+movie 4,780, director 2,269, actor 5,841
+MAGNN
+movie 4,278, director 2,081, actor 5,257
+3 classes, single-label
+HGB
+movie 4,932, director 2,393, actor 6,124, key-
+word 7,971
+5 classes, multi-label
+1. DBLP’s term count. HAN reports 8,789 terms; MAGNN, HeCo and HGB all use 7,723.
+HGB’s published total is only consistent with the latter (4,057+14,328+7,723+20 = 26,128,
+whereas the HAN figure would give 27,194). HAN’s own table is also internally inconsistent:
+it lists 14,328 papers in the Paper–Author and Paper–Conference rows but 14,327 in the
+Paper–Term row.
+2. HGB’s ACM does not match its stated provenance. HGB says it uses HAN’s subset
+while “preserving all edges including paper citations and references”, but its author count
+(5,959 vs. 5,835) and P–A edge count (9,949 vs. 9,744) differ from HAN’s published table. Re-
+adding citation edges cannot change the number of authors, so the two ACM graphs genuinely
+differ.
+3. IMDB changes task type, not just size. HGB’s IMDB is multi-label with 5 overlapping
+genres; MAGNN’s is single-label with 3 disjoint ones. An F1 on one is not comparable to an
+F1 on the other even in principle (Section 5).
+4. HGB’s LastFM edge count double-counts one relation. Its node total 20,612 exactly
+equals MAGNN’s 1,892 + 17,632 + 1,088, but its edge total is 141,521 against MAGNN’s
+128,804. The gap is exactly 12,717, the U–U count: 2 × 12,717 + 92,834 + 23,253 = 141,521.
+So the symmetric user–user relation is stored in both directions while U–A and A–T are
+stored in one.
+3. Network schemas and meta-paths
+Each schema in Figures 4 and 5 is TG = (A, R) for one benchmark family: circles are node types
+(letter = the initial used in meta-path notation), edges are relation types. Inverse relations are
+omitted for readability in Figure 4; Freebase (Figure 5) has no inverse relations at all and is drawn
+complete.
+Page 20 of 28
+
+===== rendered page 21 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+P
+Paper
+A
+Author
+V
+Venue
+T
+Term
+writes
+published in
+contains
+DBLP
+P
+Paper
+A
+Author
+S
+Subject
+T
+Term
+writes
+belongs to
+contains
+cites / refs
+ACM
+M
+Movie
+A
+Actor
+D
+Director
+K
+Keyword
+acted in
+directed by
+has
+IMDB
+U
+User
+A
+Artist
+T
+Tag
+listens to
+tagged as
+friend of
+LastFM
+I
+Institution
+A
+Author
+P
+Paper
+F
+Field of study
+affiliated with
+writes
+has topic
+cites
+ogbn-mag / MAG240M
+B
+Business
+U
+User
+C
+Category
+L
+City
+Co
+Compliment
+reviews
+in category
+located in
+receives
+friend
+Yelp
+Figure 4: Network schemas TG = (A, R) of the bibliographic, media, large-scale and review bench-
+marks. Circles are node types (the letter is the initial used in meta-path notation); labelled edges
+are relation types. Inverse relations are omitted in this figure — but see Figure 5, where nothing
+is omitted.
+Page 21 of 28
+
+===== rendered page 22 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 7: Meta-paths commonly used on each benchmark, and the semantic relation each encodes.
+Dataset
+Meta-paths
+Semantics
+DBLP
+APA
+two authors co-wrote a paper (co-authorship)
+APCPA / APVPA
+two authors published at the same venue (commu-
+nity)
+APTPA
+two authors used the same term (topical similar-
+ity)
+ACM
+PAP
+two papers share an author
+PSP
+two papers share a subject
+PcPAP, PrPSP
+HGB variants routed through a citation (c) or ref-
+erence (r) hop
+IMDB
+MAM
+two movies share an actor
+MDM
+two movies share a director
+AMA, DMD
+two actors co-starred / two directors share a movie
+ogbn-mag
+PAP
+two papers share an author
+PAIAP
+two papers from the same institution (via author–
+institution)
+LastFM
+UAU
+two users listen to the same artist
+UATAU
+two users like artists sharing a tag
+AUA, ATA
+two artists share a listener / a tag
+Yelp
+UBU
+two users reviewed the same business
+UBCaBU
+two users reviewed businesses of the same category
+Freebase
+BB, BFB, BPB
+book–book; books sharing a film / a person
+4. Baselines
+4.1 Homogeneous methods, reported as type-agnostic baselines
+These are reported in essentially every heterogeneous paper, and the point of reporting them is
+that they discard ϕ and ψ entirely — they run on the graph with all type information erased (or
+on one meta-path-induced projection). They are the control condition: whatever a heterogeneous
+model gains over them is the measured value of modelling types. HGB’s central and uncomfortable
+finding is that this gap is much smaller than the literature had claimed, and that a properly tuned
+GAT beats most specialised HGNNs.
+• DeepWalk — Perozzi, Al-Rfou & Skiena, KDD 2014. Truncated uniform random walks
+treated as sentences, fed to skip-gram with hierarchical softmax.
+• LINE — Tang, Qu, Wang, Zhang, Yan & Mei, WWW 2015. Explicitly preserves first-order
+(observed edge) and second-order (shared-neighbourhood) proximity, optimised with negative
+sampling and edge-sampling for large graphs.
+• node2vec — Grover & Leskovec, KDD 2016. DeepWalk with a biased second-order walk
+whose p, q parameters interpolate between BFS-like (structural equivalence) and DFS-like
+(homophily) exploration.
+• GCN — Kipf & Welling, ICLR 2017. First-order spectral convolution: a layer is a symmet-
+rically normalised neighbourhood average followed by a linear map and nonlinearity.
+Page 22 of 28
+
+===== rendered page 23 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+B
+Book
+F
+Film
+M
+Music
+S
+Sports
+P
+People
+L
+Location
+O
+Organization
+Bu
+Business
+Freebase (HGB) — the schema is complete:
+(︁8
+2
+)︁
+= 28 pairwise relations + one self-relation
+per type = 36.
+Figure 5: Network schema of Freebase (HGB), drawn in full — all 36 relation types are shown, so
+unlike Figure 4 nothing is omitted here. Freebase is the one benchmark whose schema is complete:
+every one of the
+(︁8
+2
+)︁= 28 unordered type pairs carries exactly one relation, and every type carries
+one self-relation, giving 28 + 8 = 36. Note the contrast with DBLP/ACM/IMDB: none of these
+36 are inverses — all 36 are distinct forward relations, so this count is not inflated by the
+forward/inverse doubling of Section 1, whereas DBLP’s “6 edge types” is 3 relations plus their 3
+inverses. book (shaded) is the labelled target type; the largest single relation is music–music,
+283,670 edges or 27% of the graph.
+• GAT — Veličković, Cucurull, Casanova, Romero, Liò & Bengio, ICLR 2018. Replaces the
+fixed normalisation with multi-head self-attention over neighbours. (Commonly miscited as
+2017, the arXiv posting date.)
+• GraphSAGE — Hamilton, Ying & Leskovec, NIPS 2017. Inductive framework that samples
+a fixed number of neighbours and aggregates with mean/LSTM/max-pool, enabling embed-
+dings for unseen nodes.
+4.2 Meta-path and random-walk HIN embedding
+• metapath2vec — Dong, Chawla & Swami, KDD 2017. Random walks are meta-path-guided:
+at each step the walker must move to the node type prescribed by the meta-path scheme (e.g.
+APVPA), so the generated context is type-balanced instead of being dominated by the most
+frequent type. The walks feed a heterogeneous skip-gram. Note that the base model still
+normalises negative sampling over all nodes regardless of type; it is the metapath2vec++
+variant that normalises the softmax per node type.
+• HIN2Vec — Fu, Lee & Lei, CIKM 2017. Rather than fixing meta-paths in advance, it learns
+Page 23 of 28
+
+===== rendered page 24 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+node and relation (meta-path) vectors jointly by training a multi-task binary classifier that
+predicts, for a node pair, which relations hold between them.
+• ESim — Shang, Qu, Liu, Kaplan, Han & Peng, arXiv:1610.09769, 2016 (preprint only —
+never published in a peer-reviewed venue). Embeds nodes by sampling positive and nega-
+tive path instances of user-supplied weighted meta-paths and optimising a noise-contrastive
+objective for similarity search.
+• HERec — Shi, Hu, Zhao & Yu, IEEE TKDE 31(2):357–370, 2019. Performs meta-path-
+guided random walks, but first filters each walk to the target type, producing homogeneous
+sequences per meta-path; the resulting embeddings are fused by a nonlinear function and
+injected into an extended matrix-factorisation recommender.
+• PTE — Tang, Qu & Mei, KDD 2015. Decomposes a heterogeneous text network (word–word,
+word–document, word–label) into bipartite graphs and jointly embeds them with the LINE
+objective, giving semi-supervised, task-tuned text embeddings.
+4.3 Heterogeneous graph neural networks
+• R-GCN — Schlichtkrull, Kipf, Bloem, van den Berg, Titov & Welling, ESWC 2018. Relation-
+specific message passing: each layer aggregates neighbours separately per relation r with its
+own weight matrix Wr, normalised by ci,r = |N r
+i |, plus a self-loop term. Because |R| weight
+matrices overfit, it offers two alternative regularisers — basis decomposition (Wr a linear com-
+bination of B shared bases) and block-diagonal decomposition (Wr a direct sum of small dense
+blocks). For link prediction it is used as an encoder with a DistMult decoder.
+• HAN — Wang, Ji, Shi, Wang, Ye, Cui & Yu, WWW 2019.
+Two-level attention: node-
+level GAT-style attention within each meta-path-induced neighbour set, then semantic-level
+attention learning a scalar importance per meta-path to fuse them. Its limitation — the one
+MAGNN attacks — is that it operates on meta-path-induced graphs, so intermediate nodes
+along the meta-path are discarded.
+• MAGNN — Fu, Zhang, Meng & King, WWW 2020. Three stages: node-content transforma-
+tion projecting differently-dimensioned type attributes into a shared space; intra-meta-path
+aggregation that encodes the entire path instance including intermediate nodes (mean,
+linear, or a relational-rotation encoder borrowed from RotatE) with attention over instances;
+and inter-meta-path semantic attention.
+• GTN — Yun, Jeong, Kim, Kang & Kim, NeurIPS 2019.
+Learns meta-paths instead of
+accepting them. A 1 × 1 convolution with softmax weights forms a soft convex combination
+Qi of the per-edge-type adjacency matrices; multiplying A = Q1Q2 · · · Ql yields new meta-
+path adjacencies differentiably. Including the identity among the candidates lets it learn paths
+shorter than l. A GCN then runs on the learned graph.
+• HetGNN — Zhang, Song, Huang, Swami & Chawla, KDD 2019. Restart-based random
+walks sample a fixed-size, type-balanced neighbour set; content of each node is encoded with
+a Bi-LSTM over its heterogeneous attributes, neighbours are aggregated per type, and types
+are combined by attention.
+• HGT — Hu, Dong, Wang & Sun, WWW 2020.
+Node-type-specific projections produce
+Key/Query/Value, and attention and message matrices are indexed by the meta-relation
+Page 24 of 28
+
+===== rendered page 25 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+⟨τ(s), ϕ(e), τ(t)⟩, with a learnable scalar prior µ per meta-relation. It needs no hand-designed
+meta-paths. Adds relative temporal encoding for dynamic graphs and HGSampling for web-
+scale mini-batch training.
+• simple-HGN / HGB — Lv, Ding, Liu et al., KDD 2021. A deliberately minimal baseline:
+GAT plus (i) a learnable edge-type embedding concatenated into the attention logit, (ii)
+residual connections on both node representations and attention scores, and (iii) L2 normal-
+isation of the output embeddings. The paper’s larger contribution is the HGB benchmark
+itself and the finding that this simple model matches or beats most specialised HGNNs.
+• ie-HGCN — Yang, Guan, Li, Zhao, Cui & Wang, IEEE TKDE 35(2):1637–1650, 2023.
+Hierarchical object-level then type-level aggregation which, as a by-product, ranks the useful
+meta-paths, making the model interpretable while avoiding an exhaustive meta-path search.
+• RSHN — Zhu, Zhou, Pan, Zhu & Wang, IEEE ICDM 2019. Builds a coarsened edge-centric
+“relation structure graph” to embed relation types themselves, then propagates with those
+relation embeddings rather than treating relations as bare labels.
+• HPN — Ji, Wang, Shi, Wang & Yu, IEEE TKDE 35(1):521–532, 2023. Analyses semantic
+confusion (the HIN analogue of over-smoothing) and replaces the propagation step with a
+personalised-PageRank-like update that retains a fraction of the node’s own representation,
+enabling deeper meta-path propagation.
+4.4 Self-supervised / contrastive heterogeneous methods
+• DMGI — Park, Kim, Han & Yu, AAAI 2020. Extends Deep Graph Infomax to attributed
+multiplex networks: one DGI mutual-information objective per relation type, with a consensus
+regularisation that pulls the per-relation embeddings towards a shared representation.
+• HDGI — Ren, Liu, Huang, Dai, Bo & Zhang, arXiv:1911.08538, 2019 (AAAI-20 DLGMA
+workshop, under a different title; no archival venue). Applies mutual-information maximisa-
+tion between local node embeddings and a global summary, using meta-path-based convolu-
+tion plus semantic attention as the encoder.
+• HeCo — Wang, Liu, Han & Shi, KDD 2021. Contrasts two views of the same node: a
+network-schema view (attention over directly-connected neighbours of each other type) and a
+meta-path view (meta-path-specific GCNs with semantic attention). Positives are not merely
+the node’s counterpart view — HeCo selects multiple positives by counting how many meta-
+path instances connect two nodes and taking the top ones.
+4.5 Knowledge-graph embeddings as relation-aware LP baselines
+A HIN with many relation types is close to a knowledge graph, so heterogeneous link-prediction
+papers (and HGB’s LP track) routinely report KG embedding models, which score a typed triple
+(h, r, t) directly.
+• TransE — Bordes, Usunier, Garcia-Duran, Weston & Yakhnenko, NIPS 2013. Models a
+relation as a translation, h + r ≈t, scoring −∥h + r −t∥.
+Cannot represent 1-to-N or
+symmetric relations.
+Page 25 of 28
+
+===== rendered page 26 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+• DistMult — Yang, Yih, He, Gao & Deng, ICLR 2015. Bilinear score ⟨h, diag(r), t⟩; efficient
+but necessarily symmetric.
+• ComplEx — Trouillon, Welbl, Riedel, Gaussier & Bouchard, ICML 2016. Moves DistMult
+into C and takes the real part of a Hermitian product, so asymmetric relations become
+representable at the same cost.
+• ConvE — Dettmers, Minervini, Stenetorp & Riedel, AAAI 2018. Reshapes h and r into 2-D
+and applies a convolution, giving a parameter-efficient, highly expressive scorer.
+• RotatE — Sun, Deng, Nie & Tang, ICLR 2019. Treats a relation as an element-wise rotation
+in complex space, t = h ◦r with |ri| = 1, capturing symmetry, antisymmetry, inversion and
+composition simultaneously.
+5. Evaluation metrics
+Two conventions govern the whole literature. First, a HIN benchmark normally labels exactly one
+node type — the author in DBLP, the paper in ACM, the movie in IMDB — so “accuracy on
+DBLP” always means accuracy on that one target type, the other types being context. Second, for
+unsupervised methods the protocol is embed →freeze →fit a linear classifier: the embedding
+is learned without labels, then held fixed while a logistic regression is trained on a fraction of target
+nodes, the fraction varied over 20/40/60/80% and mean ± std reported over repeated splits. HAN,
+MAGNN and HeCo all report in this form.
+5.1 Node classification
+With class set C and per-class counts TPc, FPc, FNc, Micro-F1 pools the confusion matrix before
+scoring,
+Micro-P =
+∑︁
+c TPc
+∑︁
+c(TPc + FPc),
+Micro-R =
+∑︁
+c TPc
+∑︁
+c(TPc + FNc),
+Micro-F1 = 2 Micro-P · Micro-R
+Micro-P + Micro-R ,
+whereas Macro-F1 scores each class and averages unweighted:
+F1c =
+2 TPc
+2 TPc + FPc + FNc
+,
+Macro-F1 = 1
+|C|
+∑︂
+c∈C
+F1c.
+In the single-label multi-class setting every misclassification creates one false positive and one false
+negative, so Micro-P = Micro-R and Micro-F1 equals plain accuracy. The pair is always reported
+together because they answer different questions: Micro-F1 is dominated by frequent classes, Macro-
+F1 weights a rare class as heavily as a common one, and a large gap between them signals a model
+that has learned the class prior rather than the graph.
+The multi-label caveat.
+This equivalence fails for HGB’s IMDB and Freebase tracks, where
+a node may carry several labels at once. Prediction is per-label thresholding (sigmoid + binary
+cross-entropy) rather than an arg max, and the pooled confusion matrix is taken over the flattened
+node × label indicator matrix; there Micro-P̸ = Micro-R in general and Micro-F1 is not accuracy.
+In HGB’s IMDB, 2,684 of the 4,573 labelled movies carry more than one genre, so this is not a corner
+case — and it is why a Micro-F1 on HGB’s IMDB cannot be compared with one on MAGNN’s
+single-label IMDB.
+Page 26 of 28
+
+===== rendered page 27 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Other classification metrics.
+Accuracy is the official metric on OGB (ogbn-mag, MAG240M).
+ROC-AUC is used for binary or strongly imbalanced targets (and by HeCo alongside F1). For
+the clustering probe that HAN, MAGNN, DMGI and HeCo all run — k-means on the frozen
+embeddings with k = |C| — the scores are
+NMI(Y, ˆC) =
+2 I(Y ; ˆC)
+H(Y ) + H( ˆC)
+∈[0, 1],
+ARI =
+RI −E[RI]
+max(RI) −E[RI],
+with I mutual information, H entropy and RI the Rand index. Both are 0 in expectation for a
+chance partition and 1 for a perfect one (ARI may go negative). These test whether the embedding
+geometry is class-structured with no classifier fitted at all.
+5.2 Link prediction
+The essential difference from the homogeneous case is that in a HIN link prediction is stated per
+relation type: not “is there an edge” but “is there an edge of type R” — predict Author–Paper,
+or Paper–Venue, or User–Artist. Two consequences follow. (i) Negatives must be sampled type-
+consistently: a negative for an Author–Paper edge must join an author to a paper, never an author
+to a venue, since a type-violating negative is trivially rejected by any type-aware model and inflates
+its apparent margin over type-agnostic baselines. HGB samples negatives from 2-hop neighbours
+at a 1:1 ratio for exactly this reason. (ii) Scores are reported per relation and then averaged, so
+a model can be strong on a dense relation and useless on a sparse one without that showing in a
+single number.
+Let ranki be the position of the i-th true edge among its candidates, over query set Q:
+MRR =
+1
+|Q|
+∑︂
+i∈Q
+1
+ranki
+,
+Hits@K =
+1
+|Q|
+∑︂
+i∈Q
+1[ranki ≤K] ,
+i.e. MRR is the mean reciprocal rank of the first true item and Hits@K the fraction of positive edges
+ranked inside the top K against their sampled negatives (K ∈{1, 3, 10} conventionally, inherited
+from the KG literature). ROC-AUC equals the probability that a random positive outranks a
+random negative. Average precision (equivalently AUPRC) is
+AP =
+∑︂
+n
+(Rn −Rn−1) Pn,
+with Pn, Rn precision and recall at the n-th threshold. AP is preferred to ROC-AUC when pos-
+itives are rare — always true for link prediction on a sparse graph — because ROC-AUC is
+optimistic there, the enormous true-negative count sitting in its denominator. Precision@K /
+Recall@K, and MAE/RMSE for rating prediction, appear in the recommendation-flavoured HIN
+papers (HERec on Yelp/Douban). HGB’s LP track standardises on ROC-AUC and MRR.
+5.3 Summary: dataset →target →task →metric
+Closing remark.
+The single most important methodological point is the one HGB was created
+to make: because DBLP, ACM and IMDB circulate in mutually incompatible preprocessed ver-
+sions (Table 6), and because IMDB even changes from single-label to multi-label between versions,
+numbers copied across papers are frequently not comparable. Any credible evaluation must name
+the dataset version, the split, and whether the protocol is end-to-end supervised or embed-freeze-
+classify.
+Page 27 of 28
+
+===== rendered page 28 =====
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 8: Dataset →target node type →task →metric normally reported.
+Dataset
+Domain
+Target
+Task
+Labels
+Metrics normally reported
+DBLP
+bibliographic
+author
+NC
+4, single
+Macro-F1, Micro-F1 (+NMI/ARI)
+ACM
+bibliographic
+paper
+NC
+3, single
+Macro-F1, Micro-F1 (+NMI/ARI)
+IMDB (HGB)
+movie
+movie
+NC
+5, multi
+Macro-F1, Micro-F1
+IMDB (MAGNN)
+movie
+movie
+NC
+3, single
+Macro-F1, Micro-F1
+Freebase (HGB)
+KG
+book
+NC
+7, single
+Macro-F1, Micro-F1
+AMiner
+bibliographic
+author/paper
+NC
+8 / 4
+Macro-F1, Micro-F1, NMI
+ogbn-mag
+bibliographic
+paper
+NC
+349, single
+Accuracy (official)
+MAG240M
+bibliographic
+paper
+NC
+153, single
+Accuracy (official)
+LastFM
+music
+user–artist
+LP
+—
+ROC-AUC, MRR
+Amazon
+e-commerce
+product–product
+LP
+—
+ROC-AUC, MRR
+PubMed (HGB)
+biomedical
+disease–disease
+LP
+—
+ROC-AUC, MRR
+Yelp / Douban
+review
+user–item
+LP / rating
+—
+Prec@K, Rec@K; MAE, RMSE
+OAG (HGT)
+bibliographic
+paper–field/venue
+LP
+—
+NDCG, MRR
+Page 28 of 28

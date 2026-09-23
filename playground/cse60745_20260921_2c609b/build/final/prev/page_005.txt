@@ -1,0 +1,47 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+which is much harder than a random split.
+• ogbn-papers100M — the same construction as ogbn-arxiv at 111M nodes; only ∼1.5M are
+labelled (172 subject areas). The standard scalability benchmark.
+• ogbn-proteins — proteins from 8 species joined by weighted association edges. It carries
+edge features and no node features, and its 112 binary function-prediction tasks are split by
+species and scored by average ROC-AUC.
+• ogbl-collab (author collaboration), ogbl-ppa (protein association), ogbl-citation2 (paper
+citation) and ogbl-ddi (drug–drug interaction) are the four homogeneous link prediction
+tasks. Each fixes its own split, metric and negative set in Table 2; ogbl-ddi is notable for
+having no node features at all, so only structure can be used.
+1.7 Split protocols — and why they must be stated
+A result is meaningless without its split, because the same model can differ by many accuracy
+points across protocols on the same graph:
+• Planetoid semi-supervised split: exactly 20 labelled nodes per class for training, 500
+for validation, 1,000 for test. This is the split on which the familiar Cora ≈81.5% figure for
+GCN is reported.
+• Full-supervised / “Geom-GCN” split: 60/20/20% of nodes per class, averaged over 10
+random splits. Standard for the heterophilous benchmarks and typically 5–10 points higher
+than the 20-per-class numbers.
+• Random splits with fixed label budget (Shchur et al.): the Planetoid budget but re-
+randomised, reported as mean ± std over ≥100 splits. This was the paper’s central recom-
+mendation, since the single fixed Planetoid split does not support the ranking of methods
+usually claimed from it.
+• OGB splits are fixed and non-random — by time, by sales rank, by species, by experimental
+throughput, by protein target — and deliberately induce distribution shift between train and
+test.
+• Link prediction: edges, not nodes, are split. The message-passing graph must contain only
+training edges, otherwise the held-out edge leaks into its own prediction. See Figure 3.
+2. Graph schemas of the benchmarks
+The graph schema is the meta-template of a network: the graph over node types whose edges are
+the permitted relation types. For a homogeneous graph the schema is by definition degenerate —
+one node type and one edge type — so it is a single vertex with a single self-loop:
+TG =
+(︁{A}, {A
+R
+−−→A}
+)︁,
+|A| = |R| = 1.
+This is the honest answer to “draw the related graph schema” for these benchmarks, and it is
+exactly what distinguishes them from the heterogeneous datasets of Problem 2, whose schemas
+have several node types and several relation types. What actually differs between the homogeneous
+benchmarks is the semantics instantiated into A and R, so the benchmarks are grouped into seven
+schema families in Figure 1. Because a one-node schema is visually vacuous on its own, Figure 2
+additionally sketches the local structure that the schema does not capture and which nevertheless
+drives model performance: the label homophily of Eq. (1).
+Page 5 of 28

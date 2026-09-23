@@ -1,0 +1,68 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+4.2 Link prediction
+Link prediction is extremely class-imbalanced (a graph with |V | nodes has
+(︁|V |
+2
+)︁−|E| non-edges),
+so the metric choice matters far more than for node classification. Positives are held-out edges;
+negatives are sampled node pairs that are not edges (Figure 3).
+• AUC-ROC — the probability that a random positive outranks a random negative. Standard
+in the GAE/VGAE protocol with a 1:1 positive:negative ratio.
+• Average Precision (AP / AUPRC) —
+AP =
+∑︂
+k
+(︁Rk −Rk−1
+)︁Pk,
+(4)
+with Pk, Rk the precision and recall at threshold rank k. Unlike AUC it does not credit a model
+for correctly ranking the vast easy majority of negatives.
+• Precision@K / Recall@K — the fraction of the top-K predicted pairs that are true edges,
+and the fraction of true edges recovered in the top K.
+• Hits@K — the fraction of positive edges ranked in the top K against the sampled negatives:
+Hits@K =
+1
+|Etest|
+∑︂
+e∈Etest
+1
+[︁rank(e) ≤K
+]︁.
+(5)
+OGB fixes K per dataset so that numbers are comparable: Hits@50 for ogbl-collab (against
+100,000 shared negatives), Hits@20 for ogbl-ddi, Hits@100 for ogbl-ppa (against 3,000,000
+negatives).
+• MRR — for each query (in ogbl-citation2, each source paper, ranked against 1,000 sampled
+negative references),
+MRR =
+1
+|Q|
+∑︂
+q∈Q
+1
+rankq
+,
+(6)
+where rankq is the position of the first true item for query q. Rewards getting the answer at the
+very top far more than at position 10.
+• NDCG@K — with reli the relevance of the item at rank i,
+DCG@K =
+K
+∑︂
+i=1
+2reli −1
+log2(i + 1),
+NDCG@K = DCG@K
+IDCG@K ,
+(7)
+IDCG@K being the DCG of the ideal ordering.
+Used when a node has many true links of
+differing importance (recommendation-style evaluation).
+Negative sampling, and why AUC is optimistic.
+The negatives define the metric. Three
+conventions are in use: (i) 1:1 random negatives (the GAE protocol), (ii) a shared fixed negative set
+for all positives (ogbl-collab, ogbl-ddi, ogbl-ppa), and (iii) per-query negatives (ogbl-citation2: 1,000
+previously-published papers per source node). Real graphs are sparse, so a uniformly sampled pair
+is almost always a pair of distant, low-degree nodes that any model rejects trivially. AUC averages
+over all such pairs and therefore saturates near 1.0 and stops discriminating between methods —
+Page 13 of 28

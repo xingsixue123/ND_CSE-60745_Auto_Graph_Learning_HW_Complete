@@ -1,0 +1,82 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+P
+Paper
+A
+Author
+V
+Venue
+T
+Term
+writes
+published in
+contains
+DBLP
+P
+Paper
+A
+Author
+S
+Subject
+T
+Term
+writes
+belongs to
+contains
+cites / refs
+ACM
+M
+Movie
+A
+Actor
+D
+Director
+K
+Keyword
+acted in
+directed by
+has
+IMDB
+U
+User
+A
+Artist
+T
+Tag
+listens to
+tagged as
+friend of
+LastFM
+I
+Institution
+A
+Author
+P
+Paper
+F
+Field of study
+affiliated with
+writes
+has topic
+cites
+ogbn-mag / MAG240M
+B
+Business
+U
+User
+C
+Category
+L
+City
+Co
+Compliment
+reviews
+in category
+located in
+receives
+friend
+Yelp
+Figure 4: Network schemas TG = (A, R) of the bibliographic, media, large-scale and review bench-
+marks. Circles are node types (the letter is the initial used in meta-path notation); labelled edges
+are relation types. Inverse relations are omitted in this figure — but see Figure 5, where nothing
+is omitted.
+Page 21 of 28

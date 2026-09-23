@@ -1,0 +1,69 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+Table 7: Meta-paths commonly used on each benchmark, and the semantic relation each encodes.
+Dataset
+Meta-paths
+Semantics
+DBLP
+APA
+two authors co-wrote a paper (co-authorship)
+APCPA / APVPA
+two authors published at the same venue (commu-
+nity)
+APTPA
+two authors used the same term (topical similar-
+ity)
+ACM
+PAP
+two papers share an author
+PSP
+two papers share a subject
+PcPAP, PrPSP
+HGB variants routed through a citation (c) or ref-
+erence (r) hop
+IMDB
+MAM
+two movies share an actor
+MDM
+two movies share a director
+AMA, DMD
+two actors co-starred / two directors share a movie
+ogbn-mag
+PAP
+two papers share an author
+PAIAP
+two papers from the same institution (via author–
+institution)
+LastFM
+UAU
+two users listen to the same artist
+UATAU
+two users like artists sharing a tag
+AUA, ATA
+two artists share a listener / a tag
+Yelp
+UBU
+two users reviewed the same business
+UBCaBU
+two users reviewed businesses of the same category
+Freebase
+BB, BFB, BPB
+book–book; books sharing a film / a person
+4. Baselines
+4.1 Homogeneous methods, reported as type-agnostic baselines
+These are reported in essentially every heterogeneous paper, and the point of reporting them is
+that they discard ϕ and ψ entirely — they run on the graph with all type information erased (or
+on one meta-path-induced projection). They are the control condition: whatever a heterogeneous
+model gains over them is the measured value of modelling types. HGB’s central and uncomfortable
+finding is that this gap is much smaller than the literature had claimed, and that a properly tuned
+GAT beats most specialised HGNNs.
+• DeepWalk — Perozzi, Al-Rfou & Skiena, KDD 2014. Truncated uniform random walks
+treated as sentences, fed to skip-gram with hierarchical softmax.
+• LINE — Tang, Qu, Wang, Zhang, Yan & Mei, WWW 2015. Explicitly preserves first-order
+(observed edge) and second-order (shared-neighbourhood) proximity, optimised with negative
+sampling and edge-sampling for large graphs.
+• node2vec — Grover & Leskovec, KDD 2016. DeepWalk with a biased second-order walk
+whose p, q parameters interpolate between BFS-like (structural equivalence) and DFS-like
+(homophily) exploration.
+• GCN — Kipf & Welling, ICLR 2017. First-order spectral convolution: a layer is a symmet-
+rically normalised neighbourhood average followed by a linear map and nonlinearity.
+Page 22 of 28

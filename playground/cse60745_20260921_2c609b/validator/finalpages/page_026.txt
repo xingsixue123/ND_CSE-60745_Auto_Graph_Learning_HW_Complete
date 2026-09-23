@@ -1,0 +1,58 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+• DistMult — Yang, Yih, He, Gao & Deng, ICLR 2015. Bilinear score ⟨h, diag(r), t⟩; efficient
+but necessarily symmetric.
+• ComplEx — Trouillon, Welbl, Riedel, Gaussier & Bouchard, ICML 2016. Moves DistMult
+into C and takes the real part of a Hermitian product, so asymmetric relations become
+representable at the same cost.
+• ConvE — Dettmers, Minervini, Stenetorp & Riedel, AAAI 2018. Reshapes h and r into 2-D
+and applies a convolution, giving a parameter-efficient, highly expressive scorer.
+• RotatE — Sun, Deng, Nie & Tang, ICLR 2019. Treats a relation as an element-wise rotation
+in complex space, t = h ◦r with |ri| = 1, capturing symmetry, antisymmetry, inversion and
+composition simultaneously.
+5. Evaluation metrics
+Two conventions govern the whole literature. First, a HIN benchmark normally labels exactly one
+node type — the author in DBLP, the paper in ACM, the movie in IMDB — so “accuracy on
+DBLP” always means accuracy on that one target type, the other types being context. Second, for
+unsupervised methods the protocol is embed →freeze →fit a linear classifier: the embedding
+is learned without labels, then held fixed while a logistic regression is trained on a fraction of target
+nodes, the fraction varied over 20/40/60/80% and mean ± std reported over repeated splits. HAN,
+MAGNN and HeCo all report in this form.
+5.1 Node classification
+With class set C and per-class counts TPc, FPc, FNc, Micro-F1 pools the confusion matrix before
+scoring,
+Micro-P =
+∑︁
+c TPc
+∑︁
+c(TPc + FPc),
+Micro-R =
+∑︁
+c TPc
+∑︁
+c(TPc + FNc),
+Micro-F1 = 2 Micro-P · Micro-R
+Micro-P + Micro-R ,
+whereas Macro-F1 scores each class and averages unweighted:
+F1c =
+2 TPc
+2 TPc + FPc + FNc
+,
+Macro-F1 = 1
+|C|
+∑︂
+c∈C
+F1c.
+In the single-label multi-class setting every misclassification creates one false positive and one false
+negative, so Micro-P = Micro-R and Micro-F1 equals plain accuracy. The pair is always reported
+together because they answer different questions: Micro-F1 is dominated by frequent classes, Macro-
+F1 weights a rare class as heavily as a common one, and a large gap between them signals a model
+that has learned the class prior rather than the graph.
+The multi-label caveat.
+This equivalence fails for HGB’s IMDB and Freebase tracks, where
+a node may carry several labels at once. Prediction is per-label thresholding (sigmoid + binary
+cross-entropy) rather than an arg max, and the pooled confusion matrix is taken over the flattened
+node × label indicator matrix; there Micro-P̸ = Micro-R in general and Micro-F1 is not accuracy.
+In HGB’s IMDB, 2,684 of the 4,573 labelled movies carry more than one genre, so this is not a corner
+case — and it is why a Micro-F1 on HGB’s IMDB cannot be compared with one on MAGNN’s
+single-label IMDB.
+Page 26 of 28

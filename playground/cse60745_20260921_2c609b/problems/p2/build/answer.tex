@@ -1,0 +1,769 @@
+% ---- p2-namespaced TikZ styles (package loading happens in preamble.txt) ----
+\tikzset{
+  p2ent/.style={circle, draw=black!65, line width=0.7pt, minimum size=9.5mm,
+                inner sep=0pt, font=\small\bfseries},
+  p2lab/.style={font=\scriptsize},
+  p2rel/.style={draw=black!65, line width=0.7pt},
+  p2el/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+}
+\newcommand{\pTwoTgt}{orange!22}
+\newcommand{\pTwoAgt}{blue!12}
+\newcommand{\pTwoAtt}{green!14}
+\newcommand{\pTwoVen}{purple!12}
+
+\section*{Problem 2: Benchmarks, Baselines and Evaluation Metrics for
+Heterogeneous Graph Embedding}
+
+\noindent
+This answer covers graph embedding on \emph{heterogeneous} graph structures for node
+classification (NC) and link prediction (LP). The homogeneous case is treated in Problem~1;
+homogeneous methods appear here only in their role as type-agnostic baselines.
+
+% =====================================================================
+\subsection*{1. Set-up: HINs, network schemas and meta-paths}
+
+\paragraph{Heterogeneous information network (HIN).}
+\begin{sloppypar}
+Following Sun et al.\ (\emph{PathSim}, PVLDB 4(11):992--1003, 2011) and the survey of Shi, Li,
+Zhang, Sun \& Yu (\emph{A Survey of Heterogeneous Information Network Analysis}, IEEE TKDE
+29(1):17--37, 2017), a \textbf{heterogeneous information network} is a graph
+\[
+  G=(V,E,\phi,\psi),\qquad \phi:V\to\mathcal{A},\qquad \psi:E\to\mathcal{R},
+\]
+in which every node $v\in V$ carries exactly one \emph{node type} $\phi(v)$ from the type set
+$\mathcal{A}$, every edge $e\in E$ carries exactly one \emph{relation type} $\psi(e)$ from
+$\mathcal{R}$, and
+\[
+  \boxed{\;|\mathcal{A}|+|\mathcal{R}|>2\;}
+\]
+\end{sloppypar}
+This inequality \emph{is} the definition of heterogeneity: when $|\mathcal{A}|=|\mathcal{R}|=1$
+the network degenerates to the homogeneous graph of Problem~1. Each relation is typed at both
+ends, inducing a map $A_i\xrightarrow{R}A_j$ between two specific node types; its inverse
+$R^{-1}$ is in general a \emph{different} relation ($\mathsf{writes}$ vs.\ $\mathsf{written\text{-}by}$),
+which is why the released benchmarks below count $6$ or $8$ ``edge types'' where a reader might
+expect $3$ or $4$.
+
+\paragraph{Network schema.}
+The \textbf{network schema} $T_G=(\mathcal{A},\mathcal{R})$ is the directed graph whose vertices
+are the node types $\mathcal{A}$ and whose edges are the relation types $\mathcal{R}$. It is a
+meta-template of which $G$ is an instantiation: every node and edge of $G$ maps to some type in
+$T_G$, so the schema states which kinds of connection the dataset can express at all. This is the
+object Section 3 draws for each benchmark. Note that the drawing carries real
+information here whereas it does not in the homogeneous case: Cora's schema is a single node type
+with one self-relation, while DBLP's is a four-type star.
+
+\paragraph{Meta-path.}
+A \textbf{meta-path} $\mathcal{P}$ of length $\ell$ is a path defined \emph{on the schema},
+\[
+  \mathcal{P}\;:\;A_1\xrightarrow{R_1}A_2\xrightarrow{R_2}\cdots\xrightarrow{R_\ell}A_{\ell+1},
+\]
+denoting the composite relation $R=R_1\circ R_2\circ\cdots\circ R_\ell$ from type $A_1$ to type
+$A_{\ell+1}$. A node sequence $v_1v_2\cdots v_{\ell+1}$ in $G$ with $\phi(v_i)=A_i$ and
+$\psi(v_iv_{i+1})=R_i$ is a \emph{path instance}. Meta-paths are written by type initials, so on
+DBLP $\mathrm{APA}$ abbreviates
+$\text{Author}\xrightarrow{\mathsf{writes}}\text{Paper}\xrightarrow{\mathsf{written\text{-}by}}\text{Author}$.
+
+Meta-paths matter because each defines a \emph{different} homogeneous projection of the same HIN,
+and the projections carry different semantics: on DBLP $\mathrm{APA}$ means \emph{co-authorship}
+while $\mathrm{APCPA}$ means \emph{published at the same venue}, and two authors may be strongly
+related under one and unrelated under the other. Nearly every method in
+Section 4 is a different answer to ``how should meta-path structure be
+used?'' --- fixed and hand-chosen (metapath2vec, HAN), aggregated with attention (MAGNN), learned
+(GTN), or discarded in favour of per-relation parameters (R-GCN, HGT, simple-HGN).
+
+% =====================================================================
+\subsection*{2. Benchmarks}
+
+\subsubsection*{2.1 The standardised suite: HGB}
+
+Heterogeneous GNN papers before 2021 each preprocessed DBLP/ACM/IMDB their own way, so their
+reported numbers were not comparable. \textbf{HGB} (Heterogeneous Graph Benchmark; Lv, Ding, Liu
+et al., KDD 2021) exists precisely to fix this: fixed splits, fixed features, one leaderboard.
+Its headline statistics are Table~\ref{p2:tab:hgb}; the per-type breakdown is
+Table~\ref{p2:tab:hgbdetail}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{HGB (Lv et al., KDD 2021) benchmark statistics, as published.}
+\label{p2:tab:hgb}
+\begin{tabular}{llrrrrlc}
+\toprule
+Task & Dataset & \#Nodes & \#N.\,types & \#Edges & \#E.\,types & Target & \#Classes \\
+\midrule
+\multirow{4}{*}{NC}
+ & DBLP     & 26{,}128  & 4 & 239{,}566   & 6  & author  & 4 \\
+ & IMDB     & 21{,}420  & 4 & 86{,}642    & 6  & movie   & 5$^{\dagger}$ \\
+ & ACM      & 10{,}942  & 4 & 547{,}872   & 8  & paper   & 3 \\
+ & Freebase & 180{,}098 & 8 & 1{,}057{,}688 & 36 & book  & 7 \\
+\midrule
+\multirow{3}{*}{LP}
+ & Amazon   & 10{,}099  & 1 & 148{,}659   & 2  & product--product & --- \\
+ & LastFM   & 20{,}612  & 3 & 141{,}521   & 3  & user--artist     & --- \\
+ & PubMed   & 63{,}109  & 4 & 244{,}986   & 10 & disease--disease & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize $^{\dagger}$ \textbf{multi-label} --- see Section 5.}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Per-node-type and per-relation breakdown of the four HGB node-classification
+benchmarks, recomputed from the released data files (see the note below).}
+\label{p2:tab:hgbdetail}
+\begin{tabular}{llrrlr}
+\toprule
+Dataset & Node type & Count & Feat.\ dim & Relation & \#Edges \\
+\midrule
+\multirow{3}{*}{DBLP}
+ & author $^{\star}$ & 4{,}057  & 334   & author--paper & 19{,}645 \\
+ & paper             & 14{,}328 & 4{,}231 & paper--term  & 85{,}810 \\
+ & term              & 7{,}723  & 50    & paper--venue  & 14{,}328 \\
+ & venue             & 20       & ---   & \emph{(+3 inverse relations)} & \\
+\midrule
+\multirow{3}{*}{IMDB}
+ & movie $^{\star}$  & 4{,}932  & 3{,}489 & movie--director & 4{,}932 \\
+ & director          & 2{,}393  & 3{,}341 & movie--actor    & 14{,}779 \\
+ & actor             & 6{,}124  & 3{,}341 & movie--keyword  & 23{,}610 \\
+ & keyword           & 7{,}971  & ---   & \emph{(+3 inverse relations)} & \\
+\midrule
+\multirow{4}{*}{ACM}
+ & paper $^{\star}$  & 3{,}025  & 1{,}902 & paper--cite--paper & 5{,}343 \\
+ & author            & 5{,}959  & 1{,}902 & paper--ref--paper  & 5{,}343 \\
+ & subject           & 56       & 1{,}902 & paper--author      & 9{,}949 \\
+ & term              & 1{,}902  & ---   & paper--subject     & 3{,}025 \\
+ &                   &          &       & paper--term        & 255{,}619 \\
+ &                   &          &       & \emph{(+3 inverse relations)} & \\
+\midrule
+\multirow{4}{*}{Freebase}
+ & book $^{\star}$ 40{,}402 & \multicolumn{2}{l}{film 19{,}427} & \multicolumn{2}{l}{music 82{,}351} \\
+ & sports 1{,}025 & \multicolumn{2}{l}{people 17{,}641} & \multicolumn{2}{l}{location 9{,}368} \\
+ & organization 2{,}731 & \multicolumn{2}{l}{business 7{,}153} & \multicolumn{2}{l}{\emph{no features at all}} \\
+ & \multicolumn{5}{l}{36 typed relations (\textsc{book-and-book} 202{,}674,
+   \textsc{music-and-music} 283{,}670, \dots)} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize $^{\star}$ labelled target type. Labelled counts: DBLP 4{,}057/4{,}057 authors;
+ACM 3{,}025/3{,}025 papers; IMDB 4{,}573/4{,}932 movies (of which \textbf{2{,}684 carry more than
+one label}); Freebase 7{,}954/40{,}402 books. Split is $24\%$ train / $6\%$ validation / $70\%$
+test on the labelled target nodes.}
+\end{table}
+
+\paragraph{Provenance of Table~\ref{p2:tab:hgbdetail}.} The HGB paper publishes only the totals of
+Table~\ref{p2:tab:hgb}; it never prints a per-type breakdown. The numbers above were therefore
+recomputed directly from the released \texttt{node.dat}/\texttt{link.dat}/\texttt{label.dat} files,
+and every one of the four datasets reproduces its published totals exactly (nodes, edges, number of
+node types, number of edge types and number of classes all match). That agreement is what licenses
+the table. Two incidental findings: HGB's own \texttt{info.dat} declares the DBLP author attribute
+dimension as $0$, but the data file actually carries $334$-dimensional author features --- and $334$
+is exactly the feature dimension HAN publishes for DBLP, which independently corroborates the data
+over the metadata; and ACM's $1{,}902$-dimensional bag-of-words is indexed by exactly the $1{,}902$
+\texttt{term} nodes.
+
+\subsubsection*{2.2 The individual benchmark graphs}
+
+\paragraph{DBLP (bibliographic).} A computer-science bibliography extract with types
+\emph{author}, \emph{paper}, \emph{term}, \emph{venue/conference}. Authors are labelled with one of
+4 research areas (database, data mining, AI, information retrieval); author features are a
+bag-of-words over the keywords of the papers they wrote. It is the canonical author-classification
+HIN and the standard testbed for $\mathrm{APA}$ vs.\ $\mathrm{APCPA}$ semantics.
+
+\paragraph{ACM (bibliographic).} Papers from ACM venues with types \emph{paper}, \emph{author},
+\emph{subject}, \emph{term}. Papers are labelled with 3 classes (database, wireless communication,
+data mining) and carry a bag-of-words feature. Distinctively, ACM has a \emph{paper--paper}
+citation relation in addition to the star structure, and HGB splits it into a citation and a
+reference direction --- so the schema is not a pure star.
+
+\paragraph{IMDB (movie).} Types \emph{movie}, \emph{director}, \emph{actor} and (in HGB)
+\emph{keyword}. Movies are labelled by genre. This is the benchmark where versions diverge most
+sharply: MAGNN's IMDb has 3 \emph{disjoint} genres (Action/Comedy/Drama), whereas HGB's has 5
+\emph{overlapping} genres, making it multi-label.
+
+\paragraph{Freebase.} \emph{The name denotes two unrelated graphs.} HGB's Freebase is a general
+knowledge graph: 8 node types, 36 relations, 180{,}098 nodes, target type \textsc{book} with 7
+classes, and \textbf{no node features whatsoever} --- so it isolates how much a model can extract
+from pure typed structure. It is book-\emph{centric} only in the sense that \textsc{book} is the
+labelled type; its schema is not a star but is in fact \emph{complete}
+(Figure~\ref{p2:fig:schemasc}). HeCo's ``Freebase'' is instead a \emph{movie}
+dataset (3{,}492 movies, 33{,}401 actors, 2{,}502 directors, 4{,}459 writers; target movie, 3
+classes). Quoting a Freebase number without saying which one is meaningless.
+
+\paragraph{AMiner (bibliographic).} Two scales. metapath2vec's AMiner is web-scale: 1{,}693{,}531
+authors, 3{,}194{,}405 papers, 3{,}883 venues, with 8 Google-Scholar categories as labels and
+246{,}678 labelled authors. HeCo's AMiner is a small subset (6{,}564 papers, 13{,}329 authors,
+35{,}890 references; target paper, 4 classes). \emph{Erratum worth knowing:} metapath2vec's body
+text says the dataset ``consists of 9{,}323{,}739 computer scientists'', but the authors' own
+correction note states that 9{,}323{,}739 is the paper--author \emph{link} count and the author
+count is 1{,}693{,}531. The wrong figure is still widely re-quoted.
+
+\paragraph{Yelp and Douban (business / review).} HERec's Yelp has types \emph{user} (16{,}239),
+\emph{business} (14{,}284), \emph{city} (47), \emph{category} (511) and \emph{compliment} (11),
+with U--B 198{,}397, U--U 158{,}590, U--Co 76{,}875, B--Ci 14{,}267 and B--Ca 40{,}009 edges
+(density $0.08\%$). Douban Movie has \emph{user} (13{,}367), \emph{movie} (12{,}677),
+\emph{director} (2{,}449), \emph{actor} (6{,}311) and \emph{type} (38). Both are used for
+rating prediction / recommendation, reported with MAE and RMSE rather than F1.
+
+\paragraph{Amazon (e-commerce) --- heterogeneous in $\mathcal{R}$ only.} HGB's Amazon is the
+limiting case of the definition in Section~1, and worth stating for that reason. It has
+\textbf{one} node type (\emph{product}, 10{,}099 nodes) and \textbf{two} relation types,
+\emph{co-viewing} and \emph{co-purchasing}, over 148{,}659 edges --- the electronics subset
+preprocessed by GATNE (Cen et al., KDD 2019). So $|\mathcal{A}|=1$ but $|\mathcal{R}|=2$, giving
+$|\mathcal{A}|+|\mathcal{R}|=3>2$: it is a heterogeneous network even though every node is the
+same type, which is precisely why the condition in Section~1 is stated as a sum rather than as
+``more than one node type''. Its network schema is therefore a single node carrying two distinct
+self-relations. It is used for \textbf{link prediction only} (it has no node labels), scored with
+ROC-AUC and MRR. It is also the cleanest illustration of the limit of meta-path methods: with one
+node type there is no type alternation to define a meta-path over, and HGB's link-prediction
+table accordingly leaves MAGNN's Amazon entry blank, noting that vacancies are ``due to lack of
+meta-paths on those datasets''. Relation-aware but meta-path-free models (R-GCN, GATNE,
+simple-HGN) are the ones that can run on it at all.
+
+\paragraph{LastFM and MovieLens (user--item HINs).} MAGNN's Last.fm has \emph{user} (1{,}892),
+\emph{artist} (17{,}632) and \emph{tag} (1{,}088), with U--U 12{,}717, U--A 92{,}834 and A--T
+23{,}253; it carries \emph{no labels and no features}, so it is a pure link-prediction benchmark
+(predict user--artist), with one-hot IDs as dummy inputs. MovieLens/ML-100K is used analogously as
+a user--item bipartite HIN enriched with occupation/genre types. \textbf{PubMed}, in its HGB
+heterogeneous form, is a 4-type biomedical graph (63{,}109 nodes, 10 relation types) used for
+disease--disease link prediction --- not to be confused with the homogeneous PubMed citation
+network of Problem~1.
+
+\paragraph{OGB: \texttt{ogbn-mag} and MAG240M.} These supply the scale the older benchmarks lack.
+\texttt{ogbn-mag} is a Microsoft Academic Graph subset with \emph{paper} (736{,}389),
+\emph{author} (1{,}134{,}649), \emph{institution} (8{,}740) and \emph{field of study} (59{,}965)
+--- 1{,}939{,}743 nodes --- and four relations: author--affiliated\_with--institution
+(1{,}043{,}998), author--writes--paper (7{,}145{,}660), paper--cites--paper (5{,}416{,}271) and
+paper--has\_topic--field\_of\_study (7{,}505{,}078), totalling 21{,}111{,}007 edges. The task is
+predicting each paper's \textbf{venue} among \textbf{349 classes}; only \emph{paper} nodes have
+features (128-d word2vec), the rest are featureless. Crucially the split is \textbf{temporal}
+--- train $\le 2017$, validation 2018, test $\ge 2019$ --- not random, so it measures
+generalisation forward in time. The official metric is accuracy. \textbf{MAG240M} (OGB-LSC) is the
+same design two orders of magnitude larger: 121{,}751{,}666 papers, 122{,}383{,}112 authors and
+25{,}721 institutions (244{,}160{,}499 nodes) with 1{,}728{,}364{,}232 edges, 768-d RoBERTa
+features, and 153 arXiv subject classes.
+
+\subsubsection*{2.3 Version incompatibility --- the caveat that matters}
+
+The same dataset name denotes different graphs in different papers. Table~\ref{p2:tab:versions}
+makes this concrete; quoting a statistic without naming the version is an error.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{The same dataset name denotes different graphs in different papers. Figures that
+differ from the majority version are bolded.}
+\label{p2:tab:versions}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llp{0.40\textwidth}l@{}}
+\toprule
+Dataset & Version & Node counts & Note \\
+\midrule
+\multirow{3}{*}{DBLP}
+ & HAN   & paper 14{,}328 / 14{,}327, author 4{,}057, term \textbf{8{,}789}, venue 20
+         & P--T $=88{,}420$ \\
+ & MAGNN / HeCo / HGB & paper 14{,}328, author 4{,}057, term \textbf{7{,}723}, venue 20
+         & P--T $=85{,}810$ \\
+ & GTN   & 18{,}405 total (= paper + author + venue; \emph{term dropped}) & 4 edge types \\
+\midrule
+\multirow{3}{*}{ACM}
+ & HAN   & paper 3{,}025, author 5{,}835, subject 56 & P--A $=9{,}744$ \\
+ & HGB   & paper 3{,}025, author \textbf{5{,}959}, subject 56, term 1{,}902 & P--A $=9{,}949$ \\
+ & HeCo  & paper \textbf{4{,}019}, author \textbf{7{,}167}, subject \textbf{60} & P--A $=13{,}407$ \\
+\midrule
+\multirow{3}{*}{IMDB}
+ & HAN   & movie 4{,}780, director 2{,}269, actor 5{,}841 & \\
+ & MAGNN & movie 4{,}278, director 2{,}081, actor 5{,}257 & 3 classes, single-label \\
+ & HGB   & movie 4{,}932, director 2{,}393, actor 6{,}124, keyword 7{,}971
+         & 5 classes, \textbf{multi-label} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Four specific discrepancies are worth flagging.
+\begin{enumerate}\itemsep2pt
+\item \textbf{DBLP's term count.} HAN reports 8{,}789 terms; MAGNN, HeCo and HGB all use 7{,}723.
+  HGB's published total is only consistent with the latter
+  ($4{,}057+14{,}328+7{,}723+20=26{,}128$, whereas the HAN figure would give $27{,}194$). HAN's own
+  table is also internally inconsistent: it lists 14{,}328 papers in the Paper--Author and
+  Paper--Conference rows but 14{,}327 in the Paper--Term row.
+\item \textbf{HGB's ACM does not match its stated provenance.} HGB says it uses HAN's subset while
+  ``preserving all edges including paper citations and references'', but its author count
+  ($5{,}959$ vs.\ $5{,}835$) and P--A edge count ($9{,}949$ vs.\ $9{,}744$) differ from HAN's
+  published table. Re-adding citation edges cannot change the number of \emph{authors}, so the two
+  ACM graphs genuinely differ.
+\item \textbf{IMDB changes task type, not just size.} HGB's IMDB is multi-label with 5 overlapping
+  genres; MAGNN's is single-label with 3 disjoint ones. An F1 on one is not comparable to an F1 on
+  the other even in principle (Section 5).
+\item \textbf{HGB's LastFM edge count double-counts one relation.} Its node total $20{,}612$
+  exactly equals MAGNN's $1{,}892+17{,}632+1{,}088$, but its edge total is $141{,}521$ against
+  MAGNN's $128{,}804$. The gap is exactly $12{,}717$, the U--U count:
+  $2\times12{,}717+92{,}834+23{,}253=141{,}521$. So the symmetric user--user relation is stored in
+  both directions while U--A and A--T are stored in one.
+\end{enumerate}
+
+% =====================================================================
+\subsection*{3. Network schemas and meta-paths}
+
+Each schema in Figures~\ref{p2:fig:schemas} and~\ref{p2:fig:schemasc} is
+$T_G=(\mathcal{A},\mathcal{R})$ for one benchmark family: circles are node types (letter = the
+initial used in meta-path notation), edges are relation types. Inverse relations are omitted for
+readability in Figure~\ref{p2:fig:schemas}; Freebase (Figure~\ref{p2:fig:schemasc}) has no
+inverse relations at all and is drawn complete.
+
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Meta-paths commonly used on each benchmark, and the semantic relation each encodes.}
+\label{p2:tab:metapaths}
+\begin{tabular}{llp{7.6cm}}
+\toprule
+Dataset & Meta-paths & Semantics \\
+\midrule
+DBLP & APA & two authors co-wrote a paper (co-authorship) \\
+     & APCPA / APVPA & two authors published at the same venue (community) \\
+     & APTPA & two authors used the same term (topical similarity) \\
+\midrule
+ACM  & PAP & two papers share an author \\
+     & PSP & two papers share a subject \\
+     & PcPAP, PrPSP & HGB variants routed through a citation (c) or reference (r) hop \\
+\midrule
+IMDB & MAM & two movies share an actor \\
+     & MDM & two movies share a director \\
+     & AMA, DMD & two actors co-starred / two directors share a movie \\
+\midrule
+\texttt{ogbn-mag} & PAP & two papers share an author \\
+     & PAIAP & two papers from the same institution (via author--institution) \\
+\midrule
+LastFM & UAU & two users listen to the same artist \\
+     & UATAU & two users like artists sharing a tag \\
+     & AUA, ATA & two artists share a listener / a tag \\
+\midrule
+Yelp & UBU & two users reviewed the same business \\
+     & UBCaBU & two users reviewed businesses of the same category \\
+\midrule
+Freebase & BB, BFB, BPB & book--book; books sharing a film / a person \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}\centering
+\begin{tikzpicture}[scale=0.92, every node/.style={transform shape}]
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]below:Paper}]  (P) at (0,0) {P};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]below:Author}] (A) at (-3.0,0) {A};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]below:Venue}]  (V) at (3.3,0) {V};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]above:Term}]   (T) at (0,1.9) {T};
+  \draw[p2rel] (A) -- node[p2el]{writes} (P);
+  \draw[p2rel] (P) -- node[p2el]{published in} (V);
+  \draw[p2rel] (P) -- node[p2el]{contains} (T);
+\end{tikzpicture}
+\\[2pt]{\small\textbf{DBLP}}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\centering
+\begin{tikzpicture}[scale=0.92, every node/.style={transform shape}]
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]-35:Paper}]     (P) at (0,0) {P};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]below:Author}]  (A) at (-3.0,0) {A};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]below:Subject}] (S) at (3.3,0) {S};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]above:Term}]    (T) at (0,1.9) {T};
+  \draw[p2rel] (A) -- node[p2el]{writes} (P);
+  \draw[p2rel] (P) -- node[p2el]{belongs to} (S);
+  \draw[p2rel] (P) -- node[p2el]{contains} (T);
+  \draw[p2rel] (P) to[out=-60,in=-120,looseness=9] node[p2el,below]{cites / refs} (P);
+\end{tikzpicture}
+\\[2pt]{\small\textbf{ACM}}
+\end{minipage}
+
+\vspace{10pt}
+\begin{minipage}{0.48\textwidth}\centering
+\begin{tikzpicture}[scale=0.92, every node/.style={transform shape}]
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]above:Movie}]    (M) at (0,0) {M};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]below:Actor}]    (A) at (-3.1,0) {A};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]below:Director}] (D) at (3.4,0) {D};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]below:Keyword}]  (K) at (0,-1.9) {K};
+  \draw[p2rel] (M) -- node[p2el]{acted in} (A);
+  \draw[p2rel] (M) -- node[p2el]{directed by} (D);
+  \draw[p2rel] (M) -- node[p2el]{has} (K);
+\end{tikzpicture}
+\\[2pt]{\small\textbf{IMDB}}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\centering
+\begin{tikzpicture}[scale=0.92, every node/.style={transform shape}]
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]below:User}]   (U) at (-3.1,0) {U};
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]below:Artist}] (A) at (0,0) {A};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]below:Tag}]    (T) at (3.1,0) {T};
+  \draw[p2rel] (U) -- node[p2el]{listens to} (A);
+  \draw[p2rel] (A) -- node[p2el]{tagged as} (T);
+  \draw[p2rel] (U) to[out=120,in=60,looseness=9] node[p2el,above]{friend of} (U);
+\end{tikzpicture}
+\\[2pt]{\small\textbf{LastFM}}
+\end{minipage}
+
+\vspace{13pt}
+\begin{minipage}{\textwidth}\centering
+\begin{tikzpicture}[scale=0.95, every node/.style={transform shape}]
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]below:Institution}]    (I) at (-6.3,0) {I};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]below:Author}]         (A) at (-3.0,0) {A};
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]below:Paper}]          (P) at (0,0) {P};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]below:{Field of study}}] (F) at (3.2,0) {F};
+  \draw[p2rel] (A) -- node[p2el]{affiliated with} (I);
+  \draw[p2rel] (A) -- node[p2el]{writes} (P);
+  \draw[p2rel] (P) -- node[p2el]{has topic} (F);
+  \draw[p2rel] (P) to[out=120,in=60,looseness=9] node[p2el,above]{cites} (P);
+\end{tikzpicture}
+\\[2pt]{\small\textbf{\texttt{ogbn-mag} / MAG240M}}
+\end{minipage}
+
+\vspace{14pt}
+\begin{minipage}{\textwidth}\centering
+\begin{tikzpicture}[scale=0.95, every node/.style={transform shape}]
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]above:Business}] (B) at (0,0) {B};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]below:User}]     (U) at (-3.0,0) {U};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]below:Category}] (C) at (3.3,0) {C};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]below:City}]     (L) at (0,-1.9) {L};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]above:Compliment}] (O) at (-3.0,1.9) {Co};
+  \draw[p2rel] (U) -- node[p2el]{reviews} (B);
+  \draw[p2rel] (B) -- node[p2el]{in category} (C);
+  \draw[p2rel] (B) -- node[p2el]{located in} (L);
+  \draw[p2rel] (U) -- node[p2el]{receives} (O);
+  \draw[p2rel] (U) to[out=150,in=210,looseness=9] node[p2el,left]{friend} (U);
+\end{tikzpicture}
+\\[2pt]{\small\textbf{Yelp}}
+\end{minipage}
+\caption{Network schemas $T_G=(\mathcal{A},\mathcal{R})$ of the bibliographic, media, large-scale
+and review benchmarks. Circles are node types (the letter is the initial used in meta-path
+notation); labelled edges are relation types. Inverse relations are omitted in this figure ---
+but see Figure~\ref{p2:fig:schemasc}, where nothing is omitted.}
+\label{p2:fig:schemas}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.86\textwidth}\centering
+\begin{tikzpicture}[scale=0.92, every node/.style={transform shape}, label distance=9.5mm]
+  % positions first, so the 28 chords can be drawn underneath the type circles
+  \path (90:2.75)  coordinate (B)  (45:2.75)  coordinate (F)
+        (0:2.75)   coordinate (M)  (-45:2.75) coordinate (S)
+        (-90:2.75) coordinate (Pe) (-135:2.75)coordinate (L)
+        (180:2.75) coordinate (O)  (135:2.75) coordinate (Bu);
+  % all C(8,2)=28 pairwise relations, drawn first so the circles sit on top
+  \foreach \xa in {B,F,M,S,Pe,L,O,Bu}{
+    \foreach \ya in {B,F,M,S,Pe,L,O,Bu}{
+      \draw[draw=black!28, line width=0.4pt] (\xa) -- (\ya);}}
+  % type circles
+  \node[p2ent, fill=\pTwoTgt, label={[p2lab]90:Book}]          (nB)  at (B)  {B};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]45:Film}]          (nF)  at (F)  {F};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]0:Music}]          (nM)  at (M)  {M};
+  \node[p2ent, fill=\pTwoAgt, label={[p2lab]-45:Sports}]       (nS)  at (S)  {S};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]-90:People}]       (nPe) at (Pe) {P};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]-135:Location}]    (nL)  at (L)  {L};
+  \node[p2ent, fill=\pTwoVen, label={[p2lab]180:Organization}] (nO)  at (O)  {O};
+  \node[p2ent, fill=\pTwoAtt, label={[p2lab]135:Business}]     (nBu) at (Bu) {Bu};
+  % one self-relation per type, looping radially outward from each circle
+  \foreach \nd/\oa/\ia in {nB/116/64, nF/71/19, nM/26/-26, nS/-19/-71,
+                           nPe/-64/-116, nL/-109/-161, nO/206/154, nBu/161/109}{
+    \draw[draw=black!55, line width=0.5pt]
+      (\nd) to[out=\oa,in=\ia,looseness=6] (\nd);}
+\end{tikzpicture}
+\\[4pt]{\small\textbf{Freebase (HGB)} --- the schema is \emph{complete}:
+$\binom{8}{2}=28$ pairwise relations $+$ one self-relation per type $=36$.}
+\end{minipage}
+\caption{Network schema of Freebase (HGB), drawn \emph{in full} --- all 36 relation types are
+shown, so unlike Figure~\ref{p2:fig:schemas} nothing is omitted here.
+Freebase is the one benchmark whose schema is \textbf{complete}: every one of the
+$\binom{8}{2}=28$ unordered type pairs carries exactly one relation, and every type carries one
+self-relation, giving $28+8=36$. Note the contrast with DBLP/ACM/IMDB: \textbf{none of these 36
+are inverses} --- all 36 are distinct forward relations, so this count is \emph{not} inflated by
+the forward/inverse doubling of Section~1, whereas DBLP's ``6 edge types'' is 3 relations plus
+their 3 inverses. \textsc{book} (shaded) is the labelled target type; the largest single relation
+is \textsc{music}--\textsc{music}, 283{,}670 edges or $27\%$ of the graph.}
+\label{p2:fig:schemasc}
+\end{figure}
+
+
+
+% =====================================================================
+\subsection*{4. Baselines}
+
+\subsubsection*{4.1 Homogeneous methods, reported as type-agnostic baselines}
+
+These are reported in essentially every heterogeneous paper, and the \emph{point} of reporting
+them is that they \textbf{discard $\phi$ and $\psi$ entirely} --- they run on the graph with all
+type information erased (or on one meta-path-induced projection). They are the control condition:
+whatever a heterogeneous model gains over them is the measured value of modelling types. HGB's
+central and uncomfortable finding is that this gap is much smaller than the literature had
+claimed, and that a properly tuned GAT beats most specialised HGNNs.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{DeepWalk} --- Perozzi, Al-Rfou \& Skiena, KDD 2014. Truncated uniform random walks
+  treated as sentences, fed to skip-gram with hierarchical softmax.
+\item \textbf{LINE} --- Tang, Qu, Wang, Zhang, Yan \& Mei, WWW 2015. Explicitly preserves
+  first-order (observed edge) and second-order (shared-neighbourhood) proximity, optimised with
+  negative sampling and edge-sampling for large graphs.
+\item \textbf{node2vec} --- Grover \& Leskovec, KDD 2016. DeepWalk with a biased second-order walk
+  whose $p,q$ parameters interpolate between BFS-like (structural equivalence) and DFS-like
+  (homophily) exploration.
+\item \textbf{GCN} --- Kipf \& Welling, ICLR 2017. First-order spectral convolution: a layer is a
+  symmetrically normalised neighbourhood average followed by a linear map and nonlinearity.
+\item \textbf{GAT} --- Veli\v{c}kovi\'{c}, Cucurull, Casanova, Romero, Li\`{o} \& Bengio, ICLR
+  \textbf{2018}. Replaces the fixed normalisation with multi-head self-attention over neighbours.
+  (Commonly miscited as 2017, the arXiv posting date.)
+\item \textbf{GraphSAGE} --- Hamilton, Ying \& Leskovec, NIPS 2017. Inductive framework that
+  samples a fixed number of neighbours and aggregates with mean/LSTM/max-pool, enabling embeddings
+  for unseen nodes.
+\end{itemize}
+
+\subsubsection*{4.2 Meta-path and random-walk HIN embedding}
+
+\begin{itemize}\itemsep3pt
+\item \textbf{metapath2vec} --- Dong, Chawla \& Swami, KDD 2017. Random walks are
+  \emph{meta-path-guided}: at each step the walker must move to the node type prescribed by the
+  meta-path scheme (e.g.\ APVPA), so the generated context is type-balanced instead of being
+  dominated by the most frequent type. The walks feed a heterogeneous skip-gram. Note that the
+  base model still normalises negative sampling over \emph{all} nodes regardless of type; it is the
+  \textbf{metapath2vec++} variant that normalises the softmax per node type.
+\item \textbf{HIN2Vec} --- Fu, Lee \& Lei, CIKM 2017. Rather than fixing meta-paths in advance, it
+  learns node \emph{and} relation (meta-path) vectors jointly by training a multi-task binary
+  classifier that predicts, for a node pair, which relations hold between them.
+\item \textbf{ESim} --- Shang, Qu, Liu, Kaplan, Han \& Peng, arXiv:1610.09769, 2016
+  (\emph{preprint only --- never published in a peer-reviewed venue}). Embeds nodes by sampling
+  positive and negative path instances of user-supplied weighted meta-paths and optimising a
+  noise-contrastive objective for similarity search.
+\item \textbf{HERec} --- Shi, Hu, Zhao \& Yu, IEEE TKDE 31(2):357--370, \textbf{2019}. Performs
+  meta-path-guided random walks, but first \emph{filters} each walk to the target type, producing
+  homogeneous sequences per meta-path; the resulting embeddings are fused by a nonlinear function
+  and injected into an extended matrix-factorisation recommender.
+\item \textbf{PTE} --- Tang, Qu \& Mei, KDD 2015. Decomposes a heterogeneous text network
+  (word--word, word--document, word--label) into bipartite graphs and jointly embeds them with the
+  LINE objective, giving semi-supervised, task-tuned text embeddings.
+\end{itemize}
+
+\subsubsection*{4.3 Heterogeneous graph neural networks}
+
+\begin{itemize}\itemsep3pt
+\item \textbf{R-GCN} --- Schlichtkrull, Kipf, Bloem, van den Berg, Titov \& Welling, ESWC
+  \textbf{2018}. Relation-specific message passing: each layer aggregates neighbours separately per
+  relation $r$ with its own weight matrix $W_r$, normalised by $c_{i,r}=|\mathcal{N}_i^r|$, plus a
+  self-loop term. Because $|\mathcal{R}|$ weight matrices overfit, it offers two \emph{alternative}
+  regularisers --- \emph{basis decomposition} ($W_r$ a linear combination of $B$ shared bases) and
+  \emph{block-diagonal decomposition} ($W_r$ a direct sum of small dense blocks). For link
+  prediction it is used as an encoder with a \textbf{DistMult} decoder.
+\item \textbf{HAN} --- Wang, Ji, Shi, Wang, Ye, Cui \& Yu, WWW 2019. Two-level attention:
+  \emph{node-level} GAT-style attention within each meta-path-induced neighbour set, then
+  \emph{semantic-level} attention learning a scalar importance per meta-path to fuse them. Its
+  limitation --- the one MAGNN attacks --- is that it operates on meta-path-\emph{induced} graphs,
+  so intermediate nodes along the meta-path are discarded.
+\item \textbf{MAGNN} --- Fu, Zhang, Meng \& King, WWW 2020. Three stages: node-content
+  transformation projecting differently-dimensioned type attributes into a shared space;
+  \emph{intra}-meta-path aggregation that encodes the \textbf{entire path instance including
+  intermediate nodes} (mean, linear, or a relational-rotation encoder borrowed from RotatE) with
+  attention over instances; and \emph{inter}-meta-path semantic attention.
+\item \textbf{GTN} --- Yun, Jeong, Kim, Kang \& Kim, NeurIPS 2019. \emph{Learns} meta-paths instead
+  of accepting them. A $1\times1$ convolution with softmax weights forms a soft convex combination
+  $Q_i$ of the per-edge-type adjacency matrices; multiplying $A=Q_1Q_2\cdots Q_l$ yields new
+  meta-path adjacencies differentiably. Including the identity among the candidates lets it learn
+  paths \emph{shorter} than $l$. A GCN then runs on the learned graph.
+\item \textbf{HetGNN} --- Zhang, Song, Huang, Swami \& Chawla, KDD 2019. Restart-based random walks
+  sample a fixed-size, type-balanced neighbour set; content of each node is encoded with a
+  Bi-LSTM over its heterogeneous attributes, neighbours are aggregated per type, and types are
+  combined by attention.
+\item \textbf{HGT} --- Hu, Dong, Wang \& Sun, WWW 2020. Node-type-specific projections produce
+  Key/Query/Value, and attention and message matrices are indexed by the \emph{meta-relation}
+  $\langle\tau(s),\phi(e),\tau(t)\rangle$, with a learnable scalar prior $\mu$ per meta-relation.
+  It needs no hand-designed meta-paths. Adds \emph{relative temporal encoding} for dynamic graphs
+  and \emph{HGSampling} for web-scale mini-batch training.
+\item \textbf{simple-HGN / HGB} --- Lv, Ding, Liu et al., KDD 2021. A deliberately minimal
+  baseline: GAT plus (i) a learnable \textbf{edge-type embedding} concatenated into the attention
+  logit, (ii) residual connections on \emph{both} node representations and attention scores, and
+  (iii) $L_2$ normalisation of the output embeddings. The paper's larger contribution is the HGB
+  benchmark itself and the finding that this simple model matches or beats most specialised HGNNs.
+\item \textbf{ie-HGCN} --- Yang, Guan, Li, Zhao, Cui \& Wang, IEEE TKDE 35(2):1637--1650, 2023.
+  Hierarchical object-level then type-level aggregation which, as a by-product, \emph{ranks} the
+  useful meta-paths, making the model interpretable while avoiding an exhaustive meta-path search.
+\item \textbf{RSHN} --- Zhu, Zhou, Pan, Zhu \& Wang, IEEE ICDM 2019. Builds a coarsened
+  \emph{edge-centric} ``relation structure graph'' to embed relation types themselves, then
+  propagates with those relation embeddings rather than treating relations as bare labels.
+\item \textbf{HPN} --- Ji, Wang, Shi, Wang \& Yu, IEEE TKDE 35(1):521--532, 2023. Analyses
+  semantic confusion (the HIN analogue of over-smoothing) and replaces the propagation step with a
+  personalised-PageRank-like update that retains a fraction of the node's own representation,
+  enabling deeper meta-path propagation.
+\end{itemize}
+
+\subsubsection*{4.4 Self-supervised / contrastive heterogeneous methods}
+
+\begin{itemize}\itemsep3pt
+\item \textbf{DMGI} --- Park, Kim, Han \& Yu, AAAI 2020. Extends Deep Graph Infomax to
+  \emph{attributed multiplex} networks: one DGI mutual-information objective per relation type,
+  with a consensus regularisation that pulls the per-relation embeddings towards a shared
+  representation.
+\item \textbf{HDGI} --- Ren, Liu, Huang, Dai, Bo \& Zhang, arXiv:1911.08538, 2019 (AAAI-20 DLGMA
+  workshop, under a different title; \emph{no archival venue}). Applies mutual-information
+  maximisation between local node embeddings and a global summary, using meta-path-based
+  convolution plus semantic attention as the encoder.
+\item \textbf{HeCo} --- Wang, Liu, Han \& Shi, KDD 2021. Contrasts two \emph{views} of the same
+  node: a \emph{network-schema} view (attention over directly-connected neighbours of each other
+  type) and a \emph{meta-path} view (meta-path-specific GCNs with semantic attention). Positives
+  are not merely the node's counterpart view --- HeCo selects multiple positives by counting how
+  many meta-path instances connect two nodes and taking the top ones.
+\end{itemize}
+
+\subsubsection*{4.5 Knowledge-graph embeddings as relation-aware LP baselines}
+
+A HIN with many relation types is close to a knowledge graph, so heterogeneous link-prediction
+papers (and HGB's LP track) routinely report KG embedding models, which score a typed triple
+$(h,r,t)$ directly.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{TransE} --- Bordes, Usunier, Garcia-Duran, Weston \& Yakhnenko, NIPS 2013. Models a
+  relation as a translation, $\mathbf{h}+\mathbf{r}\approx\mathbf{t}$, scoring
+  $-\|\mathbf{h}+\mathbf{r}-\mathbf{t}\|$. Cannot represent 1-to-N or symmetric relations.
+\item \textbf{DistMult} --- Yang, Yih, He, Gao \& Deng, ICLR 2015. Bilinear score
+  $\langle\mathbf{h},\mathrm{diag}(\mathbf{r}),\mathbf{t}\rangle$; efficient but necessarily
+  \emph{symmetric}.
+\item \textbf{ComplEx} --- Trouillon, Welbl, Riedel, Gaussier \& Bouchard, ICML 2016. Moves
+  DistMult into $\mathbb{C}$ and takes the real part of a Hermitian product, so asymmetric
+  relations become representable at the same cost.
+\item \textbf{ConvE} --- Dettmers, Minervini, Stenetorp \& Riedel, AAAI 2018. Reshapes $h$ and $r$
+  into 2-D and applies a convolution, giving a parameter-efficient, highly expressive scorer.
+\item \textbf{RotatE} --- Sun, Deng, Nie \& Tang, ICLR 2019. Treats a relation as an element-wise
+  \emph{rotation} in complex space, $\mathbf{t}=\mathbf{h}\circ\mathbf{r}$ with
+  $|r_i|=1$, capturing symmetry, antisymmetry, inversion and composition simultaneously.
+\end{itemize}
+
+% =====================================================================
+\subsection*{5. Evaluation metrics}
+
+Two conventions govern the whole literature. First, a HIN benchmark normally labels
+\textbf{exactly one node type} --- the author in DBLP, the paper in ACM, the movie in IMDB --- so
+``accuracy on DBLP'' always means accuracy on that one target type, the other types being context.
+Second, for \emph{unsupervised} methods the protocol is \textbf{embed $\to$ freeze $\to$ fit a
+linear classifier}: the embedding is learned without labels, then held fixed while a logistic
+regression is trained on a fraction of target nodes, the fraction varied over $20/40/60/80\%$ and
+mean $\pm$ std reported over repeated splits. HAN, MAGNN and HeCo all report in this form.
+
+\subsubsection*{5.1 Node classification}
+
+With class set $\mathcal{C}$ and per-class counts $\mathrm{TP}_c,\mathrm{FP}_c,\mathrm{FN}_c$,
+\textbf{Micro-F1} pools the confusion matrix \emph{before} scoring,
+\[
+  \mathrm{Micro\text{-}P}=\frac{\sum_{c}\mathrm{TP}_c}{\sum_{c}(\mathrm{TP}_c+\mathrm{FP}_c)},
+  \qquad
+  \mathrm{Micro\text{-}R}=\frac{\sum_{c}\mathrm{TP}_c}{\sum_{c}(\mathrm{TP}_c+\mathrm{FN}_c)},
+\]
+\[
+  \mathrm{Micro\text{-}F1}
+   =\frac{2\,\mathrm{Micro\text{-}P}\cdot\mathrm{Micro\text{-}R}}
+          {\mathrm{Micro\text{-}P}+\mathrm{Micro\text{-}R}},
+\]
+whereas \textbf{Macro-F1} scores each class and averages \emph{unweighted}:
+\[
+  \mathrm{F1}_c=\frac{2\,\mathrm{TP}_c}{2\,\mathrm{TP}_c+\mathrm{FP}_c+\mathrm{FN}_c},
+  \qquad
+  \mathrm{Macro\text{-}F1}=\frac{1}{|\mathcal{C}|}\sum_{c\in\mathcal{C}}\mathrm{F1}_c .
+\]
+In the \emph{single-label} multi-class setting every misclassification creates one false positive
+and one false negative, so $\mathrm{Micro\text{-}P}=\mathrm{Micro\text{-}R}$ and Micro-F1 equals
+plain \textbf{accuracy}. The pair is always reported together because they answer different
+questions: Micro-F1 is dominated by frequent classes, Macro-F1 weights a rare class as heavily as a
+common one, and a large gap between them signals a model that has learned the class prior rather
+than the graph.
+
+\paragraph{The multi-label caveat.} This equivalence \textbf{fails} for HGB's IMDB and Freebase
+tracks, where a node may carry several labels at once. Prediction is per-label thresholding (sigmoid
++ binary cross-entropy) rather than an $\arg\max$, and the pooled confusion matrix is taken over the
+flattened node~$\times$~label indicator matrix; there $\mathrm{Micro\text{-}P}\neq
+\mathrm{Micro\text{-}R}$ in general and Micro-F1 is \emph{not} accuracy. In HGB's IMDB, 2{,}684 of
+the 4{,}573 labelled movies carry more than one genre, so this is not a corner case --- and it is
+why a Micro-F1 on HGB's IMDB cannot be compared with one on MAGNN's single-label IMDB.
+
+\paragraph{Other classification metrics.} \textbf{Accuracy} is the official metric on OGB
+(\texttt{ogbn-mag}, MAG240M). \textbf{ROC-AUC} is used for binary or strongly imbalanced targets
+(and by HeCo alongside F1). For the \emph{clustering} probe that HAN, MAGNN, DMGI and HeCo all run
+--- $k$-means on the frozen embeddings with $k=|\mathcal{C}|$ --- the scores are
+\[
+  \mathrm{NMI}(Y,\hat{C})=\frac{2\,I(Y;\hat{C})}{H(Y)+H(\hat{C})}\in[0,1],
+  \qquad
+  \mathrm{ARI}=\frac{\mathrm{RI}-\mathbb{E}[\mathrm{RI}]}
+                    {\max(\mathrm{RI})-\mathbb{E}[\mathrm{RI}]},
+\]
+with $I$ mutual information, $H$ entropy and $\mathrm{RI}$ the Rand index. Both are $0$ in
+expectation for a chance partition and $1$ for a perfect one (ARI may go negative). These test
+whether the embedding geometry is class-structured with no classifier fitted at all.
+
+\subsubsection*{5.2 Link prediction}
+
+The essential difference from the homogeneous case is that in a HIN link prediction is stated
+\textbf{per relation type}: not ``is there an edge'' but ``is there an edge \emph{of type $R$}''
+--- predict Author--Paper, or Paper--Venue, or User--Artist. Two consequences follow.
+(i) \emph{Negatives must be sampled type-consistently}: a negative for an Author--Paper edge must
+join an author to a paper, never an author to a venue, since a type-violating negative is trivially
+rejected by any type-aware model and inflates its apparent margin over type-agnostic baselines.
+HGB samples negatives from 2-hop neighbours at a 1:1 ratio for exactly this reason.
+(ii) Scores are reported \emph{per relation} and then averaged, so a model can be strong on a dense
+relation and useless on a sparse one without that showing in a single number.
+
+Let $\mathrm{rank}_i$ be the position of the $i$-th true edge among its candidates, over query set
+$Q$:
+\[
+  \mathrm{MRR}=\frac{1}{|Q|}\sum_{i\in Q}\frac{1}{\mathrm{rank}_i},
+  \qquad
+  \mathrm{Hits}@K=\frac{1}{|Q|}\sum_{i\in Q}\mathbf{1}\!\left[\mathrm{rank}_i\le K\right],
+\]
+i.e.\ MRR is the mean reciprocal rank of the first true item and Hits@$K$ the fraction of positive
+edges ranked inside the top $K$ against their sampled negatives ($K\in\{1,3,10\}$ conventionally,
+inherited from the KG literature). \textbf{ROC-AUC} equals the probability that a random positive
+outranks a random negative. \textbf{Average precision} (equivalently AUPRC) is
+\[
+  \mathrm{AP}=\sum_{n}\left(R_n-R_{n-1}\right)P_n ,
+\]
+with $P_n,R_n$ precision and recall at the $n$-th threshold. AP is preferred to ROC-AUC when
+positives are rare --- always true for link prediction on a sparse graph --- because ROC-AUC is
+optimistic there, the enormous true-negative count sitting in its denominator.
+\textbf{Precision@$K$} / \textbf{Recall@$K$}, and MAE/RMSE for rating prediction, appear in the
+recommendation-flavoured HIN papers (HERec on Yelp/Douban). HGB's LP track standardises on
+\textbf{ROC-AUC and MRR}.
+
+\subsubsection*{5.3 Summary: dataset $\to$ target $\to$ task $\to$ metric}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Dataset $\to$ target node type $\to$ task $\to$ metric normally reported.}
+\label{p2:tab:summary}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llllll@{}}
+\toprule
+Dataset & Domain & Target & Task & Labels & Metrics normally reported \\
+\midrule
+DBLP      & bibliographic & author  & NC     & 4, single & Macro-F1, Micro-F1 (+NMI/ARI) \\
+ACM       & bibliographic & paper   & NC     & 3, single & Macro-F1, Micro-F1 (+NMI/ARI) \\
+IMDB (HGB)& movie         & movie   & NC     & 5, \textbf{multi} & Macro-F1, Micro-F1 \\
+IMDB (MAGNN)& movie       & movie   & NC     & 3, single & Macro-F1, Micro-F1 \\
+Freebase (HGB) & KG       & book    & NC     & 7, single & Macro-F1, Micro-F1 \\
+AMiner    & bibliographic & author/paper & NC & 8 / 4    & Macro-F1, Micro-F1, NMI \\
+\texttt{ogbn-mag} & bibliographic & paper & NC & 349, single & \textbf{Accuracy} (official) \\
+MAG240M   & bibliographic & paper   & NC     & 153, single & \textbf{Accuracy} (official) \\
+\midrule
+LastFM    & music         & user--artist & LP & ---      & ROC-AUC, MRR \\
+Amazon    & e-commerce    & product--product & LP & ---  & ROC-AUC, MRR \\
+PubMed (HGB) & biomedical & disease--disease & LP & ---  & ROC-AUC, MRR \\
+Yelp / Douban & review    & user--item & LP / rating & --- & Prec@K, Rec@K; MAE, RMSE \\
+OAG (HGT) & bibliographic & paper--field/venue & LP & --- & NDCG, MRR \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Closing remark.} The single most important methodological point is the one HGB was
+created to make: because DBLP, ACM and IMDB circulate in mutually incompatible preprocessed
+versions (Table~\ref{p2:tab:versions}), and because IMDB even changes from single-label to
+multi-label between versions, numbers copied across papers are frequently not comparable. Any
+credible evaluation must name the dataset \emph{version}, the split, and whether the protocol is
+end-to-end supervised or embed-freeze-classify.

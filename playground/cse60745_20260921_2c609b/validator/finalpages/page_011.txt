@@ -1,0 +1,76 @@
+CSE 60745 (Fall 2026): HW-2: Part (A)
+of the graph, using a discriminator trained to tell real (hv, s) pairs from corrupted ones (the
+corruption shuffles the node features). Needs no random walks and no labels, and was the first
+unsupervised method to match supervised GCN on the citation benchmarks.
+• GRACE — Zhu, Xu, Yu, Liu, Wu & Wang, Deep Graph Contrastive Representation Learning,
+ICML 2020 Workshop on Graph Representation Learning and Beyond. A node-level SimCLR
+analogue: generate two views by removing edges and masking features, then maximise agreement
+between the two representations of the same node against all other nodes as negatives (InfoNCE).
+Contrasts at node rather than graph-summary level, which DGI does not.
+• GraphCL — You, Chen, Sui, Chen, Wang & Shen, Graph Contrastive Learning with Augmen-
+tations, NeurIPS 2020. Systematically studies four graph augmentations — node dropping, edge
+perturbation, attribute masking and subgraph sampling — and shows which combinations help
+on which domain. Mostly graph-level, but its augmentation study is the reference for the whole
+contrastive family.
+• BGRL — Thakoor, Tallec, Azar, Azabou, Dyer, Munos, Veličković & Valko, Large-Scale Rep-
+resentation Learning on Graphs via Bootstrapping, ICLR 2022. Removes negative samples al-
+together using a BYOL-style online/target encoder pair with a stop-gradient, cutting memory
+from quadratic to linear in the number of nodes. This is what makes self-supervised learning
+feasible at OGB scale.
+3.6 Non-learned link-prediction heuristics
+Every link-prediction paper reports these; they are strong, free, and a learned method that does
+not beat them is not worth its compute. The framing is due to Liben-Nowell & Kleinberg (The
+Link Prediction Problem for Social Networks, CIKM 2003; journal version JASIST 58(7), 2007).
+Let Γ(u) be the neighbour set of u and A the adjacency matrix.
+Heuristic
+Score s(u, v)
+Reference / note
+Common
+Neighbors
+|Γ(u) ∩Γ(v)|
+Liben-Nowell & Kleinberg, CIKM 2003
+Jaccard
+|Γ(u) ∩Γ(v)| / |Γ(u) ∪Γ(v)|
+normalises CN by degree
+Adamic–Adar
+∑︁
+w∈Γ(u)∩Γ(v) 1/ log |Γ(w)|
+Adamic & Adar, Friends and Neighbors on
+the Web, Social Networks 25(3), 2003
+Resource
+Allocation
+∑︁
+w∈Γ(u)∩Γ(v) 1/|Γ(w)|
+Zhou, Lü & Zhang, Eur. Phys. J. B 71(4),
+2009; penalises hubs harder than AA
+Preferential
+Attachment
+|Γ(u)| · |Γ(v)|
+Barabási & Albert, Science 286, 1999
+Katz
+∑︁
+ℓ≥1 βℓ⃓⃓paths⟨ℓ⟩
+u,v⃓⃓=
+(︁
+(I −βA)−1 −I)︁
+uv
+Katz, Psychometrika 18(1), 1953; global,
+needs β < 1/λmax
+Personalized
+PageRank
+stationary probability at v of a
+random walk from u with restart
+Jeh & Widom, Scaling Personalized Web
+Search, WWW 2003; PageRank itself: Page,
+Brin, Motwani & Winograd, Stanford
+InfoLab TR, 1999
+SimRank
+γ
+|Γ(u)||Γ(v)|
+∑︁
+a∈Γ(u)
+∑︁
+b∈Γ(v) s(a, b)
+Jeh & Widom, KDD 2002; “similar if
+referenced by similar nodes”
+Page 11 of 28

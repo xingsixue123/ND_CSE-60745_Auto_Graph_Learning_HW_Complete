@@ -1,0 +1,41 @@
+% ---- p2-namespaced TikZ styles (package loading happens in preamble.txt) ----
+\tikzset{
+  p2ent/.style={circle, draw=black!65, line width=0.7pt, minimum size=9.5mm,
+                inner sep=0pt, font=\small\bfseries},
+  p2lab/.style={font=\scriptsize},
+  p2rel/.style={draw=black!65, line width=0.7pt},
+  p2el/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+}
+\newcommand{\pTwoTgt}{orange!22}
+\newcommand{\pTwoAgt}{blue!12}
+\newcommand{\pTwoAtt}{green!14}
+\newcommand{\pTwoVen}{purple!12}
+
+
+% ---- p2-namespaced TikZ styles (package loading happens in preamble.txt) ----
+\tikzset{
+  p2ent/.style={circle, draw=black!65, line width=0.7pt, minimum size=9.5mm,
+                inner sep=0pt, font=\small\bfseries},
+  p2lab/.style={font=\scriptsize},
+  p2rel/.style={draw=black!65, line width=0.7pt},
+  p2el/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+}
+\newcommand{\pTwoTgt}{orange!22}
+\newcommand{\pTwoAgt}{blue!12}
+\newcommand{\pTwoAtt}{green!14}
+\newcommand{\pTwoVen}{purple!12}
+
+\subsection*{4. Baselines}
+\label{p2:sec:baselines}
+
+\subsubsection*{4.1 Homogeneous methods, reported as type-agnostic baselines}
+
+These are reported in essentially every heterogeneous paper, and the \emph{point} of reporting
+them is that they \textbf{discard $\phi$ and $\psi$ entirely} --- they run on the graph with all
+type information erased (or on one meta-path-induced projection). They are the control condition:
+whatever a heterogeneous model gains over them is the measured value of modelling types. HGB's
+central and uncomfortable finding is that this gap is much smaller than the literature had
+claimed, and that a properly tuned GAT beats most specialised HGNNs.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{DeepWalk} --- Perozzi, Al-Rfou \& Skiena, KDD 2014. Truncated uniform random walks
