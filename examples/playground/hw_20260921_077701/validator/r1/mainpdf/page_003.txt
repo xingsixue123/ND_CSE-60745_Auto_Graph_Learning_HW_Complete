@@ -1,0 +1,64 @@
+T2 preempts T1 at t = 2 and T3 preempts T2 at t = 3.
+Ex. 2.2 (5 pts) — Why process creation by a running process is the
+general case
+The first two cases describe what prompts a process to be created; they do not describe a different
+creator. They are not alternatives to the third case, they are the third case seen from the user’s side.
+When someone double-clicks an icon or types a command, that person never touches the kernel.
+The click and the keystrokes are input events, and the kernel delivers them to a process that is
+already running: the desktop shell or window manager in the first instance, the command shell in
+the second. That process interprets the event, decides which program was meant, and calls fork()
+itself. The shell is the creator; the human only supplied the reason. Case 2 differs from case 1 only
+in where the trigger originated (another process, a timer, an arriving network connection) while the
+mechanism, a running process calling fork(), is unchanged.
+All three cases therefore share a single creation primitive and differ only in what caused the running
+process to invoke it. Unix makes this literal: exactly one process is not born this way, the initial
+process (init or systemd, pid 1) that the kernel hand-builds at boot. Every other process is the
+child of some running process.
+Ex. 2.3 (5 pts) — A program using fork() and exec() to run ls
+1 #include <stdio.h>
+2 #include <stdlib.h>
+3 #include <unistd.h>
+4 #include <sys/wait.h>
+5
+6 int main(void)
+7 {
+8
+pid_t pid = fork();
+9
+10
+if (pid < 0) {
+/* case 1: fork failed */
+11
+perror("fork");
+12
+return EXIT_FAILURE;
+13
+}
+14
+15
+if (pid == 0) {
+/* case 2: we are the child */
+16
+char *argv[] = { "ls", "-l", NULL };
+17
+execvp("ls", argv);
+18
+/* only reached if execvp failed: the image was never replaced */
+19
+perror("execvp");
+20
+_exit(127);
+21
+}
+22
+23
+/* case 3: we are the parent, pid holds the child’s pid */
+24
+int status;
+25
+if (waitpid(pid, &status, 0) < 0) {
+26
+perror("waitpid");
+27
+return EXIT_FAILURE;
+3

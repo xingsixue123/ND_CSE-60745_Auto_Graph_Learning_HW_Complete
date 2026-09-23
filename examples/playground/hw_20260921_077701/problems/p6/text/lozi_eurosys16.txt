@@ -1,0 +1,904 @@
+          The Linux Scheduler: a Decade of Wasted Cores
+       Jean-Pierre Lozi, Baptiste Lepers, Justin Funston, Fabien Gaud, Vivien
+                                    Quéma, Alexandra Fedorova
+
+
+
+      To cite this version:
+    Jean-Pierre Lozi, Baptiste Lepers, Justin Funston, Fabien Gaud, Vivien Quéma, et al.. The Linux
+    Scheduler: a Decade of Wasted Cores. EuroSys 2016, ACM, Apr 2016, London, United Kingdom.
+    �10.1145/2901318.2901326�. �hal-01295194�
+
+
+
+
+                                   HAL Id: hal-01295194
+                          https://hal.science/hal-01295194
+                                      Submitted on 31 Mar 2016
+
+
+
+
+    HAL is a multi-disciplinary open access               L’archive ouverte pluridisciplinaire HAL, est
+archive for the deposit and dissemination of sci-     destinée au dépôt et à la diffusion de documents
+entific research documents, whether they are pub-     scientifiques de niveau recherche, publiés ou non,
+lished or not. The documents may come from            émanant des établissements d’enseignement et de
+teaching and research institutions in France or       recherche français ou étrangers, des laboratoires
+abroad, or from public or private research centers.   publics ou privés.
+                                 The Linux Scheduler: a Decade of Wasted Cores
+
+                    Jean-Pierre Lozi                                                                             Baptiste Lepers                                          Justin Funston
+     Université Nice Sophia-Antipolis                                                                               EPFL                                        University of British Columbia
+              jplozi@unice.fr                                                                               baptiste.lepers@epfl.ch                                  jfunston@ece.ubc.ca
+
+
+                         Fabien Gaud                                                                               Vivien Quéma                                     Alexandra Fedorova
+                       Coho Data                                                                        Grenoble INP / ENSIMAG                                   University of British Columbia
+                    me@fabiengaud.net                                                                     vivien.quema@imag.fr                                         sasha@ece.ubc.ca
+
+
+
+
+Abstract                                                                                                                              Classical scheduling problems revolve around setting the
+As a central part of resource management, the OS thread                                                                           length of the scheduling quantum to provide interactive re-
+scheduler must maintain the following, simple, invariant:                                                                         sponsiveness while minimizing the context switch overhead,
+make sure that ready threads are scheduled on available                                                                           simultaneously catering to batch and interactive workloads
+cores. As simple as it may seem, we found that this invari-                                                                       in a single system, and efficiently managing scheduler run
+ant is often broken in Linux. Cores may stay idle for sec-                                                                        queues. By and large, by the year 2000, operating systems
+onds while ready threads are waiting in runqueues. In our                                                                         designers considered scheduling to be a solved problem; the
+experiments, these performance bugs caused many-fold per-                                                                         Linus Torvalds quote is an accurate reflection of the general
+formance degradation for synchronization-heavy scientific                                                                         opinion at that time.
+applications, 13% higher latency for kernel make, and a 14-                                                                           Year 2004 brought an end to Dennard scaling, ushered in
+23% decrease in TPC-H throughput for a widely used com-                                                                           the multicore era and made energy efficiency a top concern
+mercial database. The main contribution of this work is the                                                                       in the design of computer systems. These events once again
+discovery and analysis of these bugs and providing the fixes.                                                                     made schedulers interesting, but at the same time increas-
+Conventional testing techniques and debugging tools are in-                                                                       ingly more complicated and often broken.
+effective at confirming or understanding this kind of bugs,                                                                           Our recent experience with the Linux scheduler revealed
+because their symptoms are often evasive. To drive our in-                                                                        that the pressure to work around the challenging properties
+vestigation, we built new tools that check for violation of the                                                                   of modern hardware, such as non-uniform memory access
+invariant online and visualize scheduling activity. They are                                                                      latencies (NUMA), high costs of cache coherency and syn-
+simple, easily portable across kernel versions, and run with a                                                                    chronization, and diverging CPU and memory latencies, re-
+negligible overhead. We believe that making these tools part                                                                      sulted in a scheduler with an incredibly complex implemen-
+of the kernel developers’ tool belt can help keep this type of                                                                    tation. As a result, the very basic function of the scheduler,
+bug at bay.                                                                                                                       which is to make sure that runnable threads use idle cores,
+                                                                                                                                  fell through the cracks.
+                                                                                                                                      The main contribution of this work is the discovery and
+1.         Introduction                                                                                                           study of four performance bugs in the Linux scheduler.
+                    “And you have to realize that there are not very many                                                         These bugs cause the scheduler to leave cores idle while
+                    things that have aged as well as the scheduler. Which is                                                      runnable threads are waiting for their turn to run.1 Resulting
+                    just another proof that scheduling is easy.”                                                                  performance degradations are in the range 13-24% for typi-
+                                                                                                                                  cal Linux workloads, and reach 138× in some corner cases.
+                                                                             Linus Torvalds, 2001 [43]                            Energy waste is proportional. Since these bugs undermine
+                                                                                                                                  a crucial kernel sub-system, cause substantial, sometimes
+                                                                                                                                  massive, degradation of performance, and evade conven-
+                                                                                                                                  tional testing and debugging techniques, understanding their
+Permission to make digital or hard copies of part or all of this work for personal or classroom use is granted without fee
+provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and          nature and provenance is important.
+the full citation on the first page. Copyrights for components of this work owned by others than ACM must be honored.
+Abstracting with credit is permitted. To copy otherwise, to republish, to post on servers, or to redistribute to lists, contact
+the Owner/Author(s). Request permissions from permissions@acm.org or Publications Dept., ACM, Inc., fax +1 (212)
+869-0481.
+EuroSys ’16, April 18 - 21, 2016, London, United Kingdom
+                                                                                                                                  1 This occurs even though the scheduler is not explicitly configured to save
+Copyright c 2016 held by owner/author(s). Publication rights licensed to ACM.
+ACM 978-1-4503-4240-7/16/04. . . $15.00                                                                                           power by purposefully leaving cores unused so they can be brought into a
+DOI: http://dx.doi.org/10.1145/2901318.2901326                                                                                    low-power state.
+    These bugs have different root causes, but a common                   a result of this study and identify open research problems.
+symptom. The scheduler unintentionally and for a long                     Section 6 discusses related work and Section 7 summarizes
+time leaves cores idle while there are runnable threads                   our findings.
+waiting in runqueues. Short-term occurrences of this condi-
+tion are acceptable: the system may temporarily enter such                2.    The Linux Scheduler
+a state when, for instance, a thread exits or blocks or when              We first describe how Linux’s Completely Fair Scheduling
+a thread is created or becomes unblocked. Long-term occur-                (CFS) algorithm works on a single-core single-user system
+rences are not an expected behavior. The Linux scheduler is               (Section 2.1). From this perspective, the algorithm is quite
+work-conserving, meaning that it should never leave cores                 simple. Then, in (Section 2.2) we explain how limitations of
+idle if there is work to do. Long-term presence of this symp-             modern multicore systems force developers to work-around
+tom is, therefore, unintentional: it is due to bugs and it hurts          potential performance bottlenecks, which results in a sub-
+performance.                                                              stantially more complex and bug-prone implementation.
+    We provide fixes to these bugs, and observe substan-
+tial performance improvements. Synchronization-intensive                  2.1   On a single-CPU system, CFS is very simple
+applications experienced many-fold speedups; one barrier-                 Linux’s CFS is an implementation of the weighted fair
+heavy scientific application ended up running 138 times                   queueing (WFQ) scheduling algorithm, wherein the avail-
+faster.2 Kernel make and a TPC-H workload on a widely                     able CPU cycles are divided among threads in proportion
+used commercial DBMS improved performance by 13% and                      to their weights. To support this abstraction, CFS (like most
+14% respectively. The TPC-H query most affected by the                    other CPU schedulers) time-slices the CPU among the run-
+bug sped up by 23%.                                                       ning threads. The key decisions made in the scheduler are:
+    Detecting these bugs is difficult. They do not cause the              how to determine a thread’s timeslice? and how to pick the
+system to crash or hang, but eat away at performance, often               next thread to run?
+in ways that are difficult to notice with standard performance                The scheduler defines a fixed time interval during which
+monitoring tools. With the TPC-H workload, for example,                   each thread in the system must run at least once. The interval
+the symptom occurred many times throughout the execution,                 is divided among threads proportionally to their weights.
+but each time it lasted only a few hundreds of milliseconds               The resulting interval (after division) is what we call the
+– too short to detect with tools like htop, sar or perf. Yet,             timeslice. A thread’s weight is essentially its priority, or
+collectively these occurrences did enough damage to slow                  niceness in UNIX parlance. Threads with lower niceness
+down the most affected query by 23%. Even in cases where                  have higher weights and vice versa.
+the symptom was present for a much longer duration, the                       When a thread runs, it accumulates vruntime (runtime of
+root cause was difficult to discover, because it was a result             the thread divided by its weight). Once a thread’s vruntime
+of many asynchronous events in the scheduler.                             exceeds its assigned timeslice, the thread is pre-empted from
+    We initially suspected scheduler bugs when we observed                the CPU if there are other runnable threads available. A
+unexplained performance in the TPC-H database workload,                   thread might also get pre-empted if another thread with a
+which we were evaluating for a different project. Conven-                 smaller vruntime is awoken.
+tional tools were unhelpful to us in either confirming the                    Threads are organized in a runqueue, implemented as a
+bugs or understanding their root causes. To that end, we de-              red-black tree, in which the threads are sorted in the increas-
+signed two new tools. The first tool, which we call a sanity              ing order of their vruntime. When a CPU looks for a new
+checker, periodically checks for the violation of the afore-              thread to run it picks the leftmost node in the red-black tree,
+mentioned invariant, catches the bugs on a live system and                which contains the thread with the smallest vruntime.
+collects a trace with relevant information for offline analy-
+                                                                          2.2   On multi-core systems, CFS becomes quite
+sis. The second tool visualizes traces of scheduling activity
+                                                                                complex
+to expedite debugging. These tools were easy to port be-
+tween kernel versions (from Linux 3.17 through 4.3), ran                  In multicore environments the implementation of the sched-
+with negligible overhead and consistently detected invariant              uler becomes substantially more complex. Scalability con-
+violations. Keeping them in the standard tool belt can help               cerns dictate using per-core runqueues. The motivation for
+reduce future occurrence of this class of bugs.                           per-core runqueues is that upon a context switch the core
+    The rest of the paper is organized as follows. Section 2              would access only its local runqueue, when it looks for a
+describes the architecture of the Linux scheduler. Section 3              thread to run. Context switches are on a critical path, so they
+introduces the bugs we discovered, analyzes their root causes             must be fast. Accessing only a core-local queue prevents the
+and reports their effect on performance. Section 4 presents               scheduler from making potentially expensive synchronized
+the tools. In Section 5 we reflect on the lessons learned as              accesses, which would be required if it accessed a globally
+                                                                          shared runqueue.
+2 As we explain later in the paper, scheduling shortcomings exacerbated      However, in order for the scheduling algorithm to still
+lock contention.                                                          work correctly and efficiently in the presence of per-core
+runqueues, the runqueues must be kept balanced. Consider a           queues, where one queue has some number of high-priority
+dual-core system with two runqueues that are not balanced.           threads and another queue has the same number of low-
+Suppose that one queue has one low-priority thread and an-           priority threads. Then high-priority threads would get the
+other has ten high-priority threads. If each core looked for         same amount of CPU time as low-priority threads. That is
+work only in its local runqueue, then high-priority threads          not what we want. One idea, then, is to balance the queues
+would get a lot less CPU time than the low-priority thread,          based on threads’ weights, not their number.
+which is not what we want. We could have each core check                 Unfortunately, balancing the load based solely on thread
+not only its runqueue but also the queues of other cores,            weights is not sufficient either. Consider a scenario with
+but this would defeat the purpose of per-core runqueues.             ten threads in two runqueues: one thread is of high priority
+Therefore, what Linux and most other schedulers do is pe-            and nine threads are of low priority. Let us assume that the
+riodically run a load-balancing algorithm that will keep the         weight of the high-priority thread is nine times higher than
+queues roughly balanced.                                             those of the low-priority threads. With the load balanced
+                                                                     according to threads’ weights, one runqueue would contain
+         “I suspect that making the scheduler use per-CPU            the high-priority thread, while the other would contain the
+         queues together with some inter-CPU load balancing          nine low-priority threads. The high-priority thread would get
+         logic is probably trivial . Patches already exist, and I    nine times more CPU than the low-priority threads, which
+         don’t feel that people can screw up the few hundred lines
+                                                                     appears to be what we want. However, suppose that the high-
+         too badly.”
+                                                                     priority thread often sleeps for short periods of time, so the
+                                       Linus Torvalds, 2001 [43]
+                                                                     first core often goes idle. This core would have to frequently
+                                                                     steal work from the other core’s runqueue to keep itself
+   Conceptually, load balancing is simple. In 2001, CPUs             busy. However, we do not want work stealing to become the
+were mostly single-core and commodity server systems typ-            common case, because this defeats the purpose of per-core
+ically had only a handful of processors. It was, therefore,          runqueues. What we really want is to balance the runqueues
+difficult to foresee that on modern multicore systems load           in a smarter way, accounting for the fact that the high priority
+balancing would become challenging. Load balancing is an             thread does not need a whole core.
+expensive procedure on today’s systems, both computation-                To achieve this goal, CFS balances runqueues not just
+wise, because it requires iterating over dozens of runqueues,        based on weights, but based on a metric called load, which is
+and communication-wise, because it involves modifying re-            the combination of the thread’s weight and its average CPU
+motely cached data structures, causing extremely expensive           utilization. If a thread does not use much of a CPU, its load
+cache misses and synchronization. As a result, the scheduler         will be decreased accordingly.
+goes to great lengths to avoid executing the load-balancing              Additionally, the load-tracking metric accounts for vary-
+procedure often. At the same time, not executing it often            ing levels of multithreading in different processes. Consider
+enough may leave runqueues unbalanced. When that hap-                a scenario where we have one process with lots of threads,
+pens, cores might become idle when there is work to do,              and another process with few threads. Then the threads of the
+which hurts performance. So in addition to periodic load-            first process combined will receive a lot more CPU time than
+balancing, the scheduler also invokes “emergency” load bal-          the threads of the second process. As a result, the first pro-
+ancing when a core becomes idle, and implements some                 cess would use most of the CPU cycles and starve the other
+load-balancing logic upon placement of newly created or              process. This would be unfair. So as of version 2.6.38 Linux
+newly awoken threads. These mechanisms should, in theory,            added a group scheduling feature to bring fairness between
+ensure that the cores are kept busy if there is work to do.          groups of threads (cgroup feature). When a thread belongs
+   We next describe how load balancing works, first explain-         to a cgroup, its load is further divided by the total number
+ing the algorithm and then the optimizations that the sched-         of threads in its cgroup. This feature was later extended to
+uler employs to maintain low overhead and to save power.             automatically assign processes that belong to different ttys
+Later we show that some of these optimizations make the              to different cgroups (autogroup feature).
+code more complex and cause bugs.
+                                                                     The load-balancing algorithm.       A basic load balancing
+2.2.1   The load balancing algorithm                                 algorithm would compare the load of all cores and then
+                                                                     transfer tasks from the most loaded core to the least loaded
+Crucial for understanding the load balancing algorithm is the
+                                                                     core. Unfortunately this would result in threads being mi-
+metric that the CFS scheduler uses to track load. We begin by
+                                                                     grated across the machine without considering cache local-
+explaining the metric and then describe the actual algorithm.
+                                                                     ity or NUMA. Instead, the load balancer uses a hierarchical
+The load tracking metric. A strawman load-balancing                  strategy.
+algorithm would simply ensure that each runqueue has                     The cores are logically organized in a hierarchy, at the
+roughly the same number of threads. However, this is not             bottom of which is a single core. How the cores are grouped
+necessarily what we want. Consider a scenario with two run-          in the next levels of the hierarchy depends on how they
+                                                                   Algorithm 1 Simplified load balancing algorithm.
+                                                                         {Function running on each cpu cur cpu:}
+                                                                    1: for all sd in sched domains of cur cpu do
+                                                                    2:     if sd has idle cores then
+                                                                    3:        first cpu = 1st idle CPU of sd
+                                                                    4:     else
+                                                                    5:        first cpu = 1st CPU of sd
+Figure 1: A machine with 32 cores, four nodes (eight cores          6:     end if
+per node) and SMT-level sharing among pairs of cores. The           7:     if cur cpu 6= first cpu then
+four grey areas represent the scheduling domains relative to        8:        continue
+the first core of the machine. Note that at the second level        9:     end if
+of the hierarchy we have a group of three nodes. That is
+                                                                   10:     for all sched group sg in sd do
+because these three nodes are reachable from the first core in
+                                                                   11:        sg.load = average loads of CPUs in sg
+one hop. At the 4th level, we have all nodes of the machines
+                                                                   12:     end for
+because all nodes are reachable in 2 hops. Figure 4 shows
+                                                                   13:     busiest = overloaded sg with the highest load
+the connectivity between the nodes on our system.
+                                                                              (or, if inexistent) imbalanced sg with highest load
+                                                                              (or, if inexistent) sg with highest load
+                                                                   14:     local = sg containing cur cpu
+share the machine’s physical resources. In the example pro-        15:     if busiest.load ≤ local.load then
+vided here we describe the hierarchy on our experimental           16:        continue
+machine (see Table 5), where pairs of cores share functional       17:     end if
+units (e.g., FPU), and groups of eight cores share a last-level
+cache (LLC). A group of eight cores sharing an LLC form a          18:     busiest cpu = pick busiest cpu of sg
+NUMA node. Different NUMA nodes have varying connec-               19:     try to balance load between busiest cpu and cur cpu
+tivity as explained below and as shown in Figure 4. Conse-         20:     if load cannot be balanced due to tasksets then
+quently, on our target system, at the second level of the hier-    21:         exclude busiest cpu, goto line 18
+archy we have pairs of cores, and at the next level we have        22:     end if
+groups of eight cores, each sharing an LLC (e.g., a NUMA           23: end for
+node). NUMA nodes are further grouped according to their
+level of connectivity [23]. Nodes that are one hop apart from
+each other will be at the next level, and so on. An example        to-lowest level of the hierarchy and balances the load one
+of such a hierarchy is shown in Figure 1. Each level of the        level below. For example, on the system in Figure 1 the core
+hierarchy is called a scheduling domain.                           will begin at the pair-of-cores level and will balance the load
+    The load balancing algorithm is summarized in Algo-            between the two individual cores contained therein. Then, it
+rithm 1. Load balancing is run for each scheduling domain,         will proceed to the level of the NUMA node, balancing the
+starting from the bottom to the top. At each level, one core       load one level below (among pairs of cores, in this case),
+of each domain is responsible for balancing the load. This         but not between individual cores of the NUMA node. In a
+core is either the first idle core of the scheduling domain        scheduling domain, the sets of cores among which the load
+if the domain has idle cores whose free CPU cycles can be          balancing is performed are called scheduling groups. At the
+used for load balancing, or the first core of the scheduling       NUMA node domain, there will be four scheduling groups,
+domain otherwise (Lines 2–9). Following this, the average          each corresponding to a pair of cores. The core will find the
+load is computed for each scheduling group of the schedul-         busiest scheduling group other than its own and will steal
+ing domain (Line 10), and the busiest group is picked, based       tasks from the busiest core in that group.
+on heuristics that favor overloaded and imbalanced groups
+(Line 10). If the busiest group’s load is lower than the lo-       2.2.2    Optimizations
+cal group’s load, the load is considered balanced at this level    The scheduler prevents duplicating work by running the
+(Line 16). Otherwise, the load is balanced between the lo-         load-balancing algorithm only on the designated core for the
+cal CPU and the busiest CPU of the group, with a tweak             given scheduling domain. When each active core receives a
+to ensure that load balancing works even in the presence of        periodic clock tick and begins running the load-balancing
+tasksets (Lines 18–23).                                            algorithm, it checks whether it is the lowest-numbered core
+    Assume, for the time being, that this algorithm is run by      in the domain (if all cores are busy), or if it is the lowest-
+all cores in every load-balancing period; in the next section      numbered idle core (if any core is idle). This is shown in Line
+we will explain that, as an optimization, not all cores actually   2 of the Algorithm. If this condition holds, the core deems
+do. A core executing the algorithm begins at the second-           itself as designated and continues to run the algorithm.
+   Power-related optimizations may further reduce the fre-          64 threads), and running two R processes (each with one
+quency of load balancing on an idle core. Originally, idle          thread). The make and the two R processes were launched
+cores were always awoken on every clock tick; at this point         from 3 different ssh connections (i.e., 3 different ttys).
+they would run the load-balancing algorithm. However,               Figure 2a is a heatmap colour-coding the number of threads
+since version 2.6.21 Linux has the option (now enabled by           in each core’s runqueue over time. The warmer the colour,
+default) to avoid periodically waking up sleeping cores: they       the more threads a core hosts; white corresponds to an idle
+enter a tickless idle state, in which they can reduce their en-     core. The chart shows that there are two nodes whose cores
+ergy use. The only way for a core in this state to get work         run either only one thread or no threads at all, while the rest
+when another core is overloaded is to be awoken by another          of the nodes are overloaded, with many of the cores having
+core. To this end, on each scheduling tick, if a core deems it-     two threads in their runqueue.
+self “overloaded”, it checks whether there have been tickless          After investigation, we found that the scheduler is not
+idle cores in the system for some time, and if so, it wakes         balancing load because of (i) the complexity of the load-
+up the first tickless idle core and assigns it the role of NOHZ     tracking metric, and (ii) the hierarchical design. Let us first
+balancer. The NOHZ balancer core is responsible, on each            focus on the load. Remember that a threads’ load is a com-
+tick, to run the periodic load balancing routine for itself and     bination of its weight and how much CPU it needs. With
+on behalf of all tickless idle cores.                               autogroups, the thread’s load is also divided by the num-
+   On top of periodic load balancing, the scheduler also            ber of threads in the parent autogroup. In our case, a thread
+balances load when waking up threads. When a thread wakes           in the 64-thread make process has a load roughly 64 times
+up, after sleeping or waiting for a resource (e.g., locks, I/O),    smaller than a thread in a single-threaded R process.
+the scheduler tries to place it on the idlest core. Special rules      Discrepancies between threads’ loads are illustrated in
+apply when the thread is awoken by another thread (waker            Figure 2b, which shows the combined load of threads in each
+thread). In that case the scheduler will favour cores sharing       core’s runqueue: a darker colour corresponds to a higher
+a cache with the waker thread to improve cache reuse.               load. Nodes 0 and 4, the ones running the R processes, each
+                                                                    have one core with a very high load. These are the cores that
+3.    Bugs                                                          run the R threads. The Linux load balancer steals work from
+                                                                    other runqueues based on load; obviously the underloaded
+          “Nobody actually creates perfect code the first time
+          around, except me. But there’s only one of me.”
+                                                                    cores on Nodes 0 and 4 should not steal from the overloaded
+                                                                    core on their own node, because that core runs only a single
+                                       Linus Torvalds, 2007 [44]    thread. However, they must be able to steal from the more
+                                                                    loaded cores on other nodes. Why is this not the case?
+   With so many rules about when the load balancing does               Remember that to limit algorithmic complexity, the load
+or does not occur, it becomes difficult to reason about how         balancing algorithm uses a hierarchical design. When a core
+long an idle core would remain idle if there is work to             attempts to steal work from another node, or, in other words,
+do and how long a task might stay in a runqueue waiting             from another scheduling group, it does not examine the load
+for its turn to run when there are idle cores in the system.        of every core in that group, it only looks at the group’s
+Since there are very few developers who “create the perfect         average load (line 11 of Algorithm 1). If the average load
+code the first time around”, this complexity leads to bugs.         of the victim scheduling group is greater than that of its
+Understanding the bugs is necessary to appreciate why they          own, it will attempt to steal from that group; otherwise it
+evade conventional testing and debugging tools. Therefore,          will not. This is the exact reason why in our situation the
+we describe the bugs first and delay the presentation of the        underloaded cores fail to steal from the overloaded cores
+tools that we used to confirm and understand them until             on other nodes. They observe that the average load of the
+Section 4. Table 4 summarizes the bugs described in this            victim node’s scheduling group is not any greater than their
+section.                                                            own. The core trying to steal work runs on the same node
+                                                                    as the high-load R thread; that thread skews up the average
+3.1   The Group Imbalance bug
+                                                                    load for that node and conceals the fact that some cores are
+The bug. We encountered this bug on a multi-user machine            actually idle. At the same time, cores on the victim node,
+which we used to perform kernel compilation and data anal-          with roughly the same average load, have lots of waiting
+ysis using the R machine learning package. We suspected             threads.
+that this system, a 64-core, eight-node NUMA server, did               A valid question to ask is whether work stealing should
+not use all available cores for highly-threaded computations,       occur in this case, since theoretically we want threads with a
+instead crowding all threads on a few nodes. We illustrate          higher load to get more CPU time than threads with a lower
+this bug with the output from our visual tool, shown on Fig-        load. The answer to that question is “yes”: the Linux CFS
+ures 2a and 2b.                                                     scheduler is work-conserving in nature, so threads may get
+   In the time period shown in the figure, the machine              more than their fair share of CPU cycles if there are idle
+was executing a compilation of the kernel (make with
+   (a) #threads in each core’s runqueue over time      (b) Load of each core’s runqueue over time             (c) Same as (a), with fix applied
+
+   Figure 2: The Group Imbalance bug. Y-axis shows CPU cores. Nodes are numbered 0-7. Each node contains eight cores.
+
+
+cores in the system; in other words, idle cores should be                    3.2    The Scheduling Group Construction bug
+always given to waiting threads. As we have seen in the                      The bug. Linux defines a command, called taskset, that
+scenario illustrated here, this is not necessarily the case.                 enables pinning applications to run on a subset of the avail-
+                                                                             able cores. The bug we describe in this section occurs when
+The fix. To fix the bug, we changed the part of the algo-                    an application is pinned on nodes that are two hops apart.
+rithm that compares the load of scheduling groups. Instead                   For example, in Figure 4, which demonstrates the topology
+of comparing the average loads, we compare the minimum                       of our NUMA machine, Nodes 1 and 2 are two hops apart.
+loads (lines 11 and 15 of Algorithm 1). The minimum load                     The bug will prevent the load balancing algorithm from mi-
+is the load of the least loaded core in that group. If the min-              grating threads between these two nodes. Since threads are
+imum load of one scheduling group is lower than the mini-                    created on the same node as their parent thread, the net ef-
+mum load of another scheduling group, it means that the first                fect is that the pinned application runs only on one node, no
+scheduling group has a core that is less loaded than all cores               matter how many threads it has.
+in the other group, and thus a core in the first group must                     The bug is due to the way scheduling groups are con-
+steal from the second group. This algorithm ensures that no                  structed, which is not adapted to modern NUMA machines
+core of the second group will remain overloaded while a core                 such as the one we use in our experiments. In brief, the
+of the first group has a smaller load, thus balancing the load               groups are constructed from the perspective of a specific core
+across cores. Note that this fix works, because load is also                 (Core 0), whereas they should be constructed from the per-
+balanced inside the groups (because of load balancing calls                  spective of the core responsible for load balancing on each
+at lower levels of the hierarchy). Just as the original algo-                node. We explain with an example.
+rithm, we use the special cases of group imbalance (line 13
+of Algorithm 1) to deal with corner cases due to tasksets.
+These modifications add no algorithmic complexity to the
+                                                                                 Node 0             Node 4             Node 5               Node 1
+scheduler as computing the minimum load of a scheduling
+group and its average have the same cost. In our experience,
+this fix does not result in an increased number of migrations                    Node 6             Node 2             Node 3               Node 7
+between scheduling groups (ping-pong effect).
+
+Impact on performance. Figure 2c is a trace of the ex-                        Figure 4: Topology of our 8-node AMD Bulldozer machine
+ecution of that workload with the fix applied (showing a
+heatmap of runqueue sizes, in the same fashion as Figure 2a).                   In our machine, shown in Figure 4, the first scheduling
+After we fixed the bug, the completion time of the make                      group contains the cores of Node 0, plus the cores of all the
+job, in the make/R workload described earlier in this section,               nodes that are one hop apart from Node 0, namely Nodes 1,
+decreased by 13%. The completion time of the two R pro-                      2, 4 and 6. The second scheduling group contains the cores
+cesses did not change. Performance impact could be much                      of the first node not included into the first group (Node 3),
+higher in other circumstances. For example, in a workload                    plus cores of all nodes that are one hop apart from Node 3:
+running lu from the NAS benchmark3 with 60 threads, and                      Nodes 1, 2, 4, 5, 7. The first two scheduling groups are thus:
+four single threaded R processes, lu ran 13× faster after fix-
+ing the Group Imbalance bug. lu experienced a super-linear                                      {0, 1, 2, 4, 6}, {1, 2, 3, 4, 5, 7}
+speedup, because the bug exacerbated lock contention when
+multiple lu threads ran on the same core.                                       Note that Nodes 1 and 2 are included in both scheduling
+                                                                             groups. Further note that these two nodes are actually two
+3 The NAS benchmark comprises a set of small programs designed to help       hops apart from one another. If the scheduling groups were
+evaluate the performance of supercomputers [32].                             constructed from the perspective of Node 1, Node 1 and 2
+                                 Figure 3: Several instances of the Overload-on-Wakeup bug.
+
+
+would not be together in all groups. Let us see what this                            Time w/       Time w/o        Speedup
+                                                                       Application
+implies for load balancing.                                                          bug (sec)     bug (sec)      factor (×)
+    Suppose that an application is pinned on Nodes 1 and                   bt           99            56             1.75
+2 and that all of its threads are being created on Node 1                  cg           42            15             2.73
+(Linux spawns threads on the same core as their parent                     ep           73            36               2
+thread; when an application spawns multiple threads during                 ft           96            50             1.92
+its initialization phase, they are likely to be created on the             is           271          202             1.33
+same core – so this is what typically happens). Eventually                 lu          1040           38              27
+we would like the load to be balanced between Nodes 1 and                  mg           49            24             2.03
+2. However, when a core on Node 2 looks for work to steal,                 sp           31            14             2.23
+it will compare the load between the two scheduling groups
+                                                                           ua           206           56             3.63
+shown earlier. Since each scheduling group contains both
+Nodes 1 and 2, the average loads will be the same, so Node       Table 1: Execution time of NAS applications with
+2 will not steal any work!                                       the Scheduling Group Construction bug and without
+    The bug originates from an attempt to improve the per-       the bug. All applications are launched using numactl
+formance of Linux on large NUMA systems. Before the in-          --cpunodebind=1,2 <app>.
+troduction of the bug, Linux would balance the load inside
+NUMA nodes and then across all NUMA nodes. New lev-
+els of hierarchy (nodes 1 hop apart, nodes 2 hops apart, etc.)   this: it uses a pipeline algorithm to parallelize work; threads
+were introduced to increase the likelihood for threads to re-    wait for the data processed by other threads. When multiple
+main close to their original NUMA node.                          threads are forced to execute on the same core, this results
+                                                                 in large performance losses [22].
+The fix. We modified the construction of scheduling groups
+so that each core uses scheduling groups constructed from        3.3     The Overload-on-Wakeup bug
+its perspective. After the fix, when cores of Node 1 and 2 try
+to steal tasks at the level of the machine, Nodes 1 and 2 are    The bug. The gist of this bug is that a thread that was
+no longer included in all scheduling groups. The cores are       asleep may wake up on an overloaded core while other
+thus able to detect an imbalance and to steal work.              cores in the system are idle. The bug was introduced by an
+                                                                 optimization in the wakeup code (select task rq fair
+Impact on performance. Table 1 presents the perfor-              function). When a thread goes to sleep on Node X and
+mance difference in NAS applications with and without            the thread that wakes it up later is running on that same
+the Scheduling Group Construction bug. Applications are          node, the scheduler only considers the cores of Node X for
+launched on two nodes with as many threads as there are          scheduling the awakened thread. If all cores of Node X are
+cores. The maximum slowdown of 27× is experienced by             busy, the thread will wake up on an already busy core and
+lu. The slowdown is a lot more than the expected 2× be-          miss opportunities to use idle cores on other nodes. This
+cause of locking effects. NAS applications use spinlocks and     can lead to a significant under-utilization of the machine,
+spin-barriers; when all threads execute on the same node         especially on workloads where threads frequently wait.
+due to the taskset bug, the thread that executes the critical       The rationale behind this optimization is to maximize
+section may be descheduled in favour of a thread that will       cache reuse. Essentially, the scheduler attempts to place the
+waste its timeslice by spinning. lu is an extreme example of     woken up thread physically close to the waker thread, e.g., so
+both run on cores sharing a last-level cache, in consideration               core intermittently sleeps due to a synchronization or I/O
+of producer-consumer workloads where the woken up thread                     event. Ideally we want the load balancing events to migrate
+will consume the data produced by the waker thread. This                     a thread from an overloaded core to a long-term idle core.
+seems like a reasonable idea, but for some workloads waiting                 Migrating to a short-term idle core is of little help: a thread
+in the runqueue for the sake of better cache reuse does not                  that used to run on that core will shortly awaken, and as we
+pay off.                                                                     have seen, the scheduler may place it on another loaded core
+   This bug was triggered by a widely used commercial                        in the same node due to the cache locality optimization.5 The
+database configured with 64 worker threads (1 thread per                     imbalance will thus persist.
+core) and executing the TPC-H workload. This workload,                           Unfortunately, when the scheduler considers where to mi-
+in combination with transient short-lived threads from other                 grate a thread from the overloaded core, it makes no distinc-
+applications, triggers both the Group Imbalance bug4 and                     tion between short-term and long-term idle cores. All it does
+the Overload-on-Wakeup bug. Since we already described                       is to check whether the core is idle at the moment when the
+the Group Imbalance bug in Section 3.1, we disabled auto-                    load-balancer is invoked. Remember from Section 2.2.1 that
+groups in this experiment in order to better illustrate the                  the load balancing algorithm is invoked at different levels of
+Overload-on-Wakeup bug.                                                      the hierarchy by the “designated core”. If there are multiple
+   Figure 3 illustrates several instances of the wakeup bug.                 idle cores eligible to be “designated”, only one gets chosen.
+During the first time period (noted ¶), one core is idle while               If we are lucky, the long-term idle core gets chosen, and the
+a thread that ideally should be scheduled on that core keeps                 balance gets restored. This is exactly what happens in Fig-
+waking up on other cores, which are busy. During the second                  ure 3, when the system eventually recovers from the imbal-
+time period (noted ·), there is a triple instance of the bug:                ance. However, as we observed, pure luck is not enough to
+three cores are idle for a long time, while three extra threads              maintain optimal performance.
+that should be scheduled on those cores keep waking up on
+other busy cores.                                                            The fix. To fix this bug, we alter the code that is executed
+   The Overload-on-Wakeup bug is typically caused when a                     when a thread wakes up. We wake up the thread on the local
+transient thread is scheduled on a core that runs a database                 core—i.e., the core where the thread was scheduled last—
+thread. This occurs when the kernel launches tasks that                      if it is idle; otherwise, if there are idle cores in the system,
+last less than a millisecond to perform background opera-                    we wake up the thread on the core that has been idle for
+tions, such as logging or irq handling. When this happens,                   the longest amount of time. If there are no idle cores, we
+the load balancer observes a heavier load on the node that                   fall back to the original algorithm to find the core where the
+runs the transient thread (Node A), and migrates one of the                  thread will wake up.
+threads to another node (Node B). This is not an issue if                        Waking up the thread on a long-term idle core may have
+the transient thread is the one being migrated, but if it is                 implications for power consumption. Cores that have been
+the database thread, then the Overload-on-Wakeup bug will                    idle for a long time usually go into a low-power mode. Wak-
+kick in. Node B now runs an extra database thread, and the                   ing up a thread on that core will force the core to exit that
+threads, which often sleep and wake up, keep waking up on                    mode and run at full power. For that reason, we only en-
+Node B, even if there are no idle cores on that node. This                   force the new wakeup strategy if the system’s power man-
+occurs, because the wakeup code only considers cores from                    agement policy does not allow cores to enter low-power
+the local node for the sake of better cache reuse.                           states at all. Furthermore, our fix only matters for workloads
+   We now understand how a thread might wake up on a                         where threads frequently go to sleep and awaken and where
+loaded core despite the presence of idle cores in the system.                the system is intermittently oversubscribed (there are more
+Note in Figure 3 that the system eventually recovers from                    threads than cores). In these situations, waking up threads on
+the load imbalance: the load balancing algorithm finally                     long-term idle cores makes sense. In other situations, since
+migrates threads from overloaded cores to idle cores. The                    thread wakeups are rare, our fix does not significantly alter
+question is, why does it take several milliseconds (or even                  the behavior of the scheduler.
+seconds) to recover?                                                             Looking for a long-term idle core in the system adds no
+   Note that there are two kinds of idle cores in the system:                overhead to the wakeup function: the kernel already main-
+short-term and long-term. Short-term idle cores go idle for                  tains a list of all idle cores in the system, so picking the first
+short periods, because the database thread running on that                   one (this is the one that has been idle the longest) takes con-
+                                                                             stant time.
+4 The commercial database we are using relies on pools of worker threads:
+                                                                             Impact on performance. This bug has a major impact on
+a handful of container processes each provide several dozens of worker
+                                                                             the database TPC-H workload, because the threads often
+threads. Each container process is launched in a different autogroup,
+which means that worker threads also belong to different autogroups.         wait for each other, which means that any two threads that
+Since different container processes have a different number of worker
+threads, different worker threads have different loads. The bug occurs for   5 Actually, thread migrations to short-term idle cores explain why the extra
+
+the same reasons as explained in Section 3.1.                                threads are not always located on the same cores in Figure 3.
+                    TPC-H request    Full TPC-H                    3.4     The Missing Scheduling Domains bug
+       Bug fixes
+                          #18        benchmark                     The bug. When a core is disabled and then re-enabled us-
+        None             55.9s          542.9s                     ing the /proc interface, load balancing between any NUMA
+  Group Imbalance 48.6s (−13.1%) 513.8s (−5.4%)                    nodes is no longer performed. The bug is due to an incor-
+ Overload-on-Wakeup 43.5s (−22.2%) 471.1s (−13.2%)                 rect update of a global variable representing the number of
+        Both        43.3s (−22.6%) 465.6s (−14.2%)                 scheduling domains in the machine. When a core is disabled,
+                                                                   this variable is set to the number of domains inside a NUMA
+Table 2: Impact of the bug fixes for the Overload-on-              node. As a consequence, the main scheduling loop (line 1 of
+Wakeup and Group Imbalance bugs on a popular commer-               Algorithm 1) exits earlier than expected.
+cial database (values averaged over five runs).                        As a result, threads can only run on the node on which
+                                                                   they ran before the core had been disabled (even if the node
+                                                                   they run on is not the same as that on which the core was
+are stuck on the same core end up slowing down all the re-         disabled and then re-enabled). For processes created after
+maining threads. This effect is visible in Figure 3: during ¶      disabling the core, all threads will run on the same node as
+and ·: many threads have gaps in their execution, i.e., they       their parent process. Since all processes are usually created
+all sleep at the same time, waiting for “straggler” threads that   from the same “root” process (e.g., sshd daemon and the
+are sharing a core. When all instances of the bug are resolved     ssh processes it spawns), this bug usually results in all newly
+(rightmost part of the graph), the gaps disappear.                 created threads executing on only one node of the machine,
+    Table 2 shows the performance impact of our bug fixes          regardless of the number of threads.
+for the Overload-on-Wakeup and Group Imbalance bugs on                 Figure 5 shows a visualization of this bug. An application
+the commercial database. We use two workloads: (1) the 18th        with 16 threads is launched on the machine. After the threads
+query of TPC-H, which is one of the queries that is most sen-      have been created, all cores on Node 1 run two threads
+sitive to the bug, and (2) the full TPC-H benchmark. Our bug       (orange horizontal lines). The blue vertical lines originating
+fix for the Overload-on-Wakeup improves performance by             from Core 0 represent the cores considered by Core 0 when
+22.2% on the 18th query of TPC-H, and by 13.2% on the full         it tries to steal work. Because the loop exits earlier than it
+TPC-H workload. Using the Group Imbalance bug fix in ad-           should, Core 0 only considers cores local to its node, and
+dition to the Overload-on-Wakeup bug fix improves perfor-          not cores of Node 1.
+mance by 22.6% on the 18th query of TPC-H, and by 14.2%            The fix. We traced the root cause of the bug to the code that
+on the full TPC-H benchmark. The effect of the Group Im-           regenerates the machine’s scheduling domains. Linux regen-
+balance bug fix is small in these experiments, because the         erates scheduling domains every time a core is disabled. Re-
+Group Imbalance bug only occurs at the level of a pair of          generating the scheduling domains is a two-step process: the
+cores (i.e., one core is idle while another one is overloaded),    kernel regenerates domains inside NUMA nodes, and then
+and only during some parts of the experiments.                     across NUMA nodes. Unfortunately, the call to the function
+                                                                   generating domains across NUMA nodes was dropped by
+                                                                   Linux developers during code refactoring. We added it back,
+                                                                   and doing so fixed the bug.
+
+                                                                                       Time w/       Time w/o        Speedup
+                                                                         Application
+                                                                                       bug (sec)     bug (sec)      factor (×)
+                                                                             bt           122           23             5.24
+                                                                             cg           134          5.4            24.90
+                                                                             ep           72            18              4.0
+                                                                             ft           110           14             7.69
+                                                                             is           283           53             5.36
+                                                                             lu          2196           16            137.59
+Figure 5: The Missing Scheduling Domains bug, from the                       mg           81             9             9.03
+point of view of Core 0. The vertical blue lines represent the               sp           109           12             9.06
+cores considered by Core 0 for each (failed) load balancing                  ua           906           14            64.27
+call. There is one load balancing call every 4ms. We can see
+that Core 0 only considers its sibling core and cores on the       Table 3: Execution time (in seconds) of NAS applications
+same node for load balancing, even though cores of Node 1          with the Missing Scheduling Domains bug and without it.
+are overloaded.
+                                                                   Impact on performance. Table 3 summarizes the impact
+                                                                   of the Missing Scheduling Domains bug on several NAS
+applications, after disabling and reenabling one core in the      Group Construction bug. “NUMA-ness” of modern sys-
+system. Applications are launched with 64 threads, the de-        tems was responsible for the Missing Scheduling Domains
+fault configuration on our 64-core machine. The Missing           bug. Cache-coherency overheads on modern multi-node ma-
+Scheduling Domains bug causes all threads of the applica-         chines motivated the cache locality optimization that caused
+tions to run on a single node instead of eight. In some cases,    the Overload-on-Wakeup bug.
+the performance impact is greater than the 8× slowdown that           The takeaway is that new scheduler designs come and go.
+one would expect, given that the threads are getting 8× less      However, a new design, even if clean and purportedly bug-
+CPU time than they would without the bug (they run on one         free initially, is not a long-term solution. Linux is a large
+node instead of eight). lu, for example, runs 138× faster!        open-source system developed by dozens of contributors. In
+Super-linear slowdowns occur in cases where threads fre-          this environment, we will inevitably see new features and
+quently synchronize using locks or barriers: if threads spin      “hacks” retrofitted into the source base to address evolving
+on a lock held by a descheduled thread, they will waste even      hardware and applications.
+more CPU time, causing cascading effects on the entire ap-            The recently-released Linux 4.3 kernel features a new
+plication’s performance. Some applications do not scale ide-      implementation of the load metric. This change is reported
+ally to 64 cores and are thus a bit less impacted by the bug.     to be “done in a way that significantly reduces complexity
+The minimum slowdown is 4×.                                       of the code” [5]. Simplifying the load metric could get rid
+                                                                  of the Group Imbalance bug, which is directly related to it.
+                      8 × 8-core Opteron 6272 CPUs                However, we confirmed, using our tools, that the bug is still
+ CPUs
+                      (64 threads in total)                       present.6
+ Clock frequency      2.1 GHz                                         Kernel developers rely on mutual code review and testing
+ Caches               768 KB L1 cache, 16 MB L2 cache,            to prevent the introduction of bugs. This could potentially be
+ (each CPU)           12 MB L3 cache                              effective for bugs like the Missing Scheduling Domains and
+ Memory               512 GB of 1.6 Ghz DDR-3                     Scheduling Group Construction that are easier to spot in the
+ Interconnect         HyperTransport 3.0 (see Figure 4)           code (of course, it still was not effective in these cases), but
+                                                                  it is unlikely to be reliable for the more arcane types of bugs.
+      Table 5: Hardware of our AMD Bulldozer machine.                 Catching these bugs with testing or conventional perfor-
+                                                                  mance monitoring tools is tricky. They do not cause the
+                                                                  system to crash or to run out of memory, they silently eat
+3.5    Discussion
+                                                                  away at performance. As we have seen with the Group Im-
+The first question to ask is whether these bugs could be          balance and the Overload-on-Wakeup bugs, they introduce
+fixed with a new, cleaner scheduler design that is less error-    short-term idle periods that “move around” between dif-
+prone and easier to debug, but still maintains the features we    ferent cores. These microscopic idle periods cannot be no-
+have today. Historically though, this does not seem like it       ticed with performance monitoring tools like htop, sar or
+would be a long-term solution, in addition to the fact that the   perf. Standard performance regression testing is also un-
+new design would need to be implemented and tested from           likely to catch these bugs, as they occur in very specific situa-
+scratch. The Linux scheduler has gone through a couple ma-        tions (e.g., multiple applications with different thread counts
+jor redesigns. The original scheduler had high algorithmic        launched from distinct ttys). In practice, performance test-
+complexity, which resulted in poor performance when highly        ing on Linux is done with only one application running at
+multithreaded workloads became common. In 2001, it was            a time on a dedicated machine – this is the standard way of
+replaced by a new scheduler with O(1) complexity and bet-         limiting factors that could explain performance differences.
+ter scalability on SMP systems. It was initially successful           In summary, conventional testing techniques and debug-
+but soon required modifications for new architectures like        ging tools were not helpful to us in either confirming the
+NUMA and SMT. At the same time, users wanted better               bugs, after we initially suspected them, or understanding
+support for desktop use cases such as interactive and audio       their root causes. Our experience motivated us to build new
+applications which required more changes to the scheduler.        tools, using which we could productively confirm the bugs
+Despite numerous modifications and proposed heuristics, the       and understand why they occur. The following section de-
+O(1) scheduler was not able to meet expectations and was          scribes the tools.
+replaced by CFS in 2007. Interestingly, CFS sacrifices O(1)
+complexity for O(log n) but it was deemed worthwhile to
+                                                                  4.    Tools
+provide the desired features.
+   As the hardware and workloads became more complex,             4.1    Online Sanity Checker
+CFS too succumbed to bugs. The addition of autogroups             Sanity checker is a term we use to describe a mechanism for
+coupled with the hierarchical load balancing introduced the       periodically checking an invariant that must be maintained
+Group Imbalance bug. Asymmetry in new, increasingly
+more complex NUMA systems triggered the Scheduling                6 All our fixes will be submitted to the kernel developers shortly.
+                                                                            Kernel         Impacted          Maximum measured
+         Name                              Description
+                                                                            version       applications       performance impact
+                         When launching multiple applications with
+  Group Imbalance        different thread counts, some CPUs are idle       2.6.38+            All                    13×
+                         while other CPUs are overloaded.
+ Scheduling Group        No load balancing between nodes that are 2-
+                                                                             3.9+             All                    27×
+    Construction         hops apart
+   Overload-on-          Threads wake up on overloaded cores while                       Applications
+                                                                           2.6.32+                                   22%
+      Wakeup             some other cores are idle.                                    that sleep or wait
+ Missing Scheduling      The load is not balanced between NUMA
+                                                                            3.19+             All                    138×
+      Domains            nodes
+
+                                      Table 4: Bugs found in the scheduler using our tools.
+
+
+by the software. The invariant verified by our sanity checker      this helps ensure that the invariant violation is detected for
+is shown in Algorithm 2. It verifies that no core is idle while    all but very short programs and keeps the overhead low. We
+another core’s runqueue has waiting threads. We strived to         measured the overhead to be under 0.5% on our system for
+keep the code simple, perhaps at the expense of a higher           workloads of as many as 10,000 threads when S = 1.
+algorithmic complexity, to minimize the chance of bugs in              The load balancer runs every 4ms, but because of the hi-
+the sanity checker itself.                                         erarchical design multiple load balancing attempts might be
+                                                                   needed to recover from invariant violation in a bug-free sys-
+Algorithm 2 “No core remains idle while another core is            tem. We conservatively set M to 100ms to virtually elimi-
+overloaded”                                                        nate the probability of false positives. The monitoring that
+ 1: for all CPU1 in CPUs do                                        occurs during that period tracks thread migration, creation
+ 2:   if CPU1.nr running ≥ 1 {CPU1 is not idle} then               and destruction, because it is these events that can help the
+ 3:      continue                                                  system to recover. Tracking these events requires adding a
+ 4:   end if                                                       function call in the move thread, fork and exit functions
+ 5:   for all CPU2 in CPUs do                                      that check where threads are migrated. The overhead of this
+ 6:      if CPU2.nr running ≥ 2 and can steal(CPU1,                function call is negligible.
+         CPU2) then                                                    The probability of detecting the actual bugs, i.e., long-
+ 7:         Start monitoring thread operations                     term invariant violations, depends on the frequency and du-
+ 8:      end if                                                    ration of the invariant violation. In most cases we described,
+ 9:   end for                                                      once the bug triggers an invariant violation, the system never
+10: end for                                                        recovers. Such invariant violations are trivially detected by
+                                                                   the sanity checker. In one case (the Overload-on-Wakeup
+   Our sanity checker is different from an assertion or a          bug), invariant violations persisted for shorter periods, on
+watchdog in that, in our case, it must be specifically tailored    the order of hundreds of milliseconds, then disappeared and
+to check for conditions that are acceptable for a short pe-        reappeared again. In this case, the probability of catching the
+riod of time, but unacceptable if they persist. While an as-       violation depends on the total fraction of time that the system
+sert would fire as soon as the desired invariant is violated,      spends in the undesirable state. If the fraction is small, the
+a sanity checker must minimize the probability of flagging         chances of detecting the bug are also small, but so is the im-
+short-term transient violations, and catch long-term viola-        pact on performance. Longer-lasting and/or more frequently
+tions with a high probability.                                     occurring violations are detected with a higher probability.
+   To meet this requirement we implement the sanity checker        Furthermore, if the bug-triggering workload keeps running,
+as follows. The invariant check is invoked periodically at an      the chances that the sanity checker detects the bug during at
+interval S. If the invariant violation is detected, we actively    least one of the checks keep increasing.
+monitor additional scheduler events (described below) for              If the bug is detected, the sanity checker begins gather-
+a short time period M to see if this is a “legal” short-term       ing profiling information to include in the bug report. We
+violation that is promptly fixed by the scheduler. If it is not    use systemtap to profile calls to all load balancing func-
+fixed, we record profiling information (described below) and       tions (e.g., load balance, select task rq fair) along
+flag a bug.                                                        with all the statements executed by these functions and the
+   We set S and M to minimize the overhead and the prob-           values of the variables they use. We used these profiles to
+ability of false positives and to maximize the probability of      understand how the load-balancing functions were executed
+detecting the actual bugs. Our setting for S is one second;        and why they failed to balance the load. Note that we do not
+record the part of the execution where the bug is triggered,          uses an atomic increment instruction to find the position in
+but this is not an issue because we only want to understand           the array where to write the event; it then writes its event to
+why all load balancing calls fail during a significant period         memory which may incur a cache miss. On our architecture,
+of time. Monitoring with systemtap has a high overhead                20 bytes are sufficient to store each event. In Section 3, the
+(around 7% in our measurements), so we only begin profil-             application that produced events at the highest frequency
+ing after detecting the bug and stop profiling after 20ms.            was the commercial database: it produces around 60,200
+    Thanks to its small size, the sanity checker is eas-              events of type (1) per second, 58,000 events of type (2)
+ily portable between kernel versions, and does not con-               per second, and 68,000 events of type (3) per second, for
+flict with patches that modify the scheduler. We origi-               a total of around 186,200 events per second. Consequently,
+nally implemented the sanity checker in Linux 3.17. Port-             when active our profiler uses 3.6 MB of RAM per second
+ing to 4.3 only required changing one line of code (the               on a machine with 64 cores. In practice the profiler is only
+do posix clock monotonic gettime function, that we                    active when a bug is detected, and its impact on performance
+used to get timing data, changed its name).                           negligible in the non-buggy case.
+                                                                         In addition to the changes in the Linux kernel, we also
+4.2     Scheduler Visualization tool                                  wrote a kernel module that makes it possible to start and
+The visualization tool we are about to describe was tremen-           end a profiling session on demand, and to output the global
+dously helpful in gauging the nature of bug symptoms and              array to a file. We also wrote scripts that plot the results.
+further understanding their root causes. The tool illustrates         Figures 2, 4, and 5 are examples of these plots.
+salient scheduling activity over time (the charts from this
+                                                                          In our experience, confirming and understanding the
+tool were shown to illustrate the bugs in the previous sec-
+                                                                      tricky performance bugs described in this paper, and detect-
+tion). These charts rely on additional instrumentation of the
+                                                                      ing them across kernel versions was substantially more pro-
+kernel, whose overhead is negligible. Our visual tool makes
+                                                                      ductive after we developed these tools. Since the tools catch
+it possible to profile and to plot (1) the size of run queues,
+                                                                      important bugs, while at the same time being simple, virtu-
+(2) the total load of run queues, and (3) the cores that were
+                                                                      ally overhead-free and easy to port across kernel versions,
+considered during periodic load balancing and thread wake-
+                                                                      we believe that it is a good idea to keep them as part of a
+ups. In order to provide maximum accuracy, it does not use
+                                                                      standard kernel developers’ tool belt.
+sampling, instead, it records every change in the size of run
+queues or load, as well as a set of considered cores at each
+                                                                      5.   Lessons Learned
+load rebalancing or thread wakeup event. To keep the over-
+head low, we store all profiling information in a large global        We now reflect on the lessons learned during this study and
+array in memory of a static size. Each element of this array          identify open problems.
+is an event that corresponds to either (1), (2), or (3):                  The bugs we described resulted from developers want-
+                                                                      ing to put more and more optimizations into the scheduler,
+ • For (1), we instrument kernel functions add nr running             whose purpose was mostly to cater to complexity of modern
+      and sub nr running, which are the only functions that           hardware. As a result, the scheduler, that once used to be a
+      directly alter the variables that stores the size of each run   simple isolated part of the kernel grew into a complex mon-
+      queue. In these functions, we store an event in our global      ster whose tentacles reached into many other parts of the sys-
+      array that contains a timestamp, the core number, and the       tem, such as power and memory management. The optimiza-
+      new runqueue size.                                              tions studied in this paper are part of the mainline Linux, but
+ • Similarly, for (2), we instrument kernel functions                 even more scheduling optimizations were proposed in the
+      account entity enqueue and account entity en-                   research community.
+      queue, which are the only functions that directly alter the         As of circa 2000, dozens of papers described new
+      variables that store the load of each run queue. In these       scheduling algorithms catering to resource contention, co-
+      functions, we store an event in our global array that con-      herency bottlenecks and other idiosyncrasies of modern mul-
+      tains a timestamp, the core number, and the new load.           ticore systems. There were algorithms that scheduled threads
+ • Finally,                                                           so as to minimize contention for shared caches, memory
+                for (3), we instrument kernel functions
+      select idle sibling, update sg lb stats, find -                 controllers and multithreaded CPU pipelines [8, 9, 24, 29,
+      busiest queue and find idlest group. In these                   34, 42, 46]. There were algorithms that reduced commu-
+      functions, we store an event in our global array that           nication distance among threads sharing data [41] and de-
+      contains a timestamp, as well as a bit field with 0’s for       termined the optimal number of cores to allocate to mul-
+      cores that were not considered during the operation, and        tithreaded workloads [17]. There were algorithms that ad-
+      1’s for cores that were.                                        dressed the scheduling of threads on asymmetric multicore
+                                                                      CPUs [22, 35] and algorithms that integrated scheduling
+   Implementing these changes in the Linux kernel took less           with the management of power and temperature [19]. Fi-
+than 150 lines of code. In order to write an event, a thread          nally, there were algorithms that managed the memory on
+NUMA systems, which was closely tied to how threads are           Overload-on-Wakeup bug!). Though visualization is con-
+being scheduled [7, 14, 18, 38], and algorithms that sched-       ceptually simple, implementing effective tools is not easy.
+uled threads to minimize communication latency on systems         Execution traces can be very large, so visualizing everything
+with an asymmetric interconnect [23]. All of these algo-          is not feasible and not useful. Understanding what to visual-
+rithms showed positive benefits, either in terms of perfor-       ize and how to let the user effectively explore the trace when
+mance or power, for some real applications. However, few of       the user does not know what they are looking for is an im-
+them were adopted in mainstream operating systems, mainly         portant open problem. There most certainly exists research
+because it is not clear how to integrate all these ideas in       on this topic in the visualization community, but the systems
+scheduler safely.                                                 community needs to more actively embrace those techniques
+    If every good scheduling idea is slapped as an add-on to      and adapt them to the specificity of the problems we solve in
+a single monolithic scheduler, we risk more complexity and        systems.
+more bugs, as we saw from the case studies in this paper.
+What we need is to rethink the architecture of the scheduler,
+since it can no longer remain a small, compact and largely        6.   Related Work
+isolated part of the kernel. We now understand that rapid         Performance bugs. Performance bugs are a recurring
+evolution of hardware that we are witnessing today will mo-       problem for operating systems. The Linux Kernel Perfor-
+tivate more and more scheduler optimizations. The scheduler       mance project [13] was started in 2005 to combat perfor-
+must be able to easily integrate them, and to have a way of       mance regressions. Despite this effort, performance bugs are
+reasoning about how to combine them. We envision a sched-         repeatedly reported by OS researchers. Boyd et al. [10] re-
+uler that is a collection of modules: the core module and         ported a variety of scalability bugs, and Harji et al. [20] re-
+optimization modules. The core module embodies the very           ported other kinds performance bugs in 2.6 kernels.
+basic function of the scheduler: assigning runnable threads          Mollison et al. [30] proposed a tool that performs re-
+to idle cores and sharing the cycles among them in some fair      gression testing specifically for schedulers. It targets real-
+fashion. The optimization modules suggest specific enhance-       time schedulers implemented as plug-ins for the LInux
+ments to the basic algorithm. For example, a load-balancing       Testbed for MUltiprocessor Scheduling in Real-Time Sys-
+module might suggest an alternative load balancing sched-         tems (LITMUSRT ) project. The tool is limited (e.g., it does
+ule that avoids excessive overhead. A cache affinity module       not take blocking into account) and does not target the Linux
+might suggest waking up a thread on a core where it re-           kernel’s fair scheduling policy (CFS).
+cently ran. A resource contention module might suggest a             To combat performance bugs, Perl et al. [33] proposed
+placement of threads that reduces the chances of contention-      to add assertions to kernels to check that function calls fin-
+induced performance degradation. The core module should           ish in a timely manner. Shen et al. [39] built a throughput
+be able to take suggestions from optimization modules and         model for checking the performance of I/Os. These tech-
+to act on them whenever feasible, while always maintaining        niques detect performance bugs using assertions, which is
+the basic invariants, such as not letting cores sit idle while    not applicable for detecting a problematic load imbalance in
+there are runnable threads. Deciding how to combine mul-          the scheduler. Temporary load imbalances are expected and
+tiple optimizations when they conflict, e.g., if a cache affin-   not problematic. Therefore, our online sanity checker uses
+ity module and a resource contention module suggest dif-          a different design to discriminate between problematic and
+ferent thread placements or if a load balancer risks to break     non-problematic invariant violations.
+memory-node affinity as it moves threads among runqueues,
+is a difficult open problem in scheduling.                        Kernel correctness. A large body of work has also been
+    Another lesson we learned as a result of this work is the     done on verifying system correctness. RacerX [15] and
+crucial importance of visualization tools. Understanding the      Eraser [37] detect deadlocks and race conditions. Erickson
+root causes of the bugs we described would not have been          et al. [16] detect data races in kernel modules. It would be
+possible without visualization of the execution events rele-      ideal to extend these systems to target performance bugs,
+vant to the problem. Visualizing execution is definitely not a    which do not necessarily result in systems crash; however,
+new idea. While isolated clusters of system developers (e.g.,     this is a difficult problem because short-term invariant viola-
+certain engineering teams at Google [26, 40]) have embraced       tions are acceptable in our environment.
+it, the developer community at large is missing effective vi-        D3S [25], Likely Invariants [36], and ExpressOS [28]
+sualization tools. There are many great trace-gathering tools,    use invariants and predicates to check correctness of sim-
+such as systemtap, Pivot tracing [27], or Intel Processor         ple operations (e.g., ensure that a variable is within a certain
+Tracing. However, without effective visualization, develop-       range). Our online sanity checker makes it possible to detect
+ers tend to only summarize and aggregate the information          more subtle incorrect states of the system (i.e., systems with
+available in the traces, which obscures outliers that are re-     cores that are idle for a long time while other cores are over-
+sponsible for bugs and performance problems (think of the         loaded), and it could be integrated into operating systems to
+                                                                  validate higher-level design choices.
+    Model checking has also been used to detect bugs in ker-       duce large amounts of data that would overwhelmingly con-
+nels. CMC [31] inject states in the kernel to find implemen-       sist of non-buggy execution traces, with no way to jump to
+tation bugs. Yang et al. [45] found errors in file systems (e.g.   the buggy sections of these traces. Moreover, our visualiza-
+deadlocks) using model checking. Model checking is a use-          tion tool is capable of monitoring very fine-grained sched-
+ful approach to find bugs before they happen. The scheduler        uler events that were crucial to understanding some of the
+is particularly challenging to model check due to the large        performance bugs presented in this paper, such as individ-
+number of possible workloads and intricacies with hardware         ual scheduling events (which makes it possible to plot which
+behavior (e.g., topology, behavior of sleeping cores). Model       scheduling event was responsible each time a thread moves
+checkers could be used to find crash bugs in the scheduler,        across cores), or individual iterations in the work-stealing
+but to the best of our knowledge, none of these works could        loop (which makes it possible to monitor which cores are
+be used to detect more subtle performance bugs.                    considered during load balancing).
+    Formal verification is a method for proving software cor-
+rectness by analyzing the source code. Traditionally, formal       7.   Conclusion
+verification was limited to small codebases and languages
+other than C, but recently, through heroic efforts of several      Scheduling, as in dividing CPU cycles among threads was
+OS researchers, formal verification was applied to OS ker-         thought to be a solved problem. We show that this is not the
+nels [11, 12, 21]. Even so, these state-of-the-art methods do      case. Catering to complexities of modern hardware, a sim-
+not apply to the bugs described here, because they are lim-        ple scheduling policy resulted in a very complex bug-prone
+ited to single-threaded environments and do not have a way         implementation. We discovered that the Linux scheduler vi-
+of reasoning about time. Formal tools work by describing           olates a basic work-conserving invariant: scheduling waiting
+the system as series of state transitions, pre-conditions and      threads onto idle cores. As a result, runnable threads may
+post-conditions, and then reason whether any state transi-         be stuck in runqueues for seconds while there are idle cores
+tions may lead to violation of post-conditions given the pos-      in the system; application performance may degrade many-
+sible pre-conditions. The problem is that in our environment,      fold. The nature of these bugs makes it difficult to detect
+short and intermittent violations of post-conditions (i.e., idle   them with conventional tools. We fix these bugs, understand
+cores in the presence of waiting threads) are totally accept-      their root causes and present tools, which make catching and
+able. It is the long-term violations that are problematic. Un-     fixing these bugs substantially easier. Our fixes and tools will
+fortunately, existing tools do not have the mechanisms al-         be available at http://git.io/vaGOW.
+lowing to reason how timing affects transient violation of in-
+variants. Extending these tools to work in multithreaded en-       References
+vironments and to reason about time could make them more            [1] DTrace. http://dtrace.org/.
+suitable, but having Linux developers write formal specifi-
+                                                                    [2] Event Tracing for Windows. https://msdn.microsoft
+cations will be another hurdle for adoption of these tools.
+                                                                        .com/en-us/library/windows/desktop/bb968803(v=
+                                                                        vs.85).aspx.
+Tracing. Due to the complexity of some of the bugs we en-
+countered, the Overload-on-Wakeup bug in particular, profil-        [3] Ftrace. https://www.kernel.org/doc/Documentation/t
+ing tools were not sufficient to fully understand their causes:         race/ftrace.txt.
+we needed traces in order to precisely follow the behavior of       [4] KernelShark. http://people.redhat.com/srostedt/ker
+the scheduler.                                                          nelshark/HTML/.
+    Many tracing tools have been proposed to help detect            [5] Linux 4.3 scheduler change “potentially affects every SMP
+performance bugs. Event Tracing for Windows [2] and                     workload in existence”. http://www.phoronix.com/scan.p
+DTrace [1] are frameworks that make it possible to trace                hp?page=news item&px=Linux-4.3-Scheduler-SMP.
+application and kernel events, including some scheduler             [6] SystemTap. https://sourceware.org/systemtap/.
+events, for the Microsoft Windows, Solaris, MacOS X and             [7] J. Antony, P. P. Janes, and A. P. Rendell. Exploring thread
+FreeBSD operating systems. The Linux kernel comes with                  and memory placement on NUMA architectures: Solaris and
+its own set of tracers, such as Ftrace [3] and SystemTap [6].           Linux, UltraSPARC/FirePlane and Opteron/HyperTransport.
+Some additional tools such as KernelShark [4] produce                   In Proceedings of the 13th International Conference on High
+graphical traces.                                                       Performance Computing, HiPC’06, 2006.
+    Our online sanity checker does not provide a novel way          [8] S. Blagodurov, S. Zhuravlev, and A. Fedorova. Contention-
+to monitor events, and directly relies on SystemTap for this            aware scheduling on multicore systems. ACM Trans. Comput.
+purpose. What our sanity checker does that is not included in           Syst., 28:8:1–8:45, 2010.
+these tools, however, is detecting an invariant violation in or-    [9] S. Blagodurov, S. Zhuravlev, M. Dashti, and A. Fedorova. A
+der to only monitor events while a performance bug is occur-            case for NUMA-aware contention management on multicore
+ring: running existing tracing tools all the time would be of           systems. In Proceedings of the 2011 USENIX Annual Techni-
+little use to detect performance bugs, since they would pro-            cal Conference, USENIX ATC’11, 2011.
+[10] S. Boyd-Wickizer, A. T. Clements, Y. Mao, A. Pesterev, M. F.            5th European Conference on Computer Systems, EuroSys ’10,
+     Kaashoek, R. Morris, and N. Zeldovich. An analysis of Linux             2010.
+     scalability to many cores. In Proceedings of the 9th USENIX        [23] B. Lepers, V. Quéma, and A. Fedorova. Thread and memory
+     Conference on Operating Systems Design and Implementa-                  placement on NUMA systems: asymmetry matters. In Pro-
+     tion, OSDI’10, 2010.                                                    ceedings of the 2015 USENIX Conference on Usenix Annual
+[11] H. Chen, D. Ziegler, T. Chajed, A. Chlipala, M. F. Kaashoek,            Technical Conference, USENIX ATC ’15, 2015.
+     and N. Zeldovich. Using Crash Hoare logic for certifying the       [24] T. Li, D. Baumberger, D. A. Koufaty, and S. Hahn. Efficient
+     FSCQ file system. In Proceedings of the 25th Symposium on               operating system scheduling for performance-asymmetric
+     Operating Systems Principles, SOSP ’15, 2015.                           multi-core architectures.   In Proceedings of the 2007
+[12] H. Chen, D. Ziegler, A. Chlipala, M. F. Kaashoek, E. Kohler,            ACM/IEEE Conference on Supercomputing, SC ’07, 2007.
+     and N. Zeldovich. Specifying crash safety for storage systems.     [25] X. Liu, Z. Guo, X. Wang, F. Chen, X. Lian, J. Tang, M. Wu,
+     In 15th Workshop on Hot Topics in Operating Systems (HotOS              M. F. Kaashoek, and Z. Zhang. D3 S: debugging deployed
+     XV), Kartause Ittingen, Switzerland, May 2015.                          distributed systems. In Proceedings of the 5th USENIX Sym-
+[13] T. Chen, L. I. Ananiev, and A. V. Tikhonov. Keeping ker-                posium on Networked Systems Design and Implementation,
+     nel performance from regressions. In Linux Symposium, vol-              NSDI’08, 2008.
+     ume 1, pages 93–102, 2007.                                         [26] D. Luu. The Nyquist theorem and limitations of sampling
+[14] M. Dashti, A. Fedorova, J. Funston, F. Gaud, R. Lachaize,               profilers today, with glimpses of tracing tools from the future.
+     B. Lepers, V. Quema, and M. Roth. Traffic management: a                 http://danluu.com/perf-tracing.
+     holistic approach to memory placement on NUMA systems.             [27] J. Mace, R. Roelke, and R. Fonseca. Pivot tracing: dy-
+     In Proceedings of the Eighteenth International Conference               namic causal monitoring for distributed systems. In Proceed-
+     on Architectural Support for Programming Languages and                  ings of the 25th Symposium on Operating Systems Principles,
+     Operating Systems, ASPLOS ’13, 2013.                                    SOSP ’15, 2015.
+[15] D. Engler and K. Ashcraft. RacerX: Effective, static detec-        [28] H. Mai, E. Pek, H. Xue, S. T. King, and P. Madhusudan.
+     tion of race conditions and deadlocks. In Proceedings of the            Verifying security invariants in ExpressOS. In Proceedings
+     Nineteenth ACM Symposium on Operating Systems Princi-                   of the Eighteenth International Conference on Architectural
+     ples, SOSP ’03, 2003.                                                   Support for Programming Languages and Operating Systems,
+[16] J. Erickson, M. Musuvathi, S. Burckhardt, and K. Olynyk.                ASPLOS ’13, 2013.
+     Effective data-race detection for the kernel. In Proceedings       [29] A. Merkel, J. Stoess, and F. Bellosa. Resource-conscious
+     of the 9th USENIX Conference on Operating Systems Design                scheduling for energy efficiency on multicore processors. In
+     and Implementation, OSDI’10, 2010.                                      Proceedings of the 5th European Conference on Computer
+[17] J. R. Funston, K. El Maghraoui, J. Jann, P. Pattnaik, and A. Fe-        Systems, EuroSys ’10, 2010.
+     dorova. An SMT-selection metric to improve multithreaded           [30] M. S. Mollison, B. Brandenburg, and J. H. Anderson. Towards
+     applications’ performance. In Proceedings of the 2012 IEEE              unit testing real-time schedulers in LITMUSRT . In Proceed-
+     26th International Parallel and Distributed Processing Sym-             ings of the 5th Workshop on Operating Systems Platforms for
+     posium, IPDPS ’12, 2012.                                                Embedded Real-Time Applications, OSPERT ’09, 2009.
+[18] F. Gaud, B. Lepers, J. Decouchant, J. Funston, A. Fedorova,        [31] M. Musuvathi, D. Y. W. Park, A. Chou, D. R. Engler, and
+     and V. Quéma. Large pages may be harmful on NUMA sys-                  D. L. Dill. CMC: a pragmatic approach to model checking
+     tems. In Proceedings of the 2014 USENIX Annual Technical                real code. SIGOPS Oper. Syst. Rev., 36(SI), Dec. 2002.
+     Conference, USENIX ATC’14, 2014.                                   [32] NAS Parallel Benchmarks. http://www.nas.nasa.gov/pub
+[19] M. Gomaa, M. D. Powell, and T. N. Vijaykumar. Heat-                     lications/npb.html.
+     and-run: leveraging SMT and CMP to manage power den-               [33] S. E. Perl and W. E. Weihl. Performance assertion checking.
+     sity through the operating system. In Proceedings of the 11th           In Proceedings of the Fourteenth ACM Symposium on Oper-
+     International Conference on Architectural Support for Pro-              ating Systems Principles, SOSP ’93, 1993.
+     gramming Languages and Operating Systems, ASPLOS XI,               [34] K. K. Pusukuri, D. Vengerov, A. Fedorova, and V. Kaloger-
+     2004.                                                                   aki. FACT: a framework for adaptive contention-aware thread
+[20] A. S. Harji, P. A. Buhr, and T. Brecht. Our troubles with Linux         migrations. In Proceedings of the 8th ACM International Con-
+     and why you should care. In Proceedings of the Second Asia-             ference on Computing Frontiers, CF ’11, 2011.
+     Pacific Workshop on Systems, APSys ’11, 2011.                      [35] J. C. Saez, M. Prieto, A. Fedorova, and S. Blagodurov. A
+[21] G. Klein, K. Elphinstone, G. Heiser, J. Andronick, D. Cock,             comprehensive scheduler for asymmetric multicore systems.
+     P. Derrin, D. Elkaduwe, K. Engelhardt, R. Kolanski, M. Nor-             In Proceedings of the 5th European Conference on Computer
+     rish, T. Sewell, H. Tuch, and S. Winwood. seL4: formal veri-            Systems, EuroSys ’10, 2010.
+     fication of an OS kernel. In Proceedings of the ACM SIGOPS         [36] S. K. Sahoo, J. Criswell, C. Geigle, and V. Adve. Using likely
+     22nd Symposium on Operating Systems Principles, SOSP ’09,               invariants for automated software fault localization. In Pro-
+     2009.                                                                   ceedings of the Eighteenth International Conference on Archi-
+[22] D. Koufaty, D. Reddy, and S. Hahn. Bias scheduling in                   tectural Support for Programming Languages and Operating
+     heterogeneous multi-core architectures. In Proceedings of the           Systems, ASPLOS ’13, 2013.
+[37] S. Savage, M. Burrows, G. Nelson, P. Sobalvarro, and T. An-           ity systems for online optimizations. In Proceedings of the
+     derson. Eraser: a dynamic data race detector for multithreaded        14th International Conference on Architectural Support for
+     programs. ACM Trans. Comput. Syst., 15(4), Nov. 1997.                 Programming Languages and Operating Systems, ASPLOS
+[38] L. T. Schermerhorn. A matter of hygiene: automatic page               XIV, 2009.
+     migration for Linux. 2007. URL https://linux.org.au/c
+                                                                      [43] L. Torvalds. The Linux Kernel Mailing List. http://tec
+     onf/2007/talk/197.html.
+                                                                           h-insider.org/linux/research/2001/1215.html, Feb.
+[39] K. Shen, M. Zhong, and C. Li. I/O system performance debug-           2001.
+     ging using model-driven anomaly characterization. In Pro-
+     ceedings of the 4th USENIX Conference on File and Storage        [44] L. Torvalds. Tech Talk: Linus Torvalds on git, Google. http:
+     Technologies - Volume 4, FAST’05, pages 23–23, 2005.                  //www.youtube.com/watch?v=4XpnKHJAok8, Mar. 2007.
+[40] D. Sites. Data center computers: modern challenges in
+                                                                      [45] J. Yang, P. Twohey, D. Engler, and M. Musuvathi. Using
+     CPU design. https://www.youtube.com/watch?v=QBu2A
+                                                                           model checking to find serious file system errors. ACM Trans.
+     e8-8LM.
+                                                                           Comput. Syst., 24(4), Nov. 2006.
+[41] D. Tam, R. Azimi, and M. Stumm. Thread clustering: sharing-
+     aware scheduling on SMP-CMP-SMT multiprocessors. In              [46] S. Zhuravlev, S. Blagodurov, and A. Fedorova. Address-
+     Proceedings of the 2nd ACM SIGOPS/EuroSys European                    ing shared resource contention in multicore processors via
+     Conference on Computer Systems 2007, EuroSys ’07, 2007.               scheduling. In Proceedings of the Fifteenth Edition of AS-
+[42] D. K. Tam, R. Azimi, L. B. Soares, and M. Stumm.                      PLOS on Architectural Support for Programming Languages
+     RapidMRC: approximating L2 miss rate curves on commod-                and Operating Systems, ASPLOS XV, 2010.
+

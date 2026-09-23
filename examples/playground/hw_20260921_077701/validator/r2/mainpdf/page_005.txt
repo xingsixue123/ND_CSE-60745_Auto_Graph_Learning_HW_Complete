@@ -1,0 +1,55 @@
+state such as the open-file table and signal dispositions is shared, so none of it is swapped. A switch
+between user-level threads avoids even the trap into the kernel.
+Ex. 2.5 (20 pts) — Pseudo-code for fork, exec, waitpid, exit
+Following the hint, each algorithm below is the kernel-side implementation of the call: the code
+the operating system runs when a user process traps into it. All four operate on the process table,
+whose entries are process control blocks (PCBs); Current denotes the PCB of the calling process,
+and a negative return value is the usual errno convention.
+Algorithm 1 fork() — create a copy of the calling process
+1: procedure Fork( )
+2:
+if no free process-table slot or no free pid then
+3:
+return −EAGAIN
+4:
+end if
+5:
+c ←AllocatePCB( );
+c.pid ←AllocatePid( )
+6:
+copy from Current into c: uid, gid, cwd, root, umask,
+signal dispositions, resource limits, priority
+7:
+c.parent ←Current; append c to Current.children
+8:
+c.addrspace ←CopyOnWriteShare(Current.addrspace)
+9:
+mark every writable page read-only in both processes
+▷copy on first write
+10:
+for all descriptors fd in Current.fdtable do
+11:
+c.fdtable[fd] ←Current.fdtable[fd]
+12:
+increment the reference count of that open-file entry
+13:
+end for
+14:
+c.cputime ←0;
+c.pending signals ←∅
+15:
+c.savedregs ←Current.savedregs
+▷child resumes at the instruction after the trap
+16:
+c.savedregs.retval ←0
+▷what the child will see fork return
+17:
+c.state ←Ready; Enqueue(ready queue, c)
+18:
+return c.pid
+▷what the parent will see fork return
+19: end procedure
+The two return-value assignments — 0 into the child’s saved register, the child’s pid into the parent’s
+— are the whole “fork returns twice” phenomenon: one call site, two saved register sets, two different
+values in the return register.
+5

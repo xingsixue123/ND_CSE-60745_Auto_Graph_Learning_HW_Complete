@@ -1,0 +1,18 @@
+{
+  "source": "/home/xing/project/auto_hw_complete/output/hw_20260921_077701/final/fig_p1_rr.pdf",
+  "dpi": 400,
+  "n_pages": 1,
+  "pages": [
+    {
+      "rendered_page": 1,
+      "png": "page_001.png",
+      "txt": "page_001.txt",
+      "width": 2400,
+      "height": 940,
+      "n_chars": 109,
+      "n_images": 0,
+      "n_vector_drawings": 90,
+      "figures": []
+    }
+  ]
+}

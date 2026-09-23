@@ -1,0 +1,858 @@
+Scheduling Algorithms for Multiprogramming in a Hard-
+Real-Time Environment
+
+C. L. L I U
+
+Project MAC, Massachusetts Institute of Technology
+
+AND
+
+J A M E S W . LAYLAND
+
+Jet Propulsion Laboratory, California Institute of Technology
+
+ABSTR.~kCT. The problem of multiprogram scheduling on a single processor is studied from the
+viewpoint of the characteristics peculiar to the program functions that need guaranteed ser-
+vice. It is shown that an optimum fixed priority scheduler possesses an upper bound to proces-
+sor utihzation which may be as low as 70 percent for large task sets. I t is also shown that full
+processor utilization can be achieved by dynamically assigning priorities on the basis of their
+current deadhnes. A combination of these two scheduling techmques is also discussed.
+
+KEY WORDS AND PHRASES :    real-time multiprogramming, scheduling, muttiprogram scheduling,
+dynamic scheduling, priority assignment, processor utdlzation, deadline driven scheduling
+
+CR CATEGORIES;         3 . 8 0 , 3.82, 3.83, 4 . 3 2
+
+
+
+I.    Introduction
+T h e use of c o m p u t e r s for c o n t r o l a n d m o n i t o r i n g of i n d u s t r i a l processes has ex-
+p a n d e d g r e a t l y in r e c e n t years, a n d will p r o b a b l y e x p a n d e v e n m o r e d r a m a t i c a l l y
+in t h e n e a r future. Often, t h e c o m p u t e r u s e d in such a n a p p l i c a t i o n is s h a r e d be-
+t w e e n a c e r t a i n n u m b e r of t i m e - c r i t i c a l c o n t r o l a n d m o n i t o r functions a n d a non-
+t i m e - c r i t i c a l b a t c h processing j o b s t r e a m . I n o t h e r i n s t a l l a t i o n s , h o w e v e r , no
+n o n - t i m e - c r i t i c a l j o b s exist, a n d efficient use of t h e c o m p u t e r c a n o n l y be a c h i e v e d
+b y a careful s c h e d u l i n g of t h e t i m e - c r i t i c a l c o n t r o l a n d m o n i t o r functions themselves.
+T h i s l a t t e r g r o u p m i g h t b e t e r m e d " p u r e process c o n t r o l " a n d p r o v i d e s t h e b a c k -
+g r o u n d for t h e c o m b i n a t o r i c s c h e d u l i n g a n a l y s e s p r e s e n t e d in this p a p e r . T w o
+
+Copyright © 1973, Association for Computing Machinery, Inc. General permission to re-
+publish, but not for profit, all or part of this material is granted, provided that reference is
+made to this publication, to its date of issue, and to the fact that reprinting privileges were
+granted by permission of the Association for Computing Machinery.
+This paper presents the results of one phase of research carried out at the Jet Propulsion Lab-
+oratory, Califorma Institute of Technology, under Contract No. NAS-7-100, sponsored by the
+National Aeronautics and Space Administration.
+Authors' present addresses: C. L. Liu, Department of Computer Science, University of Illinois
+at Urbana-Champaign, Urbana, IL 61801; James W. Layland, Jet Propulsion Laboratory,
+California Institute of Technology, 4800 Oak Grove Drive, Pasadena, CA 91103.
+
+
+Journal of the Associationfor Computing Machinery,Vo|, 20, No. 1, January 1973,pp. 46-61.
+Scheduling Algorithms for Multiprogramming                                                          47
+
+scheduling algorithms for this type of programming are studied; both are priority
+driven and preemptive; meaning that the processing of any task is interrupted by
+a request for any higher priority task. The first algorithm studied uses a fixed
+priority assignment and can achieve processor utilization on the order of 70 percent
+or more. The second scheduling algorithm can achieve full processor utilization by
+means of a dynamic assignment of priorities. A combination of these two algo-
+rithms is also discussed.
+
+
+2. Background
+A process control computer performs one or more control and monitoring functions.
+The pointing of an antenna to track a spacecraft in its orbit is one example of such
+functions. Each function to be performed has associated with it a set of one or
+more tasks. Some of these tasks are executed in response to events in the equipment
+controlled or monitored by the computer. The remainder are executed in response to
+events in other tasks. None of the tasks may be executed before the event which
+requests it occurs. Each of the tasks must be completed before some fixed time has
+elapsed following the request for it. Service within this span of time must be guaran-
+teed, categorizing the environment as "hard-real-time" [1] in contrast to "soft-
+real-time" where a statistical distribution of response times is acceptable.
+   Much of the available literature on multiprogramming deals with the statistical
+analysis of commercial time-sharing systems ([2] contains an extensive bibliography).
+Another subset deals with the more interesting aspects of scheduling a batch-
+processing facility or a mixed batch-time-sharing facility, usually in a multiple
+processor configuration [3-8]. A few papers directly attack the problems of "hard-
+real-time" programming. Manacher [1] derives an algorithm for the generation of
+task schedules in a hard-real-time environment, but his results are restricted to the
+somewhat unrealistic situation of only one request time for all tasks, even though
+multiple deadlines are considered. Lampson [9] discusses the software scheduling
+problem in general terms and presents a set of ALGOLmultiprogramming procedures
+which could be software-implemented or designed into a special purpose scheduler.
+For the allocation of resources and for the assignment of priorities and time slots,
+he proposes a program which computes estimated response time distributions based
+on the timing information supplied for programs needing guaranteed service. He
+does not, however, describe the algorithms which such a program must use.
+   The text by Martin [10] depicts the range of systems which are considered to be
+"real-time" and discusses in an orderly fashion the problems which are encountered
+in programming them. Martin's description of the tight engineering management
+control that must be maintained over real-time software development is empha-
+tically echoed in a paper by Jirauch [11] on automatic checkout system software.
+These discussions serve to emphasize the need for a more systematic approach to
+software design than is currently in use.
+
+
+3. The Environment
+To obtain any analytical results about program behavior in a hard-real-time en-
+vironment, certain assumptions must be made about that environment. Not all of
+
+
+                          Journal of the Assomation for Computing Machinery, Vol. 20, No. I, January 1973
+48                                                                       O. L. L I U AND J. W. L A Y L A N D
+
+
+ these assumptions are absolutely necessary, and the effects of relaxing them will be
+ discussed in a later section.
+    (A1) The requests for all tasks for which hard deadlines exist are periodic, with
+ constant interval between requests.
+    (A2) Deadlines consist of run-ability constraints only--i.e, each task must be
+completed before the next request for it occurs.
+    (A3) The tasks are independent in that requests for a certain task do not depend
+on the initiation or the completion of requests for other tasks.
+    (A4) Run-time for each task is constant for that task and does not vary with
+time. Run-time here refers to the time wbich is taken by a processor to execute the
+task without interruption.
+    (A5) Any nonperiodic tasks in the system are special; they are initialization or
+failure-recovery routines; they displace periodic tasks while they themselves are
+being run, and do not themselves have hard, critical deadlines.
+   Assumption (A1) contrasts with the opinion of Martin [2], but appears to be valid
+for pure process control. Assumption (A2) eliminates queuing problems for the in-
+dividual tasks. For assumption (A2) to hold, a small but possibly significant amount
+of buffering hardware must exist for each peripheral function. Any control loops
+closed within the computer must be designed to allow at least an extra unit sample
+delay. Note that assumption (A3) does not exclude the situation in which the
+occurrence of a task re can only follow a certain (fixed) number, say h r, of occur-
+rences of a task r~. Such a situation can be modeled by choosing the periods of tasks
+r~ and re so that the period of re is N times the period of T, and the Nth request for
+r~ will coincide with the 1st request for re and so on. The run-time in assumption
+ (A4) can be interpreted as the maximum processing time for a task. In this way the
+bookkeeping time necessary to request a successor and the costs of preemptions can
+be taken into account. Because of the existence of large main memories out of which
+programs are executed and the overlapping of transfers between main and auxiliary
+storage and program execution in modern computer systems, assumption (A4)
+should be a good approximation even if it is not exact. These assumptions allow the
+complete characterization of a task by two numbers: its request period and its
+run-time. Unless stated otherwise, throughout this paper we shall use r l , T2, • • • , r,~
+to denote m periodic tasks, with their request periods being T1, T~, . . . , T,~ and
+their run-times being C1, C2, . . . , Cm, respectively. The request rate of a task is
+defined to be the reciprocal of its request period.
+   A scheduling algorithm is a set of rules that determine the task to be executed at a
+particular moment. The scheduling algorithms to be studied in this paper are pre-
+emptive and priority driven ones. This means that whenever there is a request for a
+task that is of higher priority than the one currently being executed, the running
+task is immediately interrupted and the newly requested task is started. Thus the
+specification of such algorithms amounts to the specification of the method of
+assigning priorities to tasks. A scheduling algorithm is said to be static if priorities are
+assigned to tasks once and for all. A static scheduling algorithm is also called a fixed
+priority scheduling algorithm. A scheduling algorithm is said to be dynamic if priori-
+ties of tasks might change from request to request. A scheduling algorithm is said to
+be a mixed scheduling algorithm if the priorities of some of the tasks are fixed yet the
+priorities of the remaining tasks vary from request to request.
+
+
+Journal of the Association for Computing Machinery, Vol. 20, No. 1, January 1973
+Scheduling Algorithms for Multiprogramming                                                                                 49
+
+4. A Fixed Priority Scheduling Algorithm
+In this section we derive a rule for priority assignment t h a t yields an optimum
+static scheduling algorithm. An important concept in determining this rule is t h a t of
+the critical instant for a task. The deadline of a request for a task is defined to be the
+time of the next request for the same task. For a set of tasks scheduled according to
+some scheduling algorithm, we say t h a t an overflow occurs at time t if t is the deadline
+of an unfulfilled request. For a given set of tasks, a scheduling algorithm is feasible if
+the tasks are scheduled so t h a t no overflow ever occurs. We define the response time
+of a request for a certain task to be the time span between the request and the end of
+the response to t h a t request. A critical instant for a task is defined to be an instant at
+which a request for that task will have the largest response time. A critical time zone
+for a task is the time interval between a critical instant and the end of the response
+to the corresponding request of the task. We have the following theorem.
+   THEOREM 1. A critical instant for any task occurs whenever the task is requested
+simultaneously with requests for all higher priority tasks.
+   PROOF. Let ~'i, ~'2, • • • , Tm denote a set of priority-ordered tasks with r,~ being
+the task with the lowest priority. Consider a particular request for ~',~t h a t occurs at
+tl. Suppose t h a t between tl and tl -~- Tm , the time at which the subsequent request
+of rm occurs, requests for task T~, i ~ m, occur at t2, t2 ~ T~, t2 "t- 2T~, • • • , t2 -P
+kT, as illustrated in Figure 1. Clearly, the preemption of T~ b y r, will cause a certain
+amount of delay in the completion of the request for r,~ t h a t occurred at tl, unless
+the request for ~-,~is completed before t2. Moreover, from Figure 1 we see imme-
+diately t h a t advancing the request time t2 will not speed up the completion of ~-,~.
+The completion time of ~'m is either unchanged or delayed by such advancement.
+Consequently, the delay in the completion of r ~ is largest when t~ coincides with tl •
+   Repeating the argument for all T~, i = 2, • • • , m -- 1, we prove the theorem.
+   One of the values of this result is t h a t a simple direct calculation can determine
+whether or not a given priority assignment will yield a feasible scheduling algorithm.
+Specifically, if the requests for all tasks at their critical instants are fulfilled before
+their respective deadlines, then the scheduling algorithm is feasible. As an example,
+consider a set of two tasks r~ and T2 with T1 = 2, T2 = 5, and C1 ~- 1, C2 -- 1. If we
+let T~ be the higher priority task, then from Figure 2 (a) we see t h a t such a priority
+assignment is feasible. Moreover, the value of C2 can be increased at most to 2 b u t
+not further as illustrated in Figure 2 (b). On the other hand, if we let T2 be the higher
+priority task, then neither of the values of C~ and C2 can be increased beyond 1 as
+illustrated in Figure 2 (c).
+
+
+                                                                                             t,+ Tm
+                                                                                                 I
+                                                                                                 I
+                                                                                                 I
+                                                                                                 I
+                                                                                                 I t2+ ( k + l ) T !
+            t2   t2+C i         t2÷ Ti               t 2,.I. ZT i            t 2 +kT i           I
+
+                                                                                                                       t
+
+
+
+
+                      FIG. 1.     E x e c u t i o n of r, b e t w e e n r e q u e s t s for r~
+
+
+
+                                Journal of the Association for Computing Machinery, Vol. 20, No. I, January 1973
+50                                                                              C. L. LIU AND J. W. LAYLAND
+
+   T,                                                        ~t
+                                                                  T,I
+              I       2         3          4        5                       I       2           '5    4       5
+
+
+     Tzl      I~I                                   l             Tzl       l~l                 l ~           I   =l
+                                                                                                              5
+        \                   v
+                                                   2                    \
+                                                                                            v
+                                                                                                          /
+
+                  CRITICALTIM£         ZONE                                     CRITICAL TIME ZONE
+
+                             (o)                                                        (b)
+
+
+
+                                    72 ~ l                                      I   ~   l
+                                                                                5
+
+
+                                    T~ (           P7~
+                                                                                        t
+                                                             2
+                                                         /
+                                               v
+                                       CRITICAL TIME ZONE
+                                                        (c)
+                                           F*G. 2. Schedules for two tasks
+
+   The result in Theorem 1 also suggests a priority assignment that is optimum in the
+sense that will be stated in Theorem 2. Let us motivate the general result by con-
+sidering the case of scheduling two tasks 72 and ~'~. Let T1 and T~ be the request
+periods of the tasks, with T~ < Te. If we let r~ be the higher priority task, then,
+according to Theorem 1, the following inequality must be satisfied :~' 2
+                                               [-T~/Ti_J Ci + C~ _< T~.                                                (1)
+If we let r2 be the higher priority task, then, the following inequality must be satis-
+fied:
+                                                        Cl + C2 _< T,.                                                 (2)
+Since
+                     LT2/T,_] C~ + LT~/TLI C2 _< LT2/T~.j T~ _< T2,
+ (2) implies (1). In other words, whenever the T, < T2 and C,, C2 are such that the
+task schedule is feasible with 75 at higher priority than n , it is also feasible with n
+at higher priority than 75, but the opposite is not true. Thus we should assign higher
+priority to n and lower priority to vs. Hence, more generally, it seems that a
+"reasonable" rule of priority assignment is to assign priorities to tasks according to
+their request rates, independent of their run-times. Specifically, tasks with higher
+request rates will have higher priorities. Such an assignment of priorities will be
+known as the rate-monotonic priority assignment. As it turns out, such a priority
+assignment is optimum in the sense that no other fixed priority assignment rule can
+schedule a task set which cannot be scheduled by the rate-monotonic priority
+assignment.
+* I t should be pointed o u t t h a t (1) is necessary b u t n o t sufficient to g u a r a n t e e the feasibility of
+t h e p r i o r i t y assignment.
+    L x ~ denotes the largest integer smaller t h a n or equal to x. [-x'~ denotes the smallest in-
+teger larger t h a n or equal to x.
+
+
+Journal of the Associationfor Computing Machinery, Vol. 20, No. 1, January 1973
+Scheduling Algorithms for Multiprogramming                                                            51
+
+  THEOREM 2. I f a feasible priority assignment exists for some task set, the rate-
+monotonic priority assignment is feasible for that task set.
+   PROOF. Let r l , r2, " • , rm be a set of m tasks with a certain feasible priority
+assignment. Let r~ and re be two tasks of adjacent priorities in such an assignment
+with r, being the higher priority one. Suppose that T~ > T~. Let us interchange the
+priorities of r~ and re. It is not difficult to see that the resultant priority assignment
+is still feasible. Since the rate-monotonic priority assignment can be obtained from
+any priority ordering by a sequence of pairwise priority reorderings as above, we
+prove the theorem.
+
+
+5.   Achievable Processor Utilization
+At this point, the tools are available to determine a least upper bound to processor
+utilization in fixed priority systems. We define the (processor) utilization factor to be
+the fraction of processor time spent in the execution of the task set. In other words,
+the utilization factor is equal to one minus the fraction of idle processor time. Since
+CjT~ is the fraction of processor time spent in executing task r , , for m tasks, the
+utilization factor is:
+
+                                     V = ~        (C,/TO.
+                                             ~1
+
+
+Although the processor utilization factor can be improved by increasing the values of
+the C~'s or b y decreasing the values of the T~'s it is upper bounded by the require-
+ment that all tasks satisfy their deadlines at their critical instants. I t is clearly
+uninteresting to ask how small the processor utilization factor can be. However, it is
+meaningful to ask how large the processor utilization factor can be. Let us be precise
+about what we mean. Corresponding to a priority assignment, a set of tasks is said to
+fully utilize the processor if the priority assignment is feasible for the set and if an
+increase in the run-time of any of the tasks in the set will make the priority assign-
+ment infeasible. For a given fixed priority scheduling algorithm, the least upper
+ bound of the utilization factor is the minimum of the utilization factors over all sets
+of tasks that fully utilize the processor. For all task sets whose processor utilization
+ factor is below this bound, there exists a fixed priority assignment which is feasible.
+ On the other hand, utilization above this bound can only be achieved if the T, of the
+ tasks are suitably related.
+   Since the rate-monotonic priority assignment is optimum, the utilization factor
+ achieved by the rate-monontonic priority assignment for a given task set is greater
+than or equal to the utilization factor for any other priority assignment for that task
+ set. Thus, the least upper bound to be determined is the infimum of the utilization
+ factors corresponding to the rate-monotonic priority assignment over all possible
+ request periods and run-times for the tasks. The bound is first determined for two
+ tasks, then extended for an arbitrary number of tasks.
+    THEOREM 3. For a set of two tasks with fixed priority assignment, the least upper
+bound to the processor utilization factor is U = 2 (2~ - 1).
+    PROOF. Let rl and r2 be two tasks with their periods being T1 and T2 and their
+run-times being C1 and C~, respectively. Assume that T2 > T1. According to the
+rate-monotonic priority assignment, ri has higher priority than r2. In a critical time
+
+
+                            Journal of the Association for Computing Machlnery, Vol, 20, No. I,January 1973
+ 52                                                                               C . L . LIU AND J. W. LAYLAND
+
+
+ zone of ~2, there are FT,~T1"-] requests for ~1 • Let us now adjust C2 to fully utilize
+ the available processor time within the critical time zone. Two cases occur:
+   Case 1. The run-time C~ is short enough that all requests for Zl within the critical
+ time zone of T~ are completed before the second z~ request. T h a t is,
+                                              C1 _< T~ - Tl t.TjTi.] .
+ Thus, the largest possible value of C~ is
+                                              C2 = T~ -- Cl V T ~ / T , - 1 .
+ The corresponding processor utilization factor is
+                                  U = 1 + Ci[(1/T1) -                 (I/T2) V T J T i - I ].
+In this case, the processor utilization factor U is monotonically decreasing in C1.
+   Case 2. The execution of the VT2/T~"lth request for t~ overlaps the second
+reque st for T2 In this case
+                         •
+
+
+
+
+                                             C1 _> T~ -- T, LT~/Ti.J.
+ I t follows that the largest possible value of C2 is
+                                      C~ = -C1 t.TJTi.J + T1 LTdT1J
+and the corresponding utilization factor is
+                   U = (T~/T2)             LT~/T~..J + C ~ [ ( 1 / T ~ ) -         (1/T2) t.T2/Ti.J ].
+In this case, U is monotonically increasing in C1.
+   The minimum of U clearly occurs at the boundary between these two cases. T h a t
+is, for
+                                              C1 = Ts-           T1 LT~/Ti.J
+we have
+               U=I-              (T~IT~)[ rTjT17             -    (TdTi)iI(T~IT,) -- t-T~ITL_I 1.          (3)
+For notational convenience,8 let I = [-T2/Ti_J and f = {T~/T1}. Equation (3) can
+be written as
+                                            U = 1 --f(l -- f)/ (l + f).
+Since U is monotonic increasing with I, minimum U occurs at the smallest possible
+value of I, namely, I = 1. Minimizing U over f, we determine t h a t a t f = 2 ½ - 1,
+U attains its minimum value which is
+                                               U = 2(2~-           1)~0.83.
+
+This is the relation we desired to prove.
+   I t should be noted that the utilization factor becomes i if f = 0, i.e. if the request
+period for the lower priority task is a multiple of the other task's request period.
+   We now derive the corresponding bound for an arbitrary number of tasks. At
+this moment, let us restrict our discussion to the case in which the ratio between
+a n y two request periods is less t h a n 2.
+a { T 1 / T ~ } denotes ( T ~ / T ~ ) -   LT2/T,.J   , i.e. the fractional p a r t of T ~ / T i .
+
+
+
+Journal of the Associahon for Computing Machinery, Vol 20, No, I,January 1973
+Scheduling Algorithms for M ultiprogramming                                                                53
+
+   THEOREM 4. For a set of m tasks with fixed priority order, and the restriction that
+the ratio between any two request periods is less than 2, the least upper bound to the
+processor utilization factor is U = m (21/m - 1).
+   PROOF. L e t r l , r 2 , . . . , r , , d e n o t e t h e m t a s k s . LetC1,C2,... ,C~ be the
+run-times of the tasks that fully utilize the processor and minimize the processor
+utilization factor. Assume t h a t T~ > Tin-1 > • • • > T2 > T1 • Let U denote the
+processor utilization factor. We wish to show t h a t
+                                          C, =        T2 -    TI.
+
+Suppose t h a t
+                              C1 = T 2 -         T, + 4 ,               A > O.
+
+Let
+                                         C,'         = T~- Ti
+                                         c~'         = c2+~
+                                         c~' =c~                                     \
+                                                                                 /
+                                         C'~_, = Cm_,
+                                         C,' = C..
+Clearly, C,', C2', • • • , C'~_,, Cm' also fully utilize the processor. Let U' denote the
+corresponding utilization factor. W e have
+                           U-       V ' = ( A / T ~ ) -- (A/T2) > 0.
+Alternatively, suppose t h a t
+                              C, = T 2 -         Ti-         A,         4>0.
+
+Let
+                                         C1"         = T2 -        T1
+                                         C2"         = C2 -        2A
+                                         C3 tt       ~- C~
+
+
+                                         Cm--1 = C,,-1
+                                         C,~" = C , , .
+Again, C1", C2", " " , C~_1, C~" fully utilize the processor. Let U" denote the
+corresponding utilization factor. We have
+                        U -      U" = - ( ~ / T 1 )          + (2A/T2) > 0.
+Therefore, if indeed U is the minimum utilization factor, then
+                                            C1 = T2 -             T1
+In a similar way, we can show t h a t
+                                       C2        = T3-            T2
+                                       C3        =    T4-         T3
+
+                                       C m-1 = T m -              T.-i.
+
+
+                                Journal of the Assoexation for Computing Machinery, Vol. 20, No. I, January 1973
+54                                                                                  C. L. L I U A N D J . W . L A Y L A N D
+
+
+Consequently,
+
+                                 Cm =       T,~ -     2(C1 + C2 +             . . . -t- C~_~).
+To simplify the notation, let
+
+                             g, = (Tin -- T , ) / T , ,                   i = 1, 2, . . . , m.
+Thus
+
+             C, = T,+i -            T, = g,T, -            g,+lT,+l,               i = 1, 2 , . . .     , m -       1
+
+and
+
+                                                  C ~ = T,~ -            2glT1
+
+a n d finally,
+
+         g =              (C~/T~) = ~            [g, -     g~+i(T~+~/T,)] .% 1 -- 2 g ~ ( T # T , n )
+                   m--1
+              = ~         [g~ -- g~+,(g~ T 1 ) / ( g , + l + 1)] + 1 -- 2[gl/(g~ -t- 1)]
+                                                                   m--1
+              = 1 --t- g~[(gl -- 1)/(g, -Jr 1)] + ~ g,[(g, -- g , _ , ) / ( g ,                        -b 1)].                  (4)
+                                                                    ~2
+
+J u s t as in t h e t w o - t a s k case, t h e u t i l i z a t i o n b o u n d b e c o m e s 1 if g, = 0, for all i.
+     T o find t h e l e a s t u p p e r b o u n d t o t h e u t i l i z a t i o n f a c t o r , eq. (4) m u s t b e m i n i -
+m i z e d o v e r t h e g,'s. T h i s c a n b e d o n e b y s e t t i n g t h e first d e r i v a t i v e of U w i t h
+r e s p e c t to e a c h of t h e g~'s e q u a l t o zero, a n d s o l v i n g t h e r e s u l t a n t difference e q u a -
+tions:
+OU/Og, = (g7 + 2g~ - g ~ - l ) / ( g ~ + 1) 2 -                      (g~+,)/(g~+, W 1) = 0,
+                                                                             j -- 1 , 2 , . . . , m -                1.         (5)
+
+T h e d e f i n i t i o n go = 1 h a s b e e n a d o p t e d for c o n v e n i e n c e .
+   T h e g e n e r a l s o l u t i o n t o eqs. (5) c a n b e s h o w n t o b e
+
+                          g~ = 2 (m-~)/m -- 1,                  j = 0, 1, " "           , m -- 1.                               (6)
+
+I t follows t h a t
+                                                  U = m(21/~-                1),
+
+w h i c h is t h e r e l a t i o n w e d e s i r e d t o p r o v e .
+     F o r m = 2, eq. (6) is t h e s a m e b o u n d as was f o u n d d i r e c t l y for t h e s e t of t w o
+t a s k s w i t h no r e s t r i c t i o n s on t h e r e q u e s t p e r i o d s . F o r m = 3, eq. (6) b e c o m e s
+                                            U = 3(21/3) -                1 ) - ~ 0.78
+
+a n d for l a r g e m, U - ~ In 2.
+    T h e r e s t r i c t i o n t h a t t h e l a r g e s t r a t i o b e t w e e n r e q u e s t p e r i o d less t h a n 2 in
+T h e o r e m 4 c a n a c t u a l l y b e r e m o v e d , w h i c h we s t a t e as:
+    THEOREM 5. F o r a set of m tasks w i t h f i x e d p r i o r i t y order, the least u p p e r b o u n d
+to processor u t i l i z a t i o n is U = m ( 2 i / m - - 1).
+    PROOF. L e t T~, r 2 , • • " , r ~ , • • • ,Tm b e a s e t of m t a s k s t h a t f u l l y u t i l i z e t h e
+p r o c e s s o r . L e t U d e n o t e t h e c o r r e s p o n d i n g u t i l i z a t i o n f a c t o r . S u p p o s e t h a t for
+
+
+Journal of the Assoclatmn for Computing Machinery, Vol 20, No 1, J a n u a r y 1973
+Scheduling Algorithms for M ultipr ogramming                                                          55
+
+s o m e i , L T m / T J > 1. To be specific, l e t T ~ = q T , + r , q > l a n d r > 0. Let
+us replace the task r~ by a task r ( such t h a t T ; = qT~ and C~' = C~, and increase
+C~ by the amount needed to again fully utilize the processor. This increase is at
+most C~ (q - 1), the time within the critical time zone of r,~ occupied b y r, but
+not b y r,'. Let U' denote the utilization factor of such a set of tasks. We have
+
+                U' < U -t- [(q -       1)C~/T,,] + (C,/T,') -             (C,/T,)
+or
+
+                U' < U + C,(q - 1)[1/(qT, + r) -                    (1/qT,)].
+Since q - 1 > 0 and [1/(qT~ ~- r)] - (1/qT~) < O, U' _< U. Therefore we con-
+clude t h a t in determining the least upper bound of the processor utilization factor,
+we need only consider task sets in which the ratio between any two request periods
+is less t h a n 2. The theorem thus follows directly from T h e o r e m 4.
+
+
+6.   Relaxing the Utilization Bound
+   The preceding section showed t h a t the least upper bound imposed upon proces-
+sor utilization by the requirement for real-time guaranteed service can approach
+In(2) for large task sets. I t is desirable to find ways to improve this situation,
+since the practical costs of switching between tasks must still be counted. One of
+the simplest ways of making the utilization bound equal to 1 is to make {T,~/T~t =
+0 for i = 1, 2, • • • , m - 1. Since this cannot ahvays be done, an alternative solu-
+tion is to buffer task rm and perhaps several of the lower priority tasks and relax
+their hard deadlines. Supposing t h a t the entire task set has a finite period and t h a t
+the buffered tasks are executed in some reasonable fashion--e.g, in a first come
+first served f a s h i o n - - t h e n the maximum delay times and a m o u n t of buffering
+required can be computed under the assumptions of this paper.
+   A better solution is to assign task priorities in some dynamic fashion. T h e re-
+maining sections of this paper are devoted to one particular m e t h o d of dynamic
+priority assignment. This method is optimum in the sense t h a t if a set of tasks
+can be scheduled b y some priority assignment, it can also be scheduled by this
+method. In other words, the least upper bound on the processor utilization factor
+is uniformly 100 percent.
+
+
+7.   The Deadline Driven Scheduling Algorithm
+We turn now to study a dynamic scheduling algorithm which we call the deadline
+driven scheduling algorithm. Using this algorithm, priorities are assigned to tasks
+according to the deadlines of their current requests. A task will be assigned the
+highest priority if the deadline of its current request is the nearest, and will be
+assigned the lowest priority if the deadline of its current request is the furthest.
+At any instant, the task with the highest priority and yet unfulfilled request will
+be executed. Such a method of assigning priorities to the tasks is a dynamic one, in
+contrast to a static assignment in which priorities of tasks do not change with
+time. We want now to establish a necessary and sufficient condition for the feasi-
+bility of the deadline driven scheduling algorithm.
+
+
+                            Journal of the Association for Computing Machinery, VoL 20, No 1, January 1973
+56                                                                               C.L.        LIU AND J. W. LAYLAND
+
+                                   PROCESSOR
+0                           It     IDLE-PERIOD         - ~2                                        r3
+ I                          ,11                                     Q                              OVERFLOW
+ii                                                                 tl       SS
+                                                         i
+                                                         '                              fl             REQUESTS FOR
+ I                                                                                                      TASK I
+
+                                                                                                     -REQUESTS FOR
+1                                                        I                                              TASK 2
+I                                                        I              c
+
+1                                                        I
+                                                                        L~-s                 n         REQUESTS FOR
+I                                                        I                                              TASK 5
+I                                        •               1
+I                                        •               I
+I                                        •               I
+I                                                        I
+                                                         I        itm
+I                                                                                                      REQUESTS FOR
+I                                                                                                        TASK m
+                                                         Io;
+                                                              o
+                  FiG. 3.    Processing overflow following a processor idle period
+
+   THEOREM 6. W h e n the deadline driven scheduling algorithm is used to schedule a
+set of tasks on a processor, there is no processor idle time prior to an overflow.
+   PROOF. Suppose t h a t there is processor idle time prior to an overflow. T o be
+specific, starting at time 0, let t3 denote the time at which an overflow occurs, and
+let tl, t~ denote the beginning and the end, respectively, of the processor idle period
+closest to t8 (i.e. there is no processor idle time between t2 and t3 .) T h e situation is
+illustrated in Figure 3, where the times of the first request for each of the m tasks
+after the processor idle period [tl, t2] are denoted a,b, • • • , m.
+   Suppose t h a t from t2 on we move all requests of task 1 up so t h a t a will coincide
+with t~. Since there was no processor idle time between t2 and t~, there will be no
+processor idle time after a is moved up. Moreover, an overflow will occur either at
+or before t3. Repeating the same argument for all other tasks, we conclude t h a t if
+all tasks are initiated at t~, there will be an overflow with no processor idle period
+prior to it. However, this is a contradiction to the assumption t h a t starting at
+time 0 there is a processor idle period to an overflow. This proves Theorem 6.
+   Theorem 6 will now be used to establish the following theorem:
+   THEOREM 7. For a given set of m tasks, the deadline driven scheduling algorithm
+is feasible i f and only i f
+                         (Cl/T~) zr ( C 2 / T , ) + . . .               + (C,~/Tm) _< 1.
+   PROOF. T o show the necessity, the total demand of computation time b y all
+tasks between t = 0 and t = TiT2 • • • T ~ , m a y be calculated to be
+         (T~T3 . . . T,~)C1 + (TiT3 . . . TIn)Ca + . . . + (T1T2 . . . T m _ i ) C ~ .
+If the total demand exceeds the available processor time, i.e.
+(T~T3 . . . T~)C~ + (TIT3 . . . T~)C~
+                          + ... + (T1T2...                                  T~_i)C,~ > T ~ T ~ . . .    Tm       (7)
+or
+
+                         (C,/T1) + ( C J T ~ ) + . . .                  + (C,~/T,~) > 1,
+there is clearly no feasible scheduling algorithm.
+  To show the sufficiency, assume t h a t the condition
+                          (C,/T,) + (CJT2) +...                         + (C~/T~) ~ 1
+
+
+Journal of the Assoclatlon for Computing Machinery, Vol. 20, No. I, January 1973
+Scheduling Algorithms for Multiprogramming                                                                                         57
+
+                                                                                   (3 I
+                                                                                   II
+
+                                                                    Ra2
+                                                                                                 ma3
+                                                                          bl
+                                                                      n
+                                                                               B             ~         ~ b2
+
+                                                                                          Eb3
+                                                                                                                         L
+
+
+                                        FIG. 4.       Processing overflow at time T
+
+is s a t i s f i e d a n d y e t t h e s c h e d u l i n g a l g o r i t h m is n o t feasible. T h a t is, t h e r e is a n
+o v e r f l o w b e t w e e n t = 0 a n d t = T1T2 • • • T m . M o r e o v e r , a c c o r d i n g t o T h e o r e m 6
+t h e r e is a t = T (0 < T < T1T2 . . . Tin) a t w h i c h t h e r e is a n o v e r f l o w w i t h no
+p r o c e s s o r idle t i m e b e t w e e n t = 0 a n d t = T. T o b e specific, l e t a l , a 2 , . . . ,
+b~, b s , • • • , d e n o t e t h e r e q u e s t t i m e s of t h e m t a s k s i m m e d i a t e l y p r i o r t o T, w h e r e
+al , a2 , • • • a r e t h e r e q u e s t t i m e s of t a s k s w i t h d e a d l i n e s s t T, a n d b , , b2, • • • a r e
+t h e r e q u e s t t i m e s of t a s k s w i t h d e a d l i n e s b e y o n d T. T h i s is i l l u s t r a t e d i n F i g u r e 4.
+    T w o cases m u s t b e e x a m i n e d .
+     C a s e 1. N o n e of t h e c o m p u t a t i o n s r e q u e s t e d a t b , , b2, . . • w a s c a r r i e d o u t
+b e f o r e T. I n t h i s case, t h e t o t a l d e m a n d of c o m p u t a t i o n t i m e b e t w e e n 0 a n d T is
+
+                      L T / T i . J C1 + "LT/T~.J C2 + " "                                + LT/T~.J C~.
+S i n c e t h e r e is no p r o c e s s o r i d l e p e r i o d ,
+
+                     LT/Ti.J Ci +                 LT/T~J C2 + ""                          LT/T~_I C~ > T.
+Also, since x _> Lx.J for all x,
+
+                           (T/T1)C1 + (T/T2)C2 + . . . + (T/T,~)C,~ > T
+and
+
+                               (Cl/T~) + (C~/T2) + . . . + (Cm/T~) > 1,
+w h i c h is a c o n t r a d i c t i o n t o (7).
+     C a s e 2. S o m e of t h e c o m p u t a t i o n s r e q u e s t e d a t b~, b2, . . . w e r e c a r r i e d o u t
+b e f o r e T. S i n c e a n overflow occurs a t T, t h e r e m u s t exist a p o i n t T ' s u c h t h a t n o n e
+of t h e r e q u e s t s a t b~, b2, • • • w a s c a r r i e d o u t w i t h i n t h e i n t e r v a l T ' < t < T. I n
+o t h e r w o r d s , w i t h i n T ' < t < T, o n l y t h o s e r e q u e s t s w i t h d e a d l i n e s s t or b e f o r e T
+will h e e x e c u t e d , as i l l u s t r a t e d in F i g u r e 5. M o r e o v e r , t h e f a c t t h a t one or m o r e of
+t h e t a s k s h a v i n g r e q u e s t s a t t h e b,'s is e x e c u t e d u n t i l t = T t m e a n s t h a t all t h o s e
+r e q u e s t s i n i t i a t e d b e f o r e T ' w i t h d e a d l i n e s a t or b e f o r e T h a v e b e e n fulfilled b e f o r e
+T t. T h e r e f o r e , t h e t o t a l d e m a n d of p r o c e s s o r t i m e w i t h i n T ~ < t _< T is less t h a n or
+equal to
+
+
+                                           Journal of the AssociaUon for Computing Machinery, Vol 20, No. I, January 1973
+58                                                                                       C. L. L I U AND J. "W. LAYLAND
+
+                                                                              rI
+                                                                                   oI
+                                                                                   R
+                                                                ~1a2
+
+                                                                                               ~a3
+
+                                                                     l~b'lI                                          l
+                                                                          l
+                                                                          h
+                                                                          I                                          I
+                                                                          I
+                                                                          I                                          I
+                                                                          I             ~ b3                         I          L
+                                                                          1                                          iI
+
+                                           REQUESTS WITH DEADLINES AT % AND o3
+                                               WERE FULFILLED BEFORE T'
+        Fro. 5.    P r o c e s s i n g o v e r f l o w a t t i m e T w i t h o u t e x e c u t i o n of {b,} f o l l o w i n g T'
+
+
+ L(T-        T')/TiJ C~ +                L(T-            T')/T~_J C2 +... + L(T - T ' ) / T , J C,,.
+T h a t an overflow occurs at T means t h a t
+
+ L(T     -   T')/T~_I C~ +                L(T        -     T')T2J C2 +... +                          L(T-            T')/TmJ        C,,,
+                                                                                                                       > T-         T',
+which implies again
+                          (C1/T1) +-5 (C2/T2) + ...--5 (Cm/Tm) > 1,
+and which is a contradiction to (7). This proves the theorem.
+   As was pointed out above, the deadline driven scheduling algorithm is optimum
+in the sense t h a t if a set of tasks can be scheduled by any algorithm, it can be
+scheduled b y the deadline driven scheduling algorithm.
+
+
+8. A Mixed Scheduling Algorithm
+In this section we investigate a class of scheduling algorithms which are combina-
+tions of the rate-monotonic scheduling algorithm and the deadline driven schedul-
+ing algorithm. We call an algorithm in this class a mixed scheduling algorithm.
+T h e study of the mixed scheduling algorithms is m o t i v a t e d by the observation
+t h a t the interrupt hardware of present day computers acts as a fixed priority
+scheduler and does not appear to be compatible with a hardware dynamic sched-
+uler. On the other hand, the cost of implementing a software scheduler for the
+slower paced tasks is not significantly increased if these tasks are deadline driven
+instead of having a fixed priority assignment. T o be specific, let tasks 1, 2, • • • , k,
+the k tasks of shortest periods, be scheduled according to the fixed priority rate-
+monotonic scheduling algorithm, and let the remaining tasks, tasks k + 1,
+k + 2, • • • , m, be scheduled according to the deadline driven scheduling algorithm
+when the processor is not occupied b y tasks 1, 2, • • • , k.
+    Let a (t) be a nondecreasing function of t. We say that a (1) is sublinear if for all
+
+
+Journal of the Association for Computing Machinery, Vol 20, No 1, January 1973
+Scheduling Algorithms for Mulliprogramming                                                                   59
+
+t and all T
+                               a(T) < a(t + T) - a(t).
+T h e availability function of a processor for a set of tasks is defined as the accumu-
+lated processor time from 0 to t available to this set of tasks. Suppose t h a t k tasks
+h a v e been scheduled on a processor b y a fixed priority scheduling algorithm. L e t
+ak (t) denote the availability function of the processor for tasks k ~ 1, k W 2, •. • ,
+m. Clearly, ak (t) is a nondecreasing function of t. Moreover, ak (t) can be shown to
+be sublinear b y means of the critical time zone argument. We have:
+    THEOREM 8. I f a set of tasks are scheduled by the deadline driven scheduling
+algorithm on a processor whose availability function is sublinear, then there is no
+processor idle period to an overflow.
+   PROOF. Similar to t h a t of T h e o r e m 6.
+   THEOREM 9. A necessary and su~eient condition for the feasibility of the deadline
+driven scheduling algorithm with respect to a processor with availability function
+ak (t) is
+         Lt/T~+iJ Ck+l + Lt/Tk+~.j Ck+~ + " " +                        Lt/T,J        C , < ak(t)
+for all t's which are multiples of Tk+l , or Tk+2, • • • , or Tm .
+   PROOF. The proof is quite similar to t h a t oi T h e o r e m 7. To show the necessity,
+ observe t h a t at a n y m o m e n t the total d e m a n d of processor time cannot exceed the
+total available processor time. T h u s we m u s t h a v e
+         L.t/Tk+~.J Ck+l + L.t/Tk+~.J C~+2 + " " +                     [_t/T,~.J C,~ < a~(t)
+for any t.
+   To show the sufficiency, assume t h a t the condition stated in the t h e o r e m is
+satisfied and yet there is an overflow at T. E x a m i n e the two cases considered in the
+proof of T h e o r e m 7. For Case 1,
+      LT/Tm+i_] Ck+l-~ LT/Tk+2J Ck+2 W " " - ~                         L T / T m J C,~ > a~(T),
+which is a contradiction to the assumption. N o t e t h a t T is multiple of Tk+l, or
+Tk+2, . . . , or T ~ . F o r Case 2,
+ L(T- T')/Tk+i.J Ck+1 W t_(T- T')/Tk+2.J Ck+2-~- "'" W
+                                                       L ( T - T')/Tm.J C,~ > a~ (T -                      T').
+Let e be the smallest nonnegative n u m b e r such t h a t T -                T ' -- e is a multiple of
+Tk+l, or Tk+2, . . . , or Tm. Clearly,
+ L(T-      T'-~)/Tk+~.J      = L(T-          T')/T~+~_]              foreachj        = 1,2,-..        ,m-k
+and thus
+ L(T-      T'-   ~)/Tk+~J Ck+~+ L ( T - - T ' - - ~)/Tk+2A C~+2+ . . . +
+                     L.(T - T' - e)/Tm_J Cm > ak(T -- T') > ak(T -- T' -                                     e),
+which is a contradiction to the assumption. This proves the theorem.
+  Although the result in Theorem 9 is a useful general result, its application in-
+volves the solution of a large set of inequalities. I n any specific case, it m a y be
+advantageous to derive sufficient conditions on schedule feasibility rather t h a n work
+directly from Theorem 9. As an example, consider the special case in which three
+
+
+                             Journal of the Association for Computing Machinery, Vol 20, No. 1, J a n u a r y 1973
+60                                                                       C.L.      LIU AND J. W. LAYLAND
+
+
+tasks are scheduled by the mixed scheduling algorithm such that the task with the
+shortest period is assigned a fixed and highest priority, and the other two tasks are
+scheduled by the deadline driven scheduling algorithm. It may be readily verified
+that if
+         1   --   (C1/T1) - rain [(T~ - C1)/T2, (C~/T~)] > (C~/T2) + (C~/T3),
+then the mixed scheduling algorithm is feasible. It may be also verified that if
+C2 _~ al(T2),         L.T3/T2_J C2 -t- Ca _< ax( L.T3/T2.J T2), and
+                                                    ( LT3/T2.] + 1) C2 -t- Ca _< a~(T3),
+then the mixed scheduling algorithm is feasible.
+   The proof of these statements consists of some relatively straightforward but
+extensive inequality manipulation, and may be found in Liu [13]. Unfortunately,
+both of these sufficient conditions correspond to considerably lower processor
+utilization than does the necessary and sufficient condition of Theorem 9.
+
+
+9. Comparison and Comment
+The constraints in Theorem 9 strongly suggest that 100 percent utilization is not
+achievable universally by the mixed scheduling algorithm. The following simple
+example will illustrate this. Let Ti = 3, T2 = 4, T3 = 5, and C~ = C2 = 1. Since
+al (20) = 13, it can be easily seen that the maximum allowable C3 is 2. The cor-
+responding utilization factor is
+                                       U = i -I- ~- + ~ = 98.3%.
+If these three tasks are scheduled by the deadline driven scheduling algorithm, C2
+can increase to 2.0833-.. and achieve a 100 percent utilization. If they are all
+scheduled by the fixed priority rate-monotnic scheduling algorithm, Ca is restricted
+to 1 or less, and the utilization factor is restricted to at most
+                                      U = ~ - t - ¼ - t - ~ = 78.3%,
+which is only slightly greater than the worst case three task utilization bound.
+   Although a closed form expression for the least upper bound to processor utiliza-
+tion has not been found for the mixed scheduling algorithm, this example strongly
+suggests that the bound is considerably less restrictive for the mixed scheduling
+algorithm than for the fixed priority rate-monotonic scheduling algorithm. The
+mixed scheduling algorithm may thus be appropriate for many applications.
+
+
+10.    Conclusion
+In the initial parts of this paper, five assumptions were made to define the environ-
+ment which supported the remaining analytical work. Perhaps the most important
+and least defensible of these are (A1), that all tasks have periodic requests, and
+ (A4), that run-times are constant. If these do not hold, the critical time zone for
+each task should be defined as the time zone between its request and deadline
+during which the maximum possible amount of computation is performed by the
+tasks having higher priority. Unless detailed knowledge of the run-time and request
+periods are available, run-ability constraints on task run-times would have to be
+
+
+Journal of the Association for Computing Machinery, Vol. 20, No. 1, January 1973
+Scheduling Algorithms for Multiprogramming                                                            61
+
+computed on the basis of assumed periodicity and constant run-time, using a period
+equal to the shortest request interval and a run-time equal to the longest run-time.
+ None of our analytic work would remain valid under this circumstance, and a severe
+bound on processor utilization could well be imposed b y the task aperiodicity. The
+fixed priority ordering now is monotonic with the shortest span between request and
+deadline for each task instead of with the undefined request period. The same will
+be true if some of the deadlines are tighter than assumed in (A2), although the
+impact on utilization will be slight if only the highest priority tasks are involved. I t
+would appear t h a t the value of the implications of (A1) and (A4) are great enough
+to m a k e them a design goal for any real-time tasks which must receive guaranteed
+service.
+   I n conclusion, this paper has discussed some of the problems associated with
+multiprogramming in a hard-real-time environment typified b y process control and
+monitoring, using some assumptions which seem to characterize t h a t application.
+A scheduling algorithm which assigns priorities to tasks in a monotonic relation to
+their request rates was shown to be o p t i m u m among the class of all fixed priority
+scheduling algorithms. The least upper bound to processor utilization factor for this
+algorithm is on the order of 70 percent for large task sets. The dynamic deadline
+driven scheduling algorithm was then shown to be globally o p t i m u m and capable of
+achieving full processor utilization. A combination of the two scheduling algorithms
+was then discussed; this appears to provide most of the benefits of the deadline
+driven scheduling algorithm, and yet m a y be readily implemented in existing
+computers.
+
+REFERENCES
+ 1. MANACHER,G.K. Production and stabihzation of real-time task schedules. J. ACM 14'
+    3 (July 1967), 439-465.
+ 2. McKINNEY, J M. A survey of analytical time-sharing models. Computing Surveys 1,
+    2 (June 1969), 105-116.
+ 3. CODD,E . F . Multiprogram scheduling. Comm ACM 8, 6, 7 (June, July 1960), 347-350;
+    413-418.
+ 4. HELI~ER,J. Sequencing aspects of multiprogramming. J. ACM 8, 3 (July 1961), 426.-439.
+ 5. GRAHAM, R.L. Bounds for certain multiprocessmg anomalies. Bell System Tech. J. 45,
+    9 (Nov. 1966), 1563-1581.
+ 6. OSCHNER,B.P. Controlling a multiprocessor system. Bell Labs Record 44, 2 (Feb. 1966),
+     59-62.
+ 7. MUNTZ,R. R., AND COFFM~N, E. G., JR. Preemptive scheduling of real-time tasks on
+    multiprocessor systems. J. ACM 17, 2 (Apr 1970), 324-338.
+ 8. BERNSTEIN,A. J., ANDSHARP,J.C. A policy-driven scheduler for a time-sharing system.
+    Comm. ACM 14, 2 (Feb. 1971), 74-78.
+ 9. LAMPSON,B.W. A scheduling philosophy for multiprocessing systems. Comm. ACM 11,
+    5 (May, 1968), 347-360.
+10. MARTIN,J. Progr~nm~ng Real-Time Computer Systems, Prentice-Hall, Englewood Cliffs,
+    N.J., 1965.
+11. JIRAUCH,D.H. Software design techniques for automatic checkout. IEEE Trans. AES-$,
+    6 (Nov. 1967), 9 ~ .
+12. MARTIN,J. Op. clt., p. 35 ff
+13. LIu, C.L. Scheduling algorithms for hard-real-time multiprogramming of a single pro-
+    cessor. JPL Space Programs Summary 37-60, Vol. II, Jet Propulsion Lab., Calif. Inst.
+    of Tech., Pasadena, Calif., Nov. 1969.
+
+RECEIVED MARCH 1970; REVISED JANUARY 1972
+
+
+                           Journal of the Associatlon ior Cornputmg Machinery, Vol. 20, No. I, January 1973
+

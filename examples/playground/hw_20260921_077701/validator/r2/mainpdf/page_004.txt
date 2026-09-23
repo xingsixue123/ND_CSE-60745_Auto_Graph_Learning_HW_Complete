@@ -1,0 +1,53 @@
+28
+}
+29
+30
+if (WIFEXITED(status))
+31
+printf("parent: child %d exited with status %d\n",
+32
+(int) pid, WEXITSTATUS(status));
+33
+else if (WIFSIGNALED(status))
+34
+printf("parent: child %d killed by signal %d\n",
+35
+(int) pid, WTERMSIG(status));
+36
+37
+return EXIT_SUCCESS;
+38 }
+fork() returns twice, so its return value is the only thing that tells the two processes apart, and
+all three of its outcomes are handled. A negative value means no child was created. In the child
+(return value 0) execvp replaces the process image with /usr/bin/ls while keeping the same pid,
+searching PATH for the binary and passing a NULL-terminated argv. A successful exec never returns,
+so the lines after it run only on failure, where they report the error and leave via _exit rather than
+exit so the child does not flush the parent’s copy of the stdio buffers. In the parent (return value
+the child’s pid) waitpid blocks until that specific child terminates, which both sequences the output
+and reaps the child so it does not linger as a zombie.
+Compiled with gcc -Wall -Wextra -o forkexec forkexec.c (gcc 12.2.0, Debian Linux) and run
+in a directory holding two small files. The actual output was:
+total 8
+-rw-r--r-- 1 xing xing 1 Sep 21 16:37 alpha.txt
+-rw-r--r-- 1 xing xing 2 Sep 21 16:37 beta.txt
+parent: child 100 exited with status 0
+The first three lines come from ls after it has taken over the child, the last from the parent after
+waitpid returns. Setting PATH to a directory that does not exist exercises the failure branch:
+execvp:
+No such file or directory, then parent:
+child 107 exited with status 127.
+Ex. 2.4 (5 pts) — Why a thread context switch is much cheaper
+than a process one
+The claim holds for two threads of the same process. Threads belonging to different processes cost
+exactly what a process switch costs, because the expense comes from changing the address space,
+not from changing the scheduling entity.
+Threads of one process share an address space, so the switch leaves the memory map untouched:
+the kernel never reloads the page-table base register (CR3 on x86, TTBR on ARM) and so never
+invalidates the TLB. A process switch does both, and the register saving is the smaller half of its
+bill. The larger half is indirect and is paid after the switch returns: the incoming process resumes
+with a cold TLB and with caches still holding the outgoing process’s lines, and stalls while both
+refill. Tagged TLBs (ARM ASIDs, x86 PCIDs) let entries for several address spaces coexist and
+soften this, but do not remove it, since a different working set still displaces cached data.
+A thread switch still saves and restores the small per-thread state: the register file, including the
+program counter and stack pointer, and the thread’s kernel stack and control block. Per-process
+4

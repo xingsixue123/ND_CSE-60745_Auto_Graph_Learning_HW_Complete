@@ -1,0 +1,73 @@
+{
+  "source": "/home/xing/project/auto_hw_complete/playground/hw_20260921_077701/ingest/pdf/PaperList.pdf",
+  "dpi": 200,
+  "n_pages": 6,
+  "pages": [
+    {
+      "rendered_page": 1,
+      "png": "page_001.png",
+      "txt": "page_001.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 176,
+      "n_images": 0,
+      "n_vector_drawings": 51,
+      "figures": []
+    },
+    {
+      "rendered_page": 2,
+      "png": "page_002.png",
+      "txt": "page_002.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 49,
+      "n_images": 0,
+      "n_vector_drawings": 19,
+      "figures": []
+    },
+    {
+      "rendered_page": 3,
+      "png": "page_003.png",
+      "txt": "page_003.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 2150,
+      "n_images": 0,
+      "n_vector_drawings": 51,
+      "figures": []
+    },
+    {
+      "rendered_page": 4,
+      "png": "page_004.png",
+      "txt": "page_004.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 673,
+      "n_images": 0,
+      "n_vector_drawings": 19,
+      "figures": []
+    },
+    {
+      "rendered_page": 5,
+      "png": "page_005.png",
+      "txt": "page_005.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 137,
+      "n_images": 0,
+      "n_vector_drawings": 13,
+      "figures": []
+    },
+    {
+      "rendered_page": 6,
+      "png": "page_006.png",
+      "txt": "page_006.txt",
+      "width": 1700,
+      "height": 2200,
+      "n_chars": 20,
+      "n_images": 0,
+      "n_vector_drawings": 8,
+      "figures": []
+    }
+  ]
+}

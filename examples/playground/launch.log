@@ -1,15 +1,40 @@
-[2026-09-07 21:12:13] job cse60745_20260907_d29ddd created
-[2026-09-07 21:12:13] ingesting input ...
-converting CSE 60745_Fall 2026_HW1.doc -> pdf
-  CSE 60745_Fall 2026_HW1.doc: 3 pages -> /home/xing/project/auto_hw_complete/playground/cse60745_20260907_d29ddd/ingest/pages/CSE 60745_Fall 2026_HW1
-[2026-09-07 21:12:14] ingest done: 1 document(s)
+[2026-09-21 16:21:58] job hw_20260921_077701 created
+[2026-09-21 16:21:58] ingesting input ...
+converting PaperList.xlsx -> pdf
+  PaperList.xlsx: also exported to PaperList.csv (rows intact -- prefer this over the PDF text)
+  PaperList.xlsx: 6 pages rendered -> /home/xing/project/auto_hw_complete/playground/hw_20260921_077701/ingest/pages/PaperList
+  hw1_example.md: text document, 35444 chars (no rendering needed)
+  hw2_instruction.md: text document, 2337 chars (no rendering needed)
+[2026-09-21 16:22:00] ingest done: 1 document(s)
 
-job dir: /home/xing/project/auto_hw_complete/playground/cse60745_20260907_d29ddd
-output dir: /home/xing/project/auto_hw_complete/output/cse60745_20260907_d29ddd
-[2026-09-07 21:12:14] spawning master agent
-[2026-09-07 22:18:28] master finished rc=-15
+job dir: /home/xing/project/auto_hw_complete/playground/hw_20260921_077701
+output dir: /home/xing/project/auto_hw_complete/output/hw_20260921_077701
+[2026-09-21 16:22:00] spawning master agent
+[2026-09-21 18:04:48] master: $9.83 (job total $66.89)
+[2026-09-21 18:04:48] master finished rc=0
 
 ======================================================================
 MASTER REPORT
 ======================================================================
+**Done — master validator returned PASS with no outstanding defects.**
 
+`output/hw_20260921_077701/final/main.pdf` — 14 pages, all 8 exercises, 100 pts.
+
+**The cut** (6 problems, all workers passed):
+
+| id | exercise | pts | rounds |
+|---|---|---|---|
+| p1 | 2.1 schedule diagrams | 15 | 1 |
+| p2 | 2.2 + 2.3 process creation & fork/exec program | 10 | 1 |
+| p3 | 2.4 thread vs process context switch | 5 | 2 |
+| p4 | 2.5 + 2.6 syscall pseudo-code & zombies | 25 | 1 |
+| p5 | 2.7 three papers from the list | 22.5 | 1 |
+| p6 | 2.8 three searched papers | 22.5 | 2 |
+
+Merges: 2.2+2.3 (the argument and the code are the same mechanism), 2.5+2.6 (a zombie *is* the state `exit()` leaves behind and `waitpid()` reaps). 2.4 kept separate rather than bundled to save a spawn.
+
+**Reading the assignment.** The exercise text is a markdown file, so ingest produced no page renders — I recorded that in every brief so no worker hunted for a PNG that doesn't exist. `PaperList.xlsx` *did* render: the CSV flattens the merged `Topics` cells (only row 2-1 carries "Scheduling"), and the colour banding on `page_001.png` independently confirms 2-1…2-7 are one group. That cross-check is what fixed the Scheduling list, and what let me tell p6 exactly which seven papers were off-limits.
+
+**Round 1 failed** on 2 blocking + 4 major R9 violations — critiques in p5/p6 aimed at objections the papers answer a sentence or two later (Lottery Scheduling *does* examine short time windows; Buttazzo's conclusions *are* hedged; he *does* net context switches against EDF's deadline update). I fixed in place rather than respawning, since the validator had already verified every number in the summary paragraphs line by line. I re-read all six source papers myself before trusting the defect list — every defect confirmed, none was a validator error, and in four cases a stronger criticism was still available.
+
+**Round 2 passed** with one minor: a word silently elided inside a quotation. Given that this document's entire standard is quotation fidelity, I fixed it and re-validated rather than shipping it — **round 3 PASS, clean**. 3 of 5 submission rounds used, $57.06.

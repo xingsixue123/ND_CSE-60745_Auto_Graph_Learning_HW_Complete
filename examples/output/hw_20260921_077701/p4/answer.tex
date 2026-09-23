@@ -1,0 +1,198 @@
+\section*{Ex. 2.5 (20 pts) --- Pseudo-code for \texttt{fork}, \texttt{exec}, \texttt{waitpid}, \texttt{exit}}
+
+Following the hint, each algorithm below is the \emph{kernel-side implementation} of the
+call: the code the operating system runs when a user process traps into it. All four
+operate on the process table, whose entries are process control blocks (PCBs);
+\textsc{Current} denotes the PCB of the calling process, and a negative return value is
+the usual \texttt{errno} convention.
+
+\begin{algorithm}[H]
+\caption{\texttt{fork()} --- create a copy of the calling process}
+\label{p4:alg:fork}
+\begin{algorithmic}[1]
+\Procedure{Fork}{\,}
+  \If{no free process-table slot \textbf{or} no free pid}
+    \State \Return $-$\texttt{EAGAIN}
+  \EndIf
+  \State $c \gets$ \Call{AllocatePCB}{\,};\quad $c.\mathit{pid} \gets$ \Call{AllocatePid}{\,}
+  \State copy from \textsc{Current} into $c$: uid, gid, cwd, root, umask,
+         \Statex \hspace{\algorithmicindent} signal dispositions, resource limits, priority
+  \State $c.\mathit{parent} \gets \textsc{Current}$; append $c$ to $\textsc{Current}.\mathit{children}$
+  \State $c.\mathit{addrspace} \gets$ \Call{CopyOnWriteShare}{$\textsc{Current}.\mathit{addrspace}$}
+  \State mark every writable page read-only in both processes
+         \Comment{copy on first write}
+  \ForAll{descriptors $fd$ in $\textsc{Current}.\mathit{fdtable}$}
+    \State $c.\mathit{fdtable}[fd] \gets \textsc{Current}.\mathit{fdtable}[fd]$
+    \State increment the reference count of that open-file entry
+  \EndFor
+  \State $c.\mathit{cputime} \gets 0$;\quad $c.\mathit{pending\ signals} \gets \emptyset$
+  \State $c.\mathit{savedregs} \gets \textsc{Current}.\mathit{savedregs}$
+         \Comment{child resumes at the instruction after the trap}
+  \State $c.\mathit{savedregs}.\mathit{retval} \gets 0$
+         \Comment{what the child will see \texttt{fork} return}
+  \State $c.\mathit{state} \gets \textsc{Ready}$; \Call{Enqueue}{\emph{ready queue}, $c$}
+  \State \Return $c.\mathit{pid}$
+         \Comment{what the parent will see \texttt{fork} return}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+The two return-value assignments --- $0$ into the child's saved register, the child's pid
+into the parent's --- are the whole ``\texttt{fork} returns twice'' phenomenon: one call
+site, two saved register sets, two different values in the return register.
+
+\begin{algorithm}[H]
+\caption{\texttt{exec(path, argv, envp)} --- replace the caller's program image}
+\label{p4:alg:exec}
+\begin{algorithmic}[1]
+\Procedure{Exec}{$\mathit{path}, \mathit{argv}, \mathit{envp}$}
+  \State $\mathit{inode} \gets$ \Call{Namei}{$\mathit{path}$};
+         \textbf{if} $\mathit{inode} = \textsc{Null}$ \textbf{then return} $-$\texttt{ENOENT}
+  \State \textbf{if} $\mathit{inode}$ is not executable by $\textsc{Current}.\mathit{uid}$
+         \textbf{then return} $-$\texttt{EACCES}
+  \State $\mathit{hdr} \gets$ \Call{ReadHeader}{$\mathit{inode}$}
+  \State $\mathit{loader} \gets$ \Call{LoaderFor}{$\mathit{hdr}.\mathit{magic}$}
+         \Comment{magic number selects a.out / ELF / script}
+  \State \textbf{if} $\mathit{loader} = \textsc{Null}$ \textbf{then return} $-$\texttt{ENOEXEC}
+  \State $\mathit{kargv}, \mathit{kenvp} \gets$ \Call{CopyIntoKernel}{$\mathit{argv}, \mathit{envp}$}
+         \Comment{they live in the old address space}
+  \Statex \hspace{\algorithmicindent}\emph{--- point of no return: every error above is still
+          reportable to the caller ---}
+  \State \Call{DestroyAddressSpace}{$\textsc{Current}.\mathit{addrspace}$}
+  \State $\textsc{Current}.\mathit{addrspace} \gets \mathit{loader}.$\Call{MapImage}{$\mathit{inode}$}
+         \Comment{text r-x, data rw, bss zeroed}
+  \State create a fresh heap and user stack
+  \ForAll{signals $s$ caught by a user handler}
+    \State disposition of $s \gets \textsc{Default}$
+           \Comment{the handler's code is gone}
+  \EndFor
+  \Statex \hspace{\algorithmicindent}\emph{ignored dispositions and the blocked signal
+          mask are left untouched}
+  \State \textbf{close} every descriptor marked close-on-exec
+  \State \textbf{if} $\mathit{inode}$ is set-uid \textbf{then}
+         $\textsc{Current}.\mathit{euid} \gets \mathit{inode}.\mathit{owner}$
+  \State $\mathit{sp} \gets$ \Call{PushOntoNewStack}{$\mathit{kargv}, \mathit{kenvp}$}
+  \State $\textsc{Current}.\mathit{savedregs} \gets \{\,\mathit{pc}: \mathit{hdr}.\mathit{entry},\;
+         \mathit{sp}: \mathit{sp},\; \text{others}: 0\,\}$
+  \State \textbf{return to user mode}
+         \Comment{on success there is no caller left to return \emph{to}}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{\texttt{waitpid(pid, statusp, options)} --- collect a terminated child}
+\label{p4:alg:waitpid}
+\begin{algorithmic}[1]
+\Procedure{Waitpid}{$\mathit{pid}, \mathit{statusp}, \mathit{options}$}
+  \Loop
+    \State $\mathit{found} \gets \textsc{False}$
+    \ForAll{$c \in \textsc{Current}.\mathit{children}$ matching $\mathit{pid}$}
+      \Comment{$\mathit{pid}=-1$ matches any child}
+      \State $\mathit{found} \gets \textsc{True}$
+      \If{$c.\mathit{state} = \textsc{Zombie}$}
+        \State \textbf{if} $\mathit{statusp} \neq \textsc{Null}$ \textbf{then}
+               \Call{CopyOut}{$\mathit{statusp}, c.\mathit{exitstatus}$}
+        \State $\textsc{Current}.\mathit{childcputime} \mathrel{+}= c.\mathit{cputime} + c.\mathit{childcputime}$
+        \State remove $c$ from $\textsc{Current}.\mathit{children}$
+        \State $p \gets c.\mathit{pid}$;\quad \Call{FreePCB}{$c$};\quad \Call{FreePid}{$p$}
+               \Comment{the reaping step}
+        \State \Return $p$
+      \EndIf
+    \EndFor
+    \State \textbf{if} $\mathit{found} = \textsc{False}$ \textbf{then return} $-$\texttt{ECHILD}
+    \State \textbf{if} $\mathit{options}$ contains \texttt{WNOHANG} \textbf{then return} $0$
+    \State \textbf{if} a signal is pending for \textsc{Current} \textbf{then return} $-$\texttt{EINTR}
+    \State \Call{Sleep}{$\textsc{Current}$, \emph{its wait channel}}
+           \Comment{a child's \texttt{exit} wakes us; then rescan}
+  \EndLoop
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{\texttt{exit(status)} --- terminate the calling process}
+\label{p4:alg:exit}
+\begin{algorithmic}[1]
+\Procedure{Exit}{$\mathit{status}$}
+  \ForAll{open descriptors $fd$ of \textsc{Current}}
+    \State \Call{Close}{$fd$}
+           \Comment{drops the reference count; the last close releases the file}
+  \EndFor
+  \State \Call{ReleaseAddressSpace}{$\textsc{Current}.\mathit{addrspace}$}
+  \State release cwd, root, timers and file locks
+  \ForAll{$c \in \textsc{Current}.\mathit{children}$}
+    \State $c.\mathit{parent} \gets \mathit{init}$; move $c$ to $\mathit{init}.\mathit{children}$
+    \State \textbf{if} $c.\mathit{state} = \textsc{Zombie}$ \textbf{then}
+           \Call{Signal}{$\mathit{init}$, \texttt{SIGCHLD}}; \Call{Wakeup}{$\mathit{init}$}
+           \Comment{so \emph{init} reaps it}
+  \EndFor
+  \State $\textsc{Current}.\mathit{exitstatus} \gets \mathit{status}$; record CPU time and accounting in the PCB
+  \State $\textsc{Current}.\mathit{state} \gets \textsc{Zombie}$
+         \Comment{PCB and pid stay allocated until reaped}
+  \State \Call{Signal}{$\textsc{Current}.\mathit{parent}$, \texttt{SIGCHLD}};
+         \Call{Wakeup}{$\textsc{Current}.\mathit{parent}$}
+  \State \Call{Schedule}{\,}
+         \Comment{picks another process; \texttt{exit} never returns}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection*{How the four calls are inter-related}
+
+They are not four independent services but two pairs that bracket the life of a process.
+
+\texttt{fork} is the only way a Unix system makes a new process, and \texttt{exec} is the
+only way a process changes the program it runs. Neither alone can start a new program:
+\texttt{fork} produces a second copy of the caller, \texttt{exec} replaces the caller's
+own image. Running a new program is therefore necessarily both of them, \texttt{fork}
+then \texttt{exec} in the child. The two algorithms are built to meet: \texttt{fork}
+gives the child a duplicate descriptor table and the parent's credentials, and
+\texttt{exec} keeps exactly that table, less the close-on-exec entries, while discarding
+everything else.
+
+The split is what makes the arrangement useful. Between \texttt{fork} returning $0$ and
+\texttt{exec} overwriting the image there is a window in which the child is still running
+the parent's code and can rearrange precisely the state that \texttt{exec} preserves.
+That window is where a shell implements \texttt{ls > out}: the child closes descriptor
+$1$, reopens it on the file, then execs \texttt{ls}, which need know nothing about
+redirection.
+
+\texttt{exit} and \texttt{waitpid} are the matching pair at the other end, and they are a
+pair for one reason: the exit status has to outlive the process that produced it.
+\texttt{exit} can free the address space and the descriptors, but it cannot free the
+PCB, because nobody has read the status out of it yet; so it stores the status there,
+marks the process \textsc{Zombie} and signals the parent. \texttt{waitpid} is the other
+half of that transaction: it finds the zombie child, copies the status out, charges its
+CPU time to the parent, and only then releases the PCB and the pid. Until then the pid
+stays reserved, so ``wait for process $p$'' stays unambiguous.
+
+A shell's main loop is the whole mechanism in one cycle: \texttt{fork}; the child
+\texttt{exec}s the command; the parent blocks in \texttt{waitpid}; the child
+\texttt{exit}s and becomes a zombie; the parent's \texttt{waitpid} returns with the
+status, frees the PCB, and prints the next prompt.
+
+\section*{Ex. 2.6 (5 pts) --- Zombie processes}
+
+A zombie is a process that has already run \texttt{exit()} but has not yet been reaped.
+Its address space, open files and kernel stack are gone; all that is left is its
+process-table entry, holding the exit status, the pid and the CPU time it used.
+
+The kernel keeps that entry because the status belongs to the parent, and the child
+cannot report it once it no longer exists. The pid must stay allocated for the same
+reason: reusing it while the parent can still name it in \texttt{waitpid} would let the
+parent wait on an unrelated process.
+
+The cost is one process-table slot and one pid --- no memory, no CPU time, no
+descriptors. A zombie also cannot be killed, since it is already dead: \texttt{SIGKILL}
+is discarded, as no execution context is left to receive it. In \texttt{ps} it appears in
+state \texttt{Z}, with its command shown as \texttt{<defunct>}.
+
+It disappears when the parent calls \texttt{wait} or \texttt{waitpid}, or when the parent
+itself exits and \emph{init} inherits and reaps it. A long-lived parent that forks
+children and never waits leaks table entries until \texttt{fork} fails with
+\texttt{EAGAIN}, which is why such a parent should handle or explicitly ignore
+\texttt{SIGCHLD}.
+
+An orphan is the complement: a child still \emph{alive} when its parent dies.
+\emph{init} adopts it and reaps it when it eventually exits.

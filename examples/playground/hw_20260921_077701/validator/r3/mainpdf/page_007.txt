@@ -1,0 +1,57 @@
+Algorithm 4 exit(status) — terminate the calling process
+1: procedure Exit(status)
+2:
+for all open descriptors fd of Current do
+3:
+Close(fd)
+▷drops the reference count; the last close releases the file
+4:
+end for
+5:
+ReleaseAddressSpace(Current.addrspace)
+6:
+release cwd, root, timers and file locks
+7:
+for all c ∈Current.children do
+8:
+c.parent ←init; move c to init.children
+9:
+if c.state = Zombie then Signal(init, SIGCHLD); Wakeup(init)
+▷so init reaps it
+10:
+end for
+11:
+Current.exitstatus ←status; record CPU time and accounting in the PCB
+12:
+Current.state ←Zombie
+▷PCB and pid stay allocated until reaped
+13:
+Signal(Current.parent, SIGCHLD); Wakeup(Current.parent)
+14:
+Schedule( )
+▷picks another process; exit never returns
+15: end procedure
+How the four calls are inter-related
+They are not four independent services but two pairs that bracket the life of a process.
+fork is the only way a Unix system makes a new process, and exec is the only way a process
+changes the program it runs. Neither alone can start a new program: fork produces a second copy
+of the caller, exec replaces the caller’s own image. Running a new program is therefore necessarily
+both of them, fork then exec in the child. The two algorithms are built to meet: fork gives the
+child a duplicate descriptor table and the parent’s credentials, and exec keeps exactly that table,
+less the close-on-exec entries, while discarding everything else.
+The split is what makes the arrangement useful. Between fork returning 0 and exec overwriting
+the image there is a window in which the child is still running the parent’s code and can rearrange
+precisely the state that exec preserves. That window is where a shell implements ls > out: the
+child closes descriptor 1, reopens it on the file, then execs ls, which need know nothing about
+redirection.
+exit and waitpid are the matching pair at the other end, and they are a pair for one reason: the
+exit status has to outlive the process that produced it. exit can free the address space and the
+descriptors, but it cannot free the PCB, because nobody has read the status out of it yet; so it
+stores the status there, marks the process Zombie and signals the parent. waitpid is the other half
+of that transaction: it finds the zombie child, copies the status out, charges its CPU time to the
+parent, and only then releases the PCB and the pid. Until then the pid stays reserved, so “wait for
+process p” stays unambiguous.
+A shell’s main loop is the whole mechanism in one cycle: fork; the child execs the command; the
+parent blocks in waitpid; the child exits and becomes a zombie; the parent’s waitpid returns with
+the status, frees the PCB, and prints the next prompt.
+7

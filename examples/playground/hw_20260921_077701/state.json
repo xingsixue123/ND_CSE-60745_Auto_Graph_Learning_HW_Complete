@@ -1,0 +1,59 @@
+{
+  "job": "hw_20260921_077701",
+  "created": "2026-09-21 16:22:00",
+  "playground": "/home/xing/project/auto_hw_complete/playground/hw_20260921_077701",
+  "output": "/home/xing/project/auto_hw_complete/output/hw_20260921_077701",
+  "problems": {
+    "p1": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-21 16:27:10",
+      "finished": "2026-09-21 16:36:57"
+    },
+    "p2": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-21 16:37:10",
+      "finished": "2026-09-21 16:43:42"
+    },
+    "p3": {
+      "status": "done",
+      "rounds": 2,
+      "started": "2026-09-21 16:43:44",
+      "finished": "2026-09-21 16:49:21"
+    },
+    "p4": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-21 16:49:25",
+      "finished": "2026-09-21 16:59:02"
+    },
+    "p5": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-09-21 16:59:05",
+      "finished": "2026-09-21 17:15:40"
+    },
+    "p6": {
+      "status": "done",
+      "rounds": 2,
+      "started": "2026-09-21 17:15:43",
+      "finished": "2026-09-21 17:43:30"
+    }
+  },
+  "problem_order": [
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "p6"
+  ],
+  "master_rounds": 3,
+  "status": "master_finished",
+  "documents": [
+    "PaperList.xlsx"
+  ],
+  "master_session": "a8ae66ca-3dc9-4fc8-a371-944b33bf70b0",
+  "cost_usd": 66.8935
+}

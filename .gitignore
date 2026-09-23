@@ -25,3 +25,12 @@ playground/*.log
 playground/*.pid
 .last_run.pid
 **/.session_id
+
+# Papers an agent downloaded to read. Third-party copyrighted material (ACM, USENIX,
+# IEEE, author sites). Each agent's downloads.md records the URL it fetched and how it
+# verified the file was the genuine paper, so a run reproduces without shipping them.
+# Validators fetch their own copies to check against, into directories of their own
+# naming, so match on the filename rather than on one directory name.
+**/papers/**
+**/mypapers/**
+**/*papers*/*.pdf

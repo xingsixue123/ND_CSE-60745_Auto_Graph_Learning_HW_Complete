@@ -1,0 +1,995 @@
+        Shinjuku: Preemptive Scheduling
+          for µsecond-scale Tail Latency
+Kostis Kaffes, Timothy Chong, and Jack Tigar Humphries, Stanford University;
+              Adam Belay, Massachusetts Institute of Technology;
+         David Mazières and Christos Kozyrakis, Stanford University
+            https://www.usenix.org/conference/nsdi19/presentation/kaffes
+
+
+
+
+       This paper is included in the Proceedings of the
+       16th USENIX Symposium on Networked Systems
+            Design and Implementation (NSDI ’19).
+                  February 26–28, 2019 • Boston, MA, USA
+                              ISBN 978-1-931971-49-2
+
+
+
+                                           Open access to the Proceedings of the
+                                      16th USENIX Symposium on Networked Systems
+                                           Design and Implementation (NSDI ’19)
+                                                     is sponsored by
+       Shinjuku: Preemptive Scheduling for µsecond-scale Tail Latency
+
+                       Kostis Kaffes1             Timothy Chong1             Jack Tigar Humphries1
+
+                            Adam Belay2             David Mazières1        Christos Kozyrakis1
+
+                        1 Stanford University         2 Massachusetts Institute of Technology
+
+
+
+
+   Abstract                                                      incoming requests across multiple queues in a flow-
+                                                                 consistent manner; a polling thread serves requests in
+   The recently proposed dataplanes for microsecond scale        each queue in a first-come-first-served manner (FCFS)
+   applications, such as IX and ZygOS, use non-preemptive        without scheduling interruptions; optimizations such as
+   policies to schedule requests to cores. For the many real-    zero copy, run-to-completion, adaptive batching, and
+   world scenarios where request service times follow dis-       cache-friendly and thread-private data structures reduce
+   tributions with high dispersion or a heavy tail, they allow   overheads. The resulting request scheduling is known as
+   short requests to be blocked behind long requests, which      distributed queuing and FCFS scheduling, or d-FCFS.
+   leads to poor tail latency.
+                                                                    d-FCFS is effective when request service times ex-
+      Shinjuku is a single-address space operating system
+                                                                 hibit low dispersion [57], as is the case for get/put
+   that uses hardware support for virtualization to make
+                                                                 requests to simple in-memory key-value stores (KVS)
+   preemption practical at the microsecond scale. This al-
+                                                                 such as Memcached [43]. d-FCFS fares poorly un-
+   lows Shinjuku to implement centralized scheduling poli-
+                                                                 der high dispersion or heavy-tailed request distributions
+   cies that preempt requests as often as every 5µsec and
+                                                                 (e.g., bimodal, log-normal, Zipf, or Pareto distribu-
+   work well for both light and heavy tailed request service
+                                                                 tions), as short requests get stuck behind older long ones
+   time distributions. We demonstrate that Shinjuku pro-
+                                                                 assigned to the same queue. d-FCFS is also not work-
+   vides significant tail latency and throughput improve-
+                                                                 conserving, an effect exacerbated by implementations
+   ments over IX and ZygOS for a wide range of workload
+                                                                 based on RSS’s flow-consistent hashing, which approx-
+   scenarios. For the case of a RocksDB server processing
+                                                                 imates true d-FCFS only with high numbers of client
+   both point and range queries, Shinjuku achieves up to
+                                                                 connections spreading requests out evenly over queues.
+   6.6× higher throughput and 88% lower tail latency.
+                                                                    ZygOS [46] improved on d-FCFS by implementing
+   1    Introduction                                             low-overhead task stealing: threads that complete short
+   Popular cloud applications such as web search, social         requests steal work from threads tied up by longer ones.
+   networks, and machine translation fan out requests to         It approximates centralized FCFS scheduling (c-FCFS),
+   hundreds of communicating services running on thou-           in which all threads serve a single queue. Work steal-
+   sands of machines. End-to-end response times are then         ing is not free. It requires scanning queues cached on
+   dominated by the slowest machine to respond [23]. Re-         non-local cores and forwarding system calls back to a
+   acting to user actions within tens of milliseconds re-        request’s home core. However, if service times exhibit
+   quires that each participating service process requests       low dispersion and there are enough client connections
+   with tail latency in the range of ten to a few hundred        for RSS to spread requests evenly across queues, steal-
+   microseconds [14]. Unfortunately, thread management           ing happens infrequently.
+   in modern operating systems such as Linux is not de-             Unfortunately, c-FCFS is also inefficient for work-
+   signed for microsecond-scale tasks and frequently pro-        loads with request times that follow heavy-tailed distri-
+   duces long, unpredictable scheduling delays resulting in      butions or even light-tailed distributions with high dis-
+   millisecond-scale tail latencies [36, 37].                    persion. These workloads include search engines that
+      To compensate, researchers have developed network          score and rank a number of items depending on the pop-
+   stacks, dataplanes, and full applications that bypass         ularity of search terms [13]; microservices and function-
+   the operating system [44, 31, 39, 32, 16, 45, 22].            as-a-service (FaaS) frameworks [17]; and in-memory
+   Most of these systems operate in a similar way: the           stores or databases, such as RocksDB [26], Redis [35],
+   NIC uses receive-side scaling (RSS) [21] to distribute        and Silo [54], that support both simple get/put requests
+
+
+
+
+USENIX Association                         16th USENIX Symposium on Networked Systems Design and Implementation               345
+      and complex range or SQL queries, and use slower non-          while it supports up to 5x larger load for heavy-tailed
+      volatile memory in addition to fast DRAM. Theory tells         and multi-modal distributions. Using RocksDB, a pop-
+      us that such workloads do best in terms of tail latency        ular key-value store that also supports range queries,
+      under processor sharing (PS) [57], where all requests          we show that Shinjuku improves upon ZygOS by up to
+      receive a fine-grain, fair fraction of the available pro-      6.6× in terms of throughput at a given 99th percentile
+      cessing capacity.                                              latency. We show that Shinjuku scales well with the
+         To approximate PS, we need preemption, as built into        number of cores available, can saturate high speed net-
+      any modern kernel scheduler including Linux. However,          work links, and is efficient even with small connection
+      any service that uses one thread per request or connec-        counts.
+      tion and allows Linux to manage threads will experi-              The rest of the paper is organized as follows.
+      ence millisecond-scale tail latencies, because the ker-        §2 motivates the need for preemptive scheduling at
+      nel employs preemption at millisecond granularities and        microsecond-scale. §3 discusses the design and imple-
+      its policies are not optimized for microsecond-scale tail      mentation of Shinjuku. §4 presents a thorough quantita-
+      latency [36, 37]. User-level libraries for cooperative         tive evaluation while §5 discusses related work.
+      threading can avoid the overheads of kernel schedul-              Shinjuku is open-source software.               The
+      ing [56]. However, it is difficult to yield often enough       code is available at https://github.com/
+      during requests with longer processing times and with-         stanford-mast/shinjuku.
+      out many blocking I/O calls, which are precisely the re-       2   Motivation
+      quests impacting tail latency.
+                                                                     Background: We aim to improve the SLO of latency-
+         This paper presents Shinjuku, a single-address space        critical services on a single server. For cloud services
+      operating system that implements preemptive schedul-           and microservices with high fan-out, Shinjuku must
+      ing at the microsecond-scale and improves tail latency         achieve low tail latency at the microsecond scale [14].
+      and throughput for both light- and heavy-tailed service        Low average or median latency is not sufficient [23].
+      time distributions. Shinjuku deemphasizes RSS in favor         While tail latency can be improved through overprovi-
+      of true centralized scheduling by one or more dedicated        sioning, doing so is not economical for services with
+      dispatcher threads with centralized knowledge of load          millions of users. To be cost-effective, Shinjuku must
+      and service time distribution. It leverages hardware sup-      maintain low tail latency in the face of high request
+      port for virtualization—specifically posted interrupts—        throughput. Finally, it must be practical for a wide
+      to achieve preemption overheads of 298 cycles in the           range of workloads and support intuitive APIs that sim-
+      dispatcher core and 1,212 cycles in worker cores. The          plify development and maintenance of large code bases.
+      single address space architecture allows us to optimize           The key to achieving low tail latency and high
+      context switches down to 110 cycles.                           throughput is effective request scheduling, which re-
+         Fast preemption enables scheduling policies that            quires both good policies and low-overhead mechanisms
+      switch between requests as often as every 5 µsec when          that operate at the microsecond scale. Good policies are
+      needed. We developed two policies. The first assumes           easy to achieve in isolation. Linux already supplies ap-
+      no prior knowledge of request service times and uses           proximations of the optimal policies for workloads we
+      preemption to select at fine granularity between FCFS or       target. Unfortunately, the Linux kernel scheduler oper-
+      PS based on observed service times. The second policy          ates at the millisecond scale because of preemption and
+      assumes we can segregate requests with different ser-          context switch overheads and the complexity of simul-
+      vice level objectives (SLO) in order to ensure good tail       taneously accommodating batch, background, and inter-
+      latency for both short and long requests. Both policies        active tasks at different time scales [36, 37].
+      are work conserving and work well across multiple dis-            Recent proposals for user-level networking stacks,
+      tributions of service times (light-tailed, heavy-tailed, bi-   dataplanes, RPC protocols, and applications [22, 44,
+      modal, or multimodal). The two policies make Shinjuku          16, 45, 31, 39, 32] sidestep the bloated kernel network-
+      the first system to support microsecond-scale tail latency     ing and thread management stacks in order to optimize
+      for workloads beyond those with fixed or low-dispersion        tail latency and throughput. Most of these systems use
+      service time distributions.                                    RSS to approximate a d-FCFS scheduling policy [21],
+         We compare Shinjuku with IX [16] and ZygOS [46],            the IX dataplane being a canonical example [16]. Zy-
+      two state-of-the-art dataplane operating systems. Us-          gOS improves on IX by using work stealing to ap-
+      ing synthetic workloads, we show that Shinjuku matches         proximate c-FCFS [46]. Linux applications built with
+      IX ’s and ZygOS’ performance for light-tailed workloads        libevent [47] or libuv [5] also implement c-FCFS,
+
+
+
+
+346    16th USENIX Symposium on Networked Systems Design and Implementation                                 USENIX Association
+                                                                                                 d-FCFS            c-FCFS       c-PRE-SQ     PS
+                            50                                          400                                                                       1000
+
+
+
+
+    99% Tail Latency (us)
+                            40                                                                                                                         800
+                                                                        300
+                            30                                                                                                                         600
+                                                                        200
+                            20                                                                                                                         400
+                                                                        100
+                            10                                                                                                                         200
+
+                            0                                                             0                                                                      0
+                                 0       0.2    0.4    0.6    0.8   1                            0           0.2     0.4    0.6        0.8    1                      0        0.2   0.4    0.6   0.8   1
+                                                 Load (%)                                                             Load (%)                                                       Load (%)
+
+                                               (a) Exp(1)                                                    (b) log-normal(1, 10)                                              (c)
+                                                                                                                                                                     Bimodal(99.5 − 0.5, 0.5 − 500)
+
+                                        Figure 1: Simulation results for different workloads and scheduling policies for a 16-core system.
+
+                                                                                                 d-FCFS            c-FCFS       c-PRE-MQ     PS
+
+                            100                                                                                                                                  500
+
+
+
+
+    99% Tail Latency (us)                                               99% Tail Latency (us)
+                             80                                                                 1000                                                             400
+
+
+
+
+                                                                                                                                                  99% Slowdown
+                             60                                                                                                                                  300
+
+                             40                                                                 500                                                              200
+
+                             20                                                                                                                                  100
+
+                                0                                                                    0                                                               0
+                                    0              0.5              1                                    0                    0.5             1                          0              0.5            1
+                                                 Load (%)                                                                   Load (%)                                                  Load (%)
+
+
+                                           (a) 1µs Requests                                                    (b) 100µs Requests                                            (c) Total 99% Slowdown
+
+                                               Figure 2: Simulation results for Bimodal(50 − 1, 50 − 100) for a 16-core system.
+   but at much higher overheads due to the use of interrupts                                                                     d-FCFS is a poor option for heavy-tailed request dis-
+   for request distribution instead of RSS and polling.                                                                       tributions [42], as found in search engines [38] or in-
+      Policy comparison: In order to quantify the dif-                                                                        duced by activities such as garbage collection or com-
+   ferences between different scheduling policies, we de-                                                                     paction [23, 6, 26]. Plot (b) shows performance un-
+   veloped a discrete event simulator. The simulator al-                                                                      der a heavy-tailed log-normal distribution with mean
+   lowed us to configure parameters such as scheduling                                                                        µ = 1 µsec and standard deviation σ = 10 µsec. Any
+   policy, number of host cores, system load, service and                                                                     long request blocks every short request assigned to the
+   inter-arrival time distributions as well as various system-                                                                same queue in d-FCFS. c-FCFS performs significantly
+   related overheads. Figure 1 compares idealized ver-                                                                        better as a worker can service any request; short re-
+   sions of scheduling policies—i.e., no stealing or pre-                                                                     quests are only delayed when most workers simultane-
+   emption overhead—using the simulator. Plot (a) shows                                                                       ously process older long requests, which is uncommon
+   a light-tailed exponential distribution of service times                                                                   for the log-normal distribution.
+   with mean µ = 1 µsec, representative of workloads such                                                                        c-FCFS performs significantly worse under a light-
+   as the get/set requests of in-memory key-value stores.                                                                     tailed bimodal distribution, commonly found in object
+   d-FCFS is arguably tolerable under such simple work-                                                                       stores and databases that mix simple get/put requests
+   loads, but suffers at moderate and high load as requests                                                                   with complex range or relational queries [35, 26, 54].
+   are not perfectly distributed across workers. c-FCFS                                                                       Plot (c) shows such a distribution in which 99.5% of re-
+   is optimal under such workloads, while PS is slightly                                                                      quests take 0.5µsec and 0.5% take 500µsec. Compared
+   worse because it preempts even short requests. The PS                                                                      to a heavy-tailed case, the bimodal distribution’s long
+   time slice used for all simulations is 0.1 µsec.                                                                           requests are not as long but far more frequent. PS han-
+
+
+
+
+USENIX Association                                                  16th USENIX Symposium on Networked Systems Design and Implementation                                                                   347
+      dles both cases in Plots (b) and (c) well by preempting
+      long requests to interleave execution of short ones.
+         Figure 2 provides further insights by separating the
+      performance of short and long requests in a bimodal
+      workload with service times evenly split between 1 µsec
+      and 100 µsec. This approximates a KVS in which half
+      of the requests are get/put requests and the other half are
+      range queries. The tail latency for the two request types
+      is drawn separately in Plots (a) and (b), and Plot (c)
+      shows the 99th percentile of the request slowdown for
+      all requests, which is the ratio of a request’s overall la-
+      tency to its service time. This ratio is a useful metric for                 Figure 3: Shinjuku system design.
+      measuring how well we achieve our goal of reducing
+      queuing time for all request types: if this ratio is small,        3.1   Design Overview
+      it means that queuing time is small for all types and no           Figure 3 summarizes the key components in Shinjuku
+      requests are affected by the requests of different types.          and the typical request flow. Incoming requests are first
+                                                                         processed by the networking subsystem that handles
+         Plot 2a shows that both d-FCFS and c-FCFS heavily
+                                                                         all network protocol processing and identifies request
+      penalize 1-µsec requests. Plot 2b shows that c-FCFS is
+                                                                         boundaries ¶. The networking subsystem can be im-
+      marginally better than PS for 100 µsec requests, as it
+                                                                         plemented using one or more dedicated cores or hyper-
+      effectively prioritizes older, long requests that would be
+                                                                         threads [22], a smartNIC [33, 53], or a combination of
+      preempted by PS. Plot 2c shows that, in relative terms,
+                                                                         the two. By separating network processing from request
+      the penalty c-FCFS inflicts on short requests dwarfs any
+                                                                         scheduling, Shinjuku can be combined with a range of
+      benefit to long requests.
+                                                                         networking protocols that optimize for different condi-
+         Shinjuku approach: Shinjuku implements the c-                   tions (UDP, TCP, ROCE [52], TIMELY [41], etc.) and
+      PRE policies (see §3.4) that achieve the best of both              various optimized network stacks [31, 28, 22]. The net-
+      worlds between PS and c-FCFS as shown in Figures 1                 working subsystem passes requests to a centralized dis-
+      and 2. The reason other recent systems cannot imple-               patcher thread · that will queue and schedule them to
+      ment similar policies is that these policies require pre-          worker threads. The dispatcher generates a context for
+      emption at arbitrary execution points. Preemption typi-            each incoming request in order to support preemption
+      cally involves interrupts and kernel threads whose over-           and rescheduling. In its simplest form, the dispatcher
+      heads are incompatible with microsecond-scale laten-               maintains a single queue for all pending requests. The
+      cies. Therefore, Shinjuku aims to achieve the follow-              dispatcher sends requests to worker threads ¸, each us-
+      ing goals: 1) Implement low-overhead preemption and                ing a dedicated hardware core or hyperthread. Most re-
+      context switching mechanisms for user-level threads. 2)            quests will complete their execution without interrup-
+      Use these mechanisms to build scheduling policies that             tion. Network processing for any replies can take place
+      work well across all possible distributions of service             either at the networking subsystem or the worker thread
+      times for microsecond-scale workloads.                             itself to optimize for latency. At a minimum, the worker
+                                                                         thread notifies the networking subsystem to free any
+      3     Shinjuku                                                     buffer space allocated for the incoming request ¹.
+      Shinjuku1 is a single-address space operating system for              The dispatcher uses timestamps to identify long run-
+      low-latency applications. Shinjuku is a significant de-            ning requests that should be preempted based on the
+      parture from the common pattern in IX [16] and Zy-                 scheduling policy. Assuming there are queued requests,
+      gOS [46], which rely heavily on RSS to distribute in-              we preempt running requests after 5µsec to 15µsec for
+      coming requests to workers that process them without               the workloads we studied (see §4), which is extremely
+      interruption. Instead, Shinjuku uses a centralized queu-           frequent compared to the time slice in the Linux kernel.
+      ing and scheduling architecture and relies on low over-            For example, the CFS scheduler has a target preemption
+      head and frequent preemption in order to ensure low tail           latency of 6ms and a minimum one of 0.75ms. The dis-
+      latency for a wide variety of service time distributions.          patcher sends an interrupt to the worker thread º, which
+                                                                         performs a context switch and receives a different re-
+         1 Shinjuku (新宿駅）is a major train station in Tokyo that serves   quest to run from the dispatcher. The long request is
+      millions traveling on 12 lines of various types and speeds.        re-enqueued » in the dispatcher and processed later us-
+
+
+
+
+348       16th USENIX Symposium on Networked Systems Design and Implementation                                   USENIX Association
+     Preemption               Sender    Receiver      Total     Each core has a local APIC and an I/O APIC is at-
+     Mechanism                  Cost       Cost     Latency     tached to the system bus. To send an IPI, the sending
+     Linux Signal              2084        2523        4950     core writes registers in its local APIC which propagates
+                                                                the interrupt via the I/O APIC to the destination core’s
+     Vanilla IPI               2081        2662        4219
+                                                                APIC, which in turn vectors execution to an interrupt
+     IPI Sender-only Exit      2081        1212        2768     handler.
+     IPI Receiver-only Exit     298        2662        3433        We extended Dune to support IPIs by virtualizing the
+     IPI No Exits               298        1212        1993     local APIC registers. When a non-root thread on core
+                                                                A writes its virtual APIC to send interrupt number V to
+   Table 1: Average preemption overhead in cycles.              core B, this causes a VM exit to Dune running in root
+   Sender/receiver cost refers to cycles consumed in the        mode. Dune writes V to core B’s posted interrupt de-
+   sending/receiving core, including the receiver overhead      scriptor, and then uses the real APIC to send interrupt
+   of invoking an empty interrupt handler. Total cost in-       242 to core B. That causes core B to perform a VM exit
+   cludes interrupt propagation through the system bus.         to an interrupt handler in Dune, which injects interrupt
+   Hence, it is not equal to the sum of sender and receiver     number V into non-root mode on resuming the applica-
+   overhead. For “IPI Sender-only Exit” and “Vanilla IPI,”      tion.
+   the receiver starts interrupt processing before the sender
+   returns from its VM exit.                                       As Table 1 shows, this vanilla implementation of pre-
+                                                                emption using IPIs is slightly faster than Linux signals
+                                                                but still suffers from significant overheads due to the
+   ing steps ·-» as many times as needed.
+                                                                cost of VM exits in both the sender and the receiver.
+      Since Shinjuku is a single-address space operating
+   system, communication between its components occurs             Optimized interrupt delivery. We first focus on re-
+   over shared memory. We use dedicated pairs of cache          moving the VM exit on the receiving core B (the Shin-
+   lines for each pair of communicating threads (see §3.5).     juku worker) using posted interrupts, an x86 feature
+      Similar to IX and ZygOS, Shinjuku leverages the           for receiving interrupts without a VM exit. To enable
+   Dune system for process virtualization [15]. With Dune,      posted interrupts, Dune on B configures its hardware-
+   Linux and the Dune kernel module run in VMX root             defined VM control structure (VMCS) to recognize in-
+   mode ring 0, where a hypervisor would run in a virtu-        terrupt 242 as the special posted interrupt notification
+   alized system. Shinjuku runs in VMX non-root mode            vector. B also registers its posted interrupt descriptor
+   ring 0, where a guest OS would run. This allows it to        with the VMCS. Core A still performs a VM exit upon
+   use very low overhead interrupts while separating the        writing the virtual APIC. Dune code on A writes V into
+   control from the data plane. The application context that    B’s posted interrupt descriptor and sends interrupt 242 to
+   uses Shinjuku can run in VMX non-root mode ring 0 or         B. However, B then directly injects interrupt V without
+   ring 3. For the results in §4, we run applications in VMX    a VM exit. Table 1 shows that eliminating the receiver-
+   non-root mode ring 0 to avoid the address space cross-       side VM exit reduces receiver overhead by 54% (from
+   ings between Shinjuku and the application code. There        2662 to 1212 cycles). This allows frequent preemption
+   is a separate instance of Shinjuku for each low-latency      of worker threads without significant reduction in use-
+   application running on the server.                           ful worker throughput. This receiver overhead consists
+                                                                of modifications to hardware structures, and it cannot be
+   3.2    Fast Preemption                                       significantly improved without hardware changes, such
+   To use preemptive scheduling at microsecond latencies,       as support for lightweight user-level interrupts [51].
+   Shinjuku requires fast preemption. A naive approach             Optimized interrupt sending. Finally, we remove
+   would be for the dispatcher to notify workers using          the VM exit on the sending core (dispatcher thread) by
+   Linux signals. As we show in Table 1, however, sig-          trusting the Shinjuku dispatcher with direct access to the
+   nals incur high overheads for both the sender and the        real (non-virtual) APIC. Using the extended page ta-
+   receiver (roughly 2.5 µsec on a 2GHz machine). They          ble (EPT), we map both the posted interrupt descriptors
+   require user- to kernel-space transitions plus some ker-     of other cores and the local APIC’s registers into the
+   nel processing.                                              guest physical address space of the Shinjuku dispatcher.
+      Preemption through interrupts. Direct use of inter-       Hence, the dispatcher can directly send an IPI without
+   processor interrupts (IPIs) is potentially faster than       incurring a VM exit. Table 1 shows that eliminating the
+   signals. x86 processors implement IPIs using the             sender-side VM exit reduces sender overheads down to
+   Advanced Programmable Interrupt Controller (APIC).           298 cycles (149ns in a 2GHz system). This improves
+
+
+
+
+USENIX Association                        16th USENIX Symposium on Networked Systems Design and Implementation               349
+            Mechanism       Linux process      Dune process        cycles (18 to 55ns for a 2GHz system).
+        swapcontext                     985             2290       3.4    Preemptive Scheduling
+        No signal mask                  140              140       The centralized dispatcher and fast preemption and con-
+         No FP-restore                   36               36       text switch mechanisms allow Shinjuku to implement
+                                                                   preemptive scheduling policies. We developed two poli-
+          No FP-save                    109              109
+                                                                   cies that differ on whether we can differentiate a pri-
+      Table 2: Average overhead in clock cycles of different       ori between requests types. The policies rely on fre-
+      context-switch mechanisms for both an ordinary Linux         quent preemption to provide near-optimal tail latency
+      process and the Dune process used by Shinjuku.               for any workload, approximating c-FCFS for low dis-
+                                                                   persion workloads and PS for all other cases.
+                                                                      Single queue (SQ) policy: This policy assumes that
+      dispatcher scalability and allows it to serve more re-
+                                                                   we do not differentiate a priori between request types
+      quests per second and/or more worker threads (cores).
+                                                                   and that there is a single service-level agreement (SLO)
+         Table 1 presents the result of combining the sender-
+                                                                   for tail latency. This is the case, for example, in a search
+      side and receiver-side optimization for the interrupt de-
+                                                                   service where we cannot know a priori which requests
+      livery used to support preemption in Shinjuku. The
+                                                                   will have longer service times. All incoming requests
+      low sender-side overhead (298 cycles) makes it prac-
+                                                                   are placed in a single FCFS queue. When a worker is
+      tical to build a centralized, preemptive dispatcher that
+                                                                   idle, the dispatcher assigns to it the request at the head
+      handles millions of scheduling actions per second. The
+                                                                   of the queue. If requests are processed quickly, this pol-
+      low receiver-side overhead (1212 cycles) makes it prac-
+                                                                   icy operates as centralized FCFS. The dispatcher uses
+      tical to preempt requests as often as every 5µsec in order
+                                                                   timestamps to identify any request running for more
+      to schedule longer requests without wasting more than
+                                                                   than a predefined quantum (5 to 15µsec in our exper-
+      10% of the workers’ throughput.
+                                                                   iments) and, assuming the queue is not empty, preempts
+      3.3    Low-overhead Context Switch                           it. The request is placed back in the queue and the
+      When a request is scheduled to an idling core or upon        worker is assigned the request at the current head of the
+      preemption, we context switch between the main con-          queue. The c-PRE-SQ policy evaluated through simula-
+      text in each worker and the request handling con-            tion in Figure 1 is this single queue policy.
+      text.    The direct approach would be to use the                Multi queue (MQ) policy: This policy assumes that
+      swapcontext function in the Linux ucontext li-               the network subsystem can identify different request
+      brary. According to Table 2, the overhead is signif-         types. For example, it can parse the request header
+      icant in an ordinary Linux process and doubles when          for KVS like Redis and RocksDB and separate simple
+      used in a Dune process. swapcontext requires a               get/put requests from complex range query requests [33]
+      system call to set the signal masks during the switch,       or use different ports for different request types. Linux
+      which requires a VM exit in Dune. The rest of the work       already supports peeking into packets with eBPF [2].
+      in swapcontext—i.e., saving/restoring register state         Each request type can have a different tail latency SLO.
+      and the stack pointer—does not require system calls.         The dispatcher maintains one queue per request type. If
+         Table 2 evaluates context switch optimizations. First,    only one queue has pending requests, this policy oper-
+      we skip setting the signal mask which eliminates the         ates just like the single queue policy described above. If
+      system call and brings Dune to parity with ordinary          more than one queue is non empty, the dispatcher must
+      Linux. This introduces the limitation that all tasks be-     select a queue to serve when a worker becomes idle or
+      longing to the same application need to share the same       a request is preempted. Once the queue is selected, the
+      signal mask. Next, we exploit that the main worker           dispatcher always takes the request at the head.
+      context does not use floating (FP) instructions. When           The queue selection algorithm is inspired by
+      switching from a request context to the worker context,      BVT [24], a process scheduling algorithm for latency
+      we must save FP registers as they may have been used in      sensitive tasks. In BVT, each process has a warp factor
+      request processing, but we do not need to restore them       that quantifies its priority compared to other processes.
+      for the worker context. When switching from the worker       For Shinjuku, we need a similar warp factor that favors
+      context to a request context, we skip saving FP registers    requests with smaller target latency in the short term,
+      and just restore them for the request context. Shinjuku      but also considers aging of requests with longer latency
+      uses the last two options in Table 2 for context switching   targets. Since Shinjuku schedules requests and not long
+      in worker cores. The overall cost ranges from 36 to 109      running processes with priorities like BVT, the selec-
+
+
+
+
+350    16th USENIX Symposium on Networked Systems Design and Implementation                                  USENIX Association
+   tion algorithm shown below uses as input the target SLO            API: To use Shinjuku, applications need to reg-
+   latency for each queue (e.g., target 99th percentile la-       ister three callback functions: the init() func-
+   tency). For the request at the head of each queue, the         tion that initializes global application state; the
+   algorithm uses timestamps to calculate the ratio of the        init per core(int core num) function that ini-
+   time it has already spent in the system (queuing time) to      tializes application state for each worker thread
+   the SLO target latency for this request type. The queue        (e.g. local variables or configuration options); the
+   with the highest such ratio is selected. The algorithm         reply * handle request(request *) func-
+   initially favors short requests that can only tolerate short   tion that handles a single application-level request and
+   queuing times, but eventually selects long requests that       returns a pointer to the reply data.
+   may have been waiting for a while. The per-queue SLO               Context management: We use a modified version of
+   is a user-set parameter. In our experiments, we set it by      the Linux ucontext library for context management.
+   running each request type individually using the single        The context structure consists of a machine-specific rep-
+   queue policy and use the observed 99% latency. This            resentation of the saved state, the signal mask, a pointer
+   captures the requirement that the performance of a re-         to the context stack, and a pointer to the context that will
+   quest type should not be affected by the existence of re-      be resumed when this context finishes execution. The
+   quests with different service time distributions.              dispatcher allocates context objects and stack space for
+    1 Queue Selection Policy                                      each request from a memory pool. They are freed by
+                                                                  the dispatcher when the request context completes exe-
+     1: procedure Q UEUE S ELECTION ( QUEUES ):
+                                                                  cution and is returned by a worker thread.
+     2:    max ← 0
+                                                                      Inter-thread communication: In adition to preemp-
+     3:    max queue ← −1
+                                                                  tion, we use a low-overhead, shared memory commu-
+     4:    time ← timestamp()
+                                                                  nication scheme similar to that used in [50]. Each pair
+     5:    for queue in queues do
+                                                                  of threads, running on dedicated cores or hyperthreads,
+     6:        cur ratio ← time−queue[0].timestamp
+                                    queue.SLO                     communicates over shared pairs of cache lines, one for
+     7:        if cur ratio > max then
+                                                                  each direction of communication. The sending thread
+     8:            max ← cur ratio
+                                                                  fills the cache line with the data it wants to send, e.g.
+     9:            max queue ← queue
+                                                                  request or context pointers, as shown in Figure 3. Then,
+    10:    return max queue                                       it sets the value of the byte the receiver polls to notify it
+      A preempted request can be placed either at the tail        that the cache line is ready for reading. This approach
+   of its queue to approximate PS or at the head of the           requires two cache line state transitions, one from shared
+   queue to approximate c-FCFS. This choice can be set            to exclusive state which takes place when the sender
+   by the application or based on online measurements of          writes the data and one from exclusive to shared state
+   service time statistics. The rule of thumb we use is           when the receiver reads the data. The average roundtrip
+   that for multi-modal or heavy-tailed workloads, the re-        latency for a message sent and received over a cache line
+   quests should be placed at the tail of the queue, while        is 211 cycles. The dispatcher’s minimum work for send-
+   for light-tailed ones at the head. Frequent preemption         ing a message is approximately 70 cycles, i.e. 35ns in
+   is needed even with light-tailed distributions in order        a 2GHz machine. This sets a theoretical upper bound
+   to allow Shinjuku to serve the queues for other request        of 28 MRPS for the number of requests the dispatcher
+   types. The c-PRE-MQ policy evaluated through simu-             can handle, assuming all it has to do is to place pointers
+   lation in Figure 2 is this multi-queue policy, where both      to the requests in shared memory locations and notify
+   request types are placed at the head of their correspond-      idling workers.
+   ing queues when preempted.                                     3.6    Discussion
+   3.5    Implementation                                          Hardware constraints: §4 shows that a single dis-
+   The current Shinjuku implementation is based on Dune           patcher thread can process at least 5M requests per sec-
+   and requires the VT-x virtualization features in x86-64        ond and comfortably saturate a full socket with 12 cores
+   systems [20]. Dune can be ported to other architectures        and 24 hyperthreads. To scale a single application to
+   with similar virtualization support. Our modifications to      higher core and/or socket counts, we must improve the
+   Dune involve 1365 SLOC. The Shinjuku dispatcher and            dispatcher throughput. The approach we use is to have
+   worker code are 2535 SLOC. The network subsystem               each dispatcher thread handle a subset of the worker
+   we used in §4 is based on IX [16]. All the aforemen-           threads and steer requests to different dispatchers using
+   tioned codebases are in C.                                     the NIC RSS feature. A relatively simple hardware fea-
+
+
+
+
+USENIX Association                         16th USENIX Symposium on Networked Systems Design and Implementation                   351
+                                  104                              cases, we will want to avoid preempting and context
+                         10                                        switching as multiple cache lines will have to move to a
+
+
+
+
+           Connections
+                                                                   different core, which can be very expensive.
+                                                                      Control plane: Online services experience load vari-
+                          5
+                                                                   ations, such as a diurnal load patterns and spikes. Hence,
+                                                                   it makes sense to adjust over time the number of work-
+                                                                   ers a Shinjuku process uses. Shenango [7] solves this
+                          0
+                                                                   problem by adjusting core allocation between applica-
+                              0           50           100
+                                                                   tions in microsecond timescales. We plan to explore the
+                                        Queues
+                                                                   possibility of integrating the two systems.
+      Figure 4: Number of concurrent connections needed for           Security model: The Dune kernel module [15] uses
+      load imbalance among queues to be less than 10% with         hardware support for virtualization to isolate a Shinjuku
+      probability greater than 90%.                                process from the Linux kernel and any other process,
+                                                                   ordinary Linux or Shinjuku based. Linux can also re-
+      ture that would vastly improve the dispatcher scalability    move cores and network queues from a Shinjuku pro-
+      would be a low-overhead message passing mechanism            cess at any time. Within a Shinjuku process, the ap-
+      among different cores [34, 51]. Ideally, such a mecha-       plication code must trust the Shinjuku runtime and, if
+      nism would offer two variations, a preemptive one that       the application contexts execute in VMX non-root ring
+      would be used for scheduling and a non-preemptive one        0, the Shinjuku runtime must trust the application code.
+      where messages are added to per core queues and would        For example, the fact that APIC registers are mapped in
+      be used for work assignment.                                 the process address space means that one process could
+         Connection counts: IX and ZygOS use RSS to dis-           launch a denial-of-service attack on another process by
+      tribute requests to workers. Using a Monte-Carlo sim-        issuing a large number of interrupts to a specific core.
+      ulation, we calculate the connection count needed for           We measured the cost of a ring 3 → ring 0 → ring 3
+      RSS to keep imbalance below 10% with high probability        transition to be only 84 cycles. Future versions of Shin-
+      as we increase the number of cores. As shown in Fig-         juku will run application code in ring 3 while the Shin-
+      ure 4, they need 16,000 connections (clients or flows)       juku runtime will be running in VMX non-root ring 0
+      to avoid imbalance on a server with 24 hyperthreads.         eliminating this attack vector with very small overhead.
+      High connection counts are common for public facing          Moreover, with this approach, bugs in application code
+      services (e.g., public load balancer or HTTP server), but    will only cause contexts to crash, not affecting the run-
+      not for internal ones. The DCTCP project [9] found           time system.
+      at most a few hundred connections to back-end servers           Synchronization in user code: Online services are
+      over each 1 msec window. In contrast, Shinjuku uses          designed to run well on multiple cores. They synchro-
+      RSS to distribute requests to dispatchers. Since each        nize across requests, but synchronization is short and
+      dispatcher can manage tens of cores, Shinjuku is not         infrequent to achieve scalability. Scalable applications
+      subject to the requirement of high connection (clients or    will perform with Shinjuku regardless of whether we
+      flows) counts discussed in §2. For example, 300 connec-      disable or allow preemption around read/write locks.
+      tions are sufficient to load balance across 2 dispatchers.   We currently disable interrupts during any non thread-
+      When a single dispatcher suffices, Shinjuku will operate     safe code, using a call safe(fn) API call to sim-
+      efficiently even with a single connection.                   plify application porting. The runtime overhead of the
+         Alternative scheduling policies: Shinjuku can sup-        instructions that are used to disable interrupts is only a
+      port more scheduling policies in addition to the two         few clock cycles and they do not affect the Linux ker-
+      we presented. In future work, we will explore inte-          nel’s abilities to reclaim the cores. Memory allocation
+      grating Shinjuku with datacenter-wide profiling tools        code is a special case that often optimizes away locks
+      [49] and online experimentation tools [55] in order          using thread-local storage. We preload our own ver-
+      to dynamically infer the service time distributions and      sion of the C and C++ libraries that disable interrupts
+      adjust the policy accordingly. We will also explore          (and hence preemption) during the execution of alloca-
+      microsecond-scale scheduling policies that are locality-     tion functions. If these functions take a long time, it will
+      and heterogeneity-aware [30, 27]. For example, con-          affect the tail latency observed with Shinjuku.
+      sider an application which creates a large memory foot-         Any application that frequently uses coarse-grain or
+      print before responding to a client request. In such         contested locks within requests will scale poorly regard-
+
+
+
+
+352    16th USENIX Symposium on Networked Systems Design and Implementation                                  USENIX Association
+   less of scheduling policy on any system, including Shin-     that offload networking to a SmartNIC [33, 18, 53, 19].
+   juku.                                                        The latter will free x86 hyperthreads for Shinjuku work-
+                                                                ers. If the SmartNIC is connected to the processor chip
+   4     Evaluation                                             through a coherent interconnect like Intel’s UPI, we can
+   We compare Shinjuku to IX [16] and ZygOS [46], two           also offload the Shinjuku dispatcher to the NIC cores.
+   recent systems that use d-FCFS and approximate c-               IX supports both UDP and TCP networking. We use
+   FCFS respectively to improve tail latency. All three sys-    it with UDP and a batch size of 64. ZygOS supports
+   tems are built on top of Dune [15]. We use the latest IX     only TCP networking [4], but is configured to use ex-
+   and ZygOS versions available at [4].                         actly one TCP segment per request and reply. Hence,
+                                                                ZygOS requests have some additional service time for
+   4.1    Experimental Methodology                              TCP processing ( < 0.25µsec), but are otherwise simi-
+   Machines: We use a cluster of 6 client and one server        lar to UDP-based IX and Shinjuku requests.
+   machines, connected through an Arista 7050-S switch             Workloads: We use one synthetic and one real work-
+   with 48 10GbE ports. The client machines each include        load. The synthetic workload is a server application
+   two Intel Xeon E5-2630 CPUs operating at 2.3GHz.             where requests perform dummy work that we can con-
+   Their NICs are a mixture of Intel 82599ES and So-            trol in order to emulate any target distribution of service
+   larflare SFC9020 10GbE NICs. The server machine that         times. This synthetic server allows us to derive insights
+   runs IX, ZygOS, or Shinjuku includes two Intel E5-2658       about how the three systems compare across a large ap-
+   CPUs operating at 2.3GHz, 128GB of DRAM, and an              plication space.
+   Intel 82599ES 10Gb NIC. All machines run Ubuntu                 We also use RocksDB version 5.13 [26], a popular
+   LTS 16.0.4 with the 4.4.0 Linux kernel. Hyperthread-         and widely deployed key-value store developed by Face-
+   ing is always enabled unless noted. NICs are configured      book. The IX, ZygOS, and Shinjuku servers handle
+   as half-duplex by the IX and ZygOS drivers and we use        RocksDB queries that may be simple get/put requests or
+   the same setting for Shinjuku. To perform scalability ex-    range scans. We configure RocksDB to keep all data in
+   periments, we also use the server machine with a 40Gb        DRAM in order to evaluate all three systems under the
+   Intel XL710-QDA2 NIC and an identical E5-2658 two-           lowest latency requirements possible. If some RocksDB
+   socket machine as the client.                                requests had to access data in Flash, the variability of
+      Each of the two server CPUs has 12 cores and 24 hy-       service times would be even higher, and the preemp-
+   perthreads. However, ZygOS and IX can only support           tive Shinjuku would perform even better than the non-
+   up to 16 hyperthreads as their network drivers are lim-      preemptive IX and ZygOS.
+   ited to 16 RSS RX queues. Hence, we use an 8-core               We developed an open loop load generator similar to
+   (16-hyperthread) configuration for most experiments.         mutilate [36] that transmits requests over either TCP or
+   Shinjuku always uses two of the available hyperthreads       UDP. The load generator starts a large number of con-
+   for the networking subsystem and dispatcher. Hence,          nections in a set of client machines, while it measures
+   our results use the notation Shinjuku(x) to specify          latency from a single unloaded machine. Unless oth-
+   that Shinjuku uses x-2 hyperthreads for workers and          erwise noted, we use 1920 persistent TCP connections
+   a total of x hyperthreads. The notation IX(x) and            (ZygOS) and 1920 distinct UDP 5-tuples (IX and Shin-
+   ZygOS(x) specify that IX and ZygOS use x hyper-              juku). Using fewer connections significantly affected
+   threads, all for d-FCFS or c-FCFS processing respec-         the performance of IX and ZygOS (see §3.6).
+   tively.
+      Networking: We use the following networking sub-          4.2    Synthetic Workload Comparison
+   system with Shinjuku. A single hyperthread, co-located       Figure 5 compares Shinjuku to IX and ZygOS for three
+   on the same physical core with the dispatcher, polls the     service time distributions. Figure 5a uses a fixed ser-
+   NIC queue and processes raw packets. It performs UDP         vice time of 1µsec, while Figure 5b uses an exponential
+   processing, identifies requests, and optionally parses the   distribution with a mean of 1µsec. These two cases are
+   request header to identify types. The Shinjuku workers       ideal for IX that uses d-FCFS. IX benefits further from
+   process network replies. This simple subsystem is suffi-     its ability to batch similarly sized requests. Shinjuku
+   cient to evaluate Shinjuku. Since Shinjuku decouples         (SQ) performs close to IX, despite exclusively using two
+   network processing from request scheduling, we can           hyperthreads for networking and the dispatcher and de-
+   combine Shinjuku in the future with alternative systems      spite preempting requests that exceed 5µsec. In this
+   that implement other transport protocols and use opti-       case, Shinjuku places preempted requests at the head of
+   mizations such as multithreaded stacks [31, 22] or stacks    the queues. Moreover, preemption is fast and for light-
+
+
+
+
+USENIX Association                        16th USENIX Symposium on Networked Systems Design and Implementation                353
+                                                                                       IX(16)         ZygOS(16)         Shinjuku(16)-SQ
+
+                                                                               1000                                                       1000
+                          400
+
+
+
+
+      99% Latency (us)
+                                                                                800                                                        800
+                          300
+                                                                                600                                                        600
+                          200
+                                                                                400                                                        400
+                          100                                                   200                                                        200
+
+                                         0                                         0                                                         0
+                                             0          2         4        6           0             2          4                     6          0      2          4       6
+                                                     Throughput (MRPS)                            Throughput (MRPS)                                  Throughput (MRPS)
+
+                                                      (a) Fixed(1)                                     (b) Exp(1)                      (c)
+                                                                                                                     Bimodal(99.5 − 0.5, 0.5 − 500)
+                                                  Figure 5: Systems comparison with synthetic workloads. Shinjuku uses the single queue policy.
+
+                                                     IX(16)    ZygOS(16)       Shinjuku(16)-MQ                       Figure 5c uses a Bimodal(99.5 − 0.5, 0.5 − 500)
+                                                                                                                  service time distribution where 99.5% of the requests
+                                         105                                                                      have a 0.5µsec service time and 0.5% 500µsec. Shin-
+                                                                                                                  juku with the single queue policy is vastly better than
+
+
+
+                          99% Slowdown
+                                         104                                                                      both IX and ZygOS, achieving up to 50% lower tail
+                                                                                                                  latency at low load and 5x better throughput for a
+                                         103                                                                      given 300µs tail latency target. IX and ZygOS lack pre-
+                                                                                                                  emption, hence the 0.5% of long requests determine the
+                                         102                                                                      overall 99th percentile tail latency as short requests are
+                                                                                                                  frequently blocked behind them. The task stealing in
+                                                 0           100          200                   300               ZygOS improves upon IX but is not sufficient to deal
+                                                           Throughput (kRPS)                                      with the high dispersion in service times. In contrast,
+                                                           (a) Two request types                                  Shinjuku preempts long requests and places them at the
+                                                         Bimodal(50 − 1, 50 − 100)                                tail of the single queue to allow short requests to com-
+                                                                                                                  plete quickly.
+                                         104                                                                         Figure 6 evaluates the three systems with multiple re-
+                                                                                                                  quest types, a key experiment that was missing from the
+
+
+
+                         99% Slowdown
+                                         103                                                                      original IX and ZygOS papers. We use Shinjuku’s multi-
+                                                                                                                  queue policy which assumes knowledge of the request
+                                                                                                                  types (e.g., from packet inspection). Figure 6a uses a
+                                         102                                                                      Bimodal(50 − 1, 50 − 100) workload, while Figure 6b
+                                                                                                                  uses a Trimodal(33 − 1, 33 − 10, 33 − 100) workload.
+                                                                                                                  In all cases, Shinjuku places preempted requests to the
+                                                 0        100           200           300                         head of their corresponding queues. Both figures show
+                                                        Throughput (kRPS)                                         the 99th percentile of request slowdown (overall request
+                                                        (b) Three request types                                   latency / service time) with a logarithmic y-axis. The
+                                                 Trimodal(33.3 − 1, 33.3 − 10, 33.3 − 100)                        preemptive, multi-queue policy allows Shinjuku to out-
+                                                                                                                  perform IX and Zygos by having 94% lower slowdown
+      Figure 6: Systems comparison with multi-modal syn-
+                                                                                                                  at low load and over 2x higer throughput (RPS). In
+      thetic workloads. Shinjuku uses the multi-queue policy.
+                                                                                                                  addition to the frequent preemption that avoids head-of-
+      tailed workloads only a few requests will be preempted                                                      line blocking, Shinjuku benefits from its ability to select
+      allowing Shinjuku to outperform ZygOS for both sce-                                                         the type of requests (long vs. short) to serve next based
+      narios. ZygOS also has a high stealing rate (60%) even                                                      on their ratio of queuing time to target latency.
+      for homogeneous workloads which exacerbates its steal-
+      ing overheads. A similar performance drop was also ob-                                                      4.3     Shinjuku Analysis
+      served in the original ZygOS paper [46].                                                                    How important is frequent preemption? Figure 7a
+
+
+
+
+354           16th USENIX Symposium on Networked Systems Design and Implementation                                                                            USENIX Association
+                                     100us       50us        20us         5us                                         1 Dispatcher      2 Dispatchers                                                    64-Byte Frames        258-Byte Frames
+                       100
+                                                                                                     10                                                                              40
+                        80
+
+
+
+
+                                                                                Throughput (MRPS)                                                              Throughput (Gbps)
+    99% Slowdown
+                                                                                                          8
+                                                                                                                                                                                     30
+                        60
+                                                                                                          6
+                                                                                                                                                                                     20
+                        40                                                                                4
+
+                        20                                                                                                                                                           10
+                                                                                                          2
+
+                         0                                                                                0                                                                                  0
+                             0          100         200                   300                                 0         5      10      15            20                                          0             5      10      15            20
+                                       Throughput (kRPS)                                                                    # Worker Cores                                                                         # Worker Cores
+                        (a)                                   (b)                                  (c)
+   Figure 7: (a) Two request types Bimodal(50−1, 50−100) with varying preemption time slice. (b) Shinjuku through-
+   put (Million RPS) as we scale the worker cores. (c) Shinjuku throughput (Gbps) as we scale the worker cores.
+
+                                     ZygOS(16)    Shinjuku(16)   IX(16)
+                                                                                                                      ZygOS(16)      Shinjuku(16)-SQ without Preemption                                      Shinjuku(16)-SQ      Shinjuku(16)-MQ
+
+                       1000                                                                               6000                                                                               10000
+
+
+
+
+                                                                                   99% GET Latency (us)                                                              99% SCAN Latency (us)
+    99% Latency (us)
+                        800                                                                                                                                                                   8000
+                                                                                                          4000
+                        600                                                                                                                                                                   6000
+
+                        400                                                                                                                                                                   4000
+                                                                                                          2000
+                        200                                                                                                                                                                   2000
+
+                             0                                                                                0                                                                                      0
+                                 0        200       400                   600                                     0         5      10      15             20                                             0           5     10      15               20
+                                        Throughput (kRPS)                                                                   Throughput (kRPS)                                                                       Throughput (kRPS)
+
+                    (a)                                 (b)                               (c)
+   Figure 8: RocksDB (a) Shinjuku, IX, and ZygOS 99.5% GET 0.5% SCAN(1000). (b + c) Shinjuku Performance -
+   50% GET(b) 50% SCAN(5000)(c).
+   varies the preemption interval for a Bimodal(50 −                                                                                 Shinjuku using two dispatchers. Shinjuku saturates the
+   1, 50 − 100) synthetic workload. Shinjuku uses the                                                                                40Gb NIC when reply frames are as short as 258 bytes.
+   multi-queue policy. The shorter the preemption interval,                                                                             These two figures validate that a single Shinjuku ap-
+   the better Shinjuku performs as the impact of 100µsec                                                                             plication can scale to high core counts and high line rates
+   requests on 1µsec is reduced. Shinjuku performs well                                                                              even with short 1µsec service times.
+   even at the very frequent 5µsec preemption interval.
+      How does Shinjuku scale? Figures 7{b,c} exam-                                                                                  4.4       RocksDB Comparison
+   ine how Shinjuku scales with more workers. We issue                                                                               We use RocksDB with a simple server we ported to IX,
+   short requests with 1µsec fixed service time to stress the                                                                        ZygOS, and Shinjuku. Client requests are looked up
+   dispatcher. We also use the Intel XL710-QDA2 40Gb                                                                                 in a RocksDB database created on an in-memory file
+   NICs so that networking is not a bottleneck. Since each                                                                           system (/tmpfs/) with random key-value pairs. We use
+   worker thread can saturate its core, we turn off hyper-                                                                           two request types: GET requests for a single key-value
+   threading and pin each worker thread to a physical core.                                                                          pair that execute within 6µsec; SCAN requests that scan
+   We use the two hyperthreads in the 12th physical core                                                                             1,000 or 5,000 key-value pairs and require 240µsec or
+   for the dispatcher and the networking threads. Figure 7b                                                                          1, 200µsec respectively. We use memory-mapped plain
+   shows that a single dispatcher thread scales almost lin-                                                                          tables as the backing files to avoid memory copies and
+   early to 11 worker cores, which is the socket size in                                                                             access to block devices. Shinjuku uses a preemption
+   our server. A second dispatcher thread allows Shinjuku                                                                            time slice of 15µsec and places preempted requests at
+   to schedule across the 22 worker cores on both sock-                                                                              the head of their corresponding queues for the multi-
+   ets for a single application. Shinjuku can schedule 5M                                                                            queue policy and at the tail for the single-queue policy.
+   and 9.5M RPS with 1 and 2 dispatchers respectively.                                                                                  Figure 8a compares IX, ZygOS, and Shinjuku with
+   Figure 7c measures the outgoing network throughput of                                                                             the single queue policy for a 99.5-0.5 mix of GET and
+
+
+
+
+USENIX Association                                                          16th USENIX Symposium on Networked Systems Design and Implementation                                                                                                         355
+      SCAN(1000) requests. Shinjuku provides a vast im-               allows the development of efficient scheduling policies
+      provement over ZygOS in tail latency (88% decrease)             for requests 3 orders of magnitude shorter than what this
+      and throughput (6.6x improvement). Frequent preemp-             line of work can handle.
+      tion in Shinjuku allows GET requests to avoid long                 Flow scheduling: PIAS [12] is a network flow
+      queuing times due to SCAN requests. IX performs even            scheduling mechanism that uses hardware priority
+      worse due to the combination of highly imbalanced re-           queues available in switches to approximate the Short-
+      quest service times and d-FCFS scheduling.                      est Job First (SJF) scheduling policy and prioritize short
+         Preemption and queue selection policy matter:                flows over longs ones. We do not follow a similar ap-
+      Figures 8b and 8c use a 50-50 workload between GET              proach in Shinjuku as SJF is optimal in terms of mini-
+      and SCAN(5000) requests. In addition to comparing               mizing average but not tail latency [57]. Moreover, in
+      with ZygOS, we modified the Shinjuku dispatcher to              order to be effective, PIAS requires some form of con-
+      show the impact of using Shinjuku without preemption,           gestion control to keep the queue length short. This is
+      the single-queue preemptive policy, and the multi-queue         not practical in non-networked settings where the run-
+      preemptive policy. IX is omitted because its latency is         time does not control the application.
+      outside the range of our plot. The results show that               Exit-less interrupts: The idea of safe, low-overhead
+      Shinjuku without preemption (SQ without preemption)             interrupts was introduced in ELI for fast delivery of in-
+      favors the longer SCAN requests over the shorter GET            terrupts to VMs [10]. ZygOS [46] uses inter-processor
+      requests. The addition of preemption (SQ) fixes this            interrupts for work stealing but does not implement pre-
+      problem and allows both request types to achieve fair           emptive scheduling. Shinjuku uses Dune [15] to opti-
+      throughput and low tail latency. The multi-queue policy         mize processor-to-processor interrupts.
+      (MQ) improves SCAN requests as it avoids excessive
+      queuing for them as well. ZygOS performs significantly             User-space thread management: Starting with
+      worse even than Shinjuku without preemption. ZygOS              scheduler activations [11], there have been several
+      uses distributed queuing and is susceptible to head-of-         efforts to implement efficient, user-space thread li-
+      line blocking for requests within the same connection.          braries [8, 56, 48, 1]. They all focus on cooperative
+      This supports our decision to decouple network process-         scheduling. Shinjuku shows that preemptive scheduling
+      ing and request scheduling in Shinjuku.                         is practical at microsecond-scales and leads to low tail
+                                                                      latency and high throughput.
+      5     Related Work
+      Optimized network stacks: There is significant                  6   Conclusion
+      work in optimizing network stacks, including polling
+      based processing (DPDK [3]), multi-core scalability             Shinjuku uses hardware support for virtualization to
+      (mTCP [31]), modularity and specialization (Sand-               make frequent preemption practical at the microsec-
+      storm [40]), and OS bypass (Andromeda [22]). Shin-              ond scale. Hence, its scheduling policies can avoid
+      juku is orthogonal to this work as it optimizes request         the common pitfall of non-preemptive policies where
+      scheduling after network protocol processing.                   short requests are blocked behind long requests. Shin-
+         Dataplane operating systems: Several recent sys-             juku provides low tail latency and high throughput for
+      tems optimize for throughput and tail latency by sep-           a wide range of distributions and request service times
+      arating the OS dataplane from the OS control plane, an          regardless of the number of client connections. For
+      idea originating in Exokernel [25]. IX [16], Arrakis [45],      the RocksDB KVS, we show that Shinjuku improves
+      MICA [39], Chronos [32], and ZygOS [46] fall in this            upon the recently published ZygOS system by 6.6x in
+      category. Shinjuku improves on these systems by intro-          throughput and 88% in tail latency.
+      ducing preemptive scheduling that allows short requests
+      to avoid excessive queuing.                                     Acknowledgements
+         Task scheduling: Li et al. [38] control tail latency
+      by reducing the amount of resources dedicated to long-          We thank our shepherd, Irene Zhang, and the anony-
+      running requests that violate the SLO. Haque et al. [29]        mous NSDI reviewers for their helpful feedback. We
+      take the opposite approach and devote more resources            also thank John Ousterhout, Adam Wierman, and Ana
+      to stragglers so that they finish faster. Interestingly, both   Klimovic for providing feedback on early versions of
+      approaches work well. However, these approaches are             this paper. This work was supported by the Stanford
+      applicable to millisecond-scale workloads and require           Platform Lab and by gifts from Google, Huawei, and
+      workloads that are dynamically parallelizable. Shinjuku         Samsung.
+
+
+
+
+356       16th USENIX Symposium on Networked Systems Design and Implementation                                 USENIX Association
+   References                                                               [16] Adam Belay, George Prekas, Ana Klimovic, Samuel Grossman,
+                                                                                 Christos Kozyrakis, and Edouard Bugnion. Ix: A protected dat-
+     [1] libfiber: A user space threading library support-                       aplane operating system for high throughput and low latency.
+         ing multi-core systems. https://github.com/                             In Proceedings of the 11th USENIX Conference on Operating
+         brianwatling/libfiber, 2015.                                            Systems Design and Implementation, OSDI’14, pages 49–65,
+                                                                                 Broomfield, CO, 2014. USENIX Association.
+     [2] ebpf - extended berkeley packet filter. http:
+         //prototype-kernel.readthedocs.io/en/                              [17] Sol Boucher, Anuj Kalia, David G. Andersen, and Michael
+         latest/bpf/ , 2016.                                                     Kaminsky. Putting the ”micro” back in microservice. In
+                                                                                 2018 USENIX Annual Technical Conference (USENIX ATC
+     [3] Data plan development kit.       http://www.dpdk.org/,                  18), pages 645–650, Boston, MA, 2018. USENIX Association.
+         2018.
+                                                                            [18] Broadcom.   Ps225.   https://www.broadcom.
+     [4] Ix-project: Protected dataplane for low latency and high perfor-
+                                                                                 com/products/ethernet-connectivity/
+         mance. https://github.com/ix-project/ , 2018.
+                                                                                 network-adapters/ps225 , 2017.
+     [5] libuv: Cross-platform asynchronous i/o. https://libuv.
+         org/, 2018.                                                        [19] Cavium. Liquidio smartnic. https://www.cavium.com/
+                                                                                 product-liquidio-adapters.html , 2018.
+     [6] Memcached. https://memcached.org/ , 2018.
+                                                                            [20] Intel Corp. Intel virtualization technology. https:
+     [7] Shenango: Achieving high CPU efficiency for latency-sensitive           //www.intel.com/content/www/us/en/
+         datacenter workloads.    In 16th USENIX Symposium on                    virtualization/virtualization-technology/
+         Networked Systems Design and Implementation (NSDI 19),                  intel-virtualization-technology.html , 2018.
+         Boston, MA, 2019. USENIX Association.
+                                                                            [21] Microsoft Corp. Receive side scaling. http:
+     [8] Atul Adya, Jon Howell, Marvin Theimer, William J. Bolosky,              //msdn.microsoft.com/library/windows/
+         and John R. Douceur. Cooperative task management with-                  hardware/ff556942.aspx , 2018.
+         out manual stack management. In Proceedings of the General
+         Track of the Annual Conference on USENIX Annual Technical          [22] Michael Dalton, David Schultz, Jacob Adriaens, Ahsan Are-
+         Conference, ATC ’02, pages 289–302. USENIX Association,                 fin, Anshuman Gupta, Brian Fahs, Dima Rubinstein, En-
+         2002.                                                                   rique Cauich Zermeno, Erik Rubow, James Alexander Docauer,
+                                                                                 Jesse Alpert, Jing Ai, Jon Olson, Kevin DeCabooter, Marc
+     [9] Mohammad Alizadeh, Albert Greenberg, David A. Maltz, Ji-
+                                                                                 de Kruijf, Nan Hua, Nathan Lewis, Nikhil Kasinadhuni, Ric-
+         tendra Padhye, Parveen Patel, Balaji Prabhakar, Sudipta Sen-
+                                                                                 cardo Crepaldi, Srinivas Krishnan, Subbaiah Venkata, Yossi
+         gupta, and Murari Sridharan. Data center tcp (dctcp). In Pro-
+                                                                                 Richter, Uday Naik, and Amin Vahdat. Andromeda: Perfor-
+         ceedings of the ACM SIGCOMM 2010 Conference, SIGCOMM
+                                                                                 mance, isolation, and velocity at scale in cloud network virtu-
+         ’10, pages 63–74, New Delhi, India, 2010. ACM.
+                                                                                 alization. In 15th USENIX Symposium on Networked Systems
+    [10] Nadav Amit, Abel Gordon, Nadav Har’El, Muli Ben-Yehuda,                 Design and Implementation (NSDI 18), pages 373–387, Ren-
+         Alex Landau, Assaf Schuster, and Dan Tsafrir. Bare-metal per-           ton, WA, 2018. USENIX Association.
+         formance for virtual machines with exitless interrupts. Com-
+         mun. ACM, 59(1):108–116, December 2015.                            [23] Jeffrey Dean and Luiz André Barroso. The tail at scale. Com-
+                                                                                 munications of the ACM, 56:74–80, 2013.
+    [11] Thomas E. Anderson, Brian N. Bershad, Edward D. Lazowska,
+         and Henry M. Levy. Scheduler activations: Effective kernel         [24] Kenneth J. Duda and David R. Cheriton. Borrowed-virtual-
+         support for the user-level management of parallelism. In Pro-           time (bvt) scheduling: Supporting latency-sensitive threads in
+         ceedings of the Thirteenth ACM Symposium on Operating Sys-              a general-purpose scheduler. In Proceedings of the Seventeenth
+         tems Principles, SOSP ’91, pages 95–109, Pacific Grove, Cali-           ACM Symposium on Operating Systems Principles, SOSP ’99,
+         fornia, USA, 1991. ACM.                                                 pages 261–276, Charleston, South Carolina, USA, 1999. ACM.
+
+    [12] Wei Bai, Li Chen, Kai Chen, Dongsu Han, Chen Tian, and Hao         [25] D. R. Engler, M. F. Kaashoek, and J. O’Toole, Jr. Exokernel:
+         Wang. Information-agnostic flow scheduling for commodity                An operating system architecture for application-level resource
+         data centers. In 12th USENIX Symposium on Networked Sys-                management. In Proceedings of the Fifteenth ACM Symposium
+         tems Design and Implementation (NSDI 15), pages 455–468,                on Operating Systems Principles, SOSP ’95, pages 251–266,
+         Oakland, CA, 2015. USENIX Association.                                  Copper Mountain, Colorado, USA, 1995. ACM.
+    [13] L. A. Barroso, J. Dean, and U. Holzle. Web search for a planet:    [26] Facebook. Rocksdb. http://rocksdb.org/ , 2018.
+         The google cluster architecture. IEEE Micro, 23(2):22–28,
+         March 2003.                                                        [27] Yi Guo, Jisheng Zhao, Vincent Cave, and Vivek Sarkar. Slaw:
+                                                                                 A scalable locality-aware adaptive work-stealing scheduler for
+    [14] Luiz Barroso, Mike Marty, David Patterson, and Parthasarathy            multi-core systems. In Proceedings of the 15th ACM SIG-
+         Ranganathan. Attack of the killer microseconds. Commun.                 PLAN Symposium on Principles and Practice of Parallel Pro-
+         ACM, 60(4):48–54, March 2017.                                           gramming, PPoPP ’10, pages 341–342, Bangalore, India, 2010.
+    [15] Adam Belay, Andrea Bittau, Ali Mashtizadeh, David Terei,                ACM.
+         David Mazières, and Christos Kozyrakis. Dune: Safe user-level
+         access to privileged cpu features. In Proceedings of the 10th
+         USENIX Conference on Operating Systems Design and Imple-
+         mentation, OSDI’12, pages 335–348, Hollywood, CA, USA,
+         2012. USENIX Association.
+
+
+
+
+USENIX Association                                16th USENIX Symposium on Networked Systems Design and Implementation                             357
+      [28] Sangjin Han, Keon Jang, Aurojit Panda, Shoumik Palkar,              [39] Hyeontaek Lim, Dongsu Han, David G. Andersen, and Michael
+           Dongsu Han, and Sylvia Ratnasamy. Softnic: A software nic to             Kaminsky. Mica: A holistic approach to fast in-memory key-
+           augment hardware. Technical Report UCB/EECS-2015-155,                    value storage. In Proceedings of the 11th USENIX Conference
+           EECS Department, University of California, Berkeley, May                 on Networked Systems Design and Implementation, NSDI’14,
+           2015.                                                                    pages 429–444, Seattle, WA, 2014. USENIX Association.
+
+      [29] Md E. Haque, Yong hun Eom, Yuxiong He, Sameh Elnikety,              [40] Ilias Marinos, Robert N.M. Watson, and Mark Handley. Net-
+           Ricardo Bianchini, and Kathryn S. McKinley. Few-to-many:                 work stack specialization for performance. In Proceedings of
+           Incremental parallelism for reducing tail latency in interactive         the 2014 ACM Conference on SIGCOMM, SIGCOMM ’14,
+           services. In Proceedings of the Twentieth International Con-             pages 175–186, Chicago, Illinois, USA, 2014. ACM.
+           ference on Architectural Support for Programming Languages
+           and Operating Systems, ASPLOS ’15, pages 161–175, Istan-            [41] Radhika Mittal, Vinh The Lam, Nandita Dukkipati, Emily
+           bul, Turkey, 2015. ACM.                                                  Blem, Hassan Wassel, Monia Ghobadi, Amin Vahdat, Yaogong
+                                                                                    Wang, David Wetherall, and David Zats. Timely: Rtt-based
+      [30] Md E. Haque, Yuxiong He, Sameh Elnikety, Thu D. Nguyen,                  congestion control for the datacenter. In Proceedings of the
+           Ricardo Bianchini, and Kathryn S. McKinley. Exploiting het-              2015 ACM Conference on Special Interest Group on Data Com-
+           erogeneity for tail latency and energy efficiency. In Proceedings        munication, SIGCOMM ’15, pages 537–550, London, United
+           of the 50th Annual IEEE/ACM International Symposium on Mi-               Kingdom, 2015. ACM.
+           croarchitecture, MICRO-50 ’17, pages 625–638, Cambridge,
+           Massachusetts, 2017. ACM.                                           [42] Jayakrishnan Nair, Adam Wierman, and Bert Zwart. The funda-
+                                                                                    mentals of heavy-tails: Properties, emergence, and identifica-
+      [31] EunYoung Jeong, Shinae Wood, Muhammad Jamshed, Haewon                    tion. In Proceedings of the ACM SIGMETRICS/International
+           Jeong, Sunghwan Ihm, Dongsu Han, and KyoungSoo Park.                     Conference on Measurement and Modeling of Computer Sys-
+           mtcp: a highly scalable user-level TCP stack for multicore sys-          tems, SIGMETRICS ’13, pages 387–388, Pittsburgh, PA, USA,
+           tems. In 11th USENIX Symposium on Networked Systems De-                  2013. ACM.
+           sign and Implementation (NSDI 14), pages 489–502, Seattle,
+           WA, 2014. USENIX Association.                                       [43] Rajesh Nishtala, Hans Fugal, Steven Grimm, Marc
+                                                                                    Kwiatkowski, Herman Lee, Harry C. Li, Ryan McElroy,
+      [32] Rishi Kapoor, George Porter, Malveeka Tewari, Geoffrey M.                Mike Paleczny, Daniel Peek, Paul Saab, David Stafford, Tony
+           Voelker, and Amin Vahdat. Chronos: Predictable low latency               Tung, and Venkateshwaran Venkataramani. Scaling memcache
+           for data center applications. In Proceedings of the Third ACM            at facebook. In Presented as part of the 10th USENIX
+           Symposium on Cloud Computing, SoCC ’12, pages 9:1–9:14,                  Symposium on Networked Systems Design and Implementation
+           San Jose, California, 2012. ACM.                                         (NSDI 13), pages 385–398, Lombard, IL, 2013. USENIX.
+
+      [33] Antoine Kaufmann, SImon Peter, Naveen Kr. Sharma, Thomas            [44] John Ousterhout, Arjun Gopalan, Ashish Gupta, Ankita Kejri-
+           Anderson, and Arvind Krishnamurthy. High performance                     wal, Collin Lee, Behnam Montazeri, Diego Ongaro, Seo Jin
+           packet processing with flexnic. In Proceedings of the Twenty-            Park, Henry Qin, Mendel Rosenblum, Stephen Rumble, Ryan
+           First International Conference on Architectural Support for              Stutsman, and Stephen Yang. The ramcloud storage system.
+           Programming Languages and Operating Systems, ASPLOS                      ACM Trans. Comput. Syst., 33(3):7:1–7:55, August 2015.
+           ’16, pages 67–81, Atlanta, Georgia, USA, 2016. ACM.
+                                                                               [45] Simon Peter, Jialin Li, Irene Zhang, Dan R. K. Ports, Doug
+      [34] Sanjeev Kumar, Christopher J. Hughes, and Anthony Nguyen.                Woos, Arvind Krishnamurthy, Thomas Anderson, and Timothy
+           Carbon: Architectural support for fine-grained parallelism on            Roscoe. Arrakis: The operating system is the control plane.
+           chip multiprocessors. In Proceedings of the 34th Annual In-              In 11th USENIX Symposium on Operating Systems Design and
+           ternational Symposium on Computer Architecture, ISCA ’07,                Implementation (OSDI 14), pages 1–16, Broomfield, CO, 2014.
+           pages 162–173, San Diego, California, USA, 2007. ACM.                    USENIX Association.
+
+      [35] Redis Labs. Redis. https://redis.io/ , 2018.                        [46] George Prekas, Marios Kogias, and Edouard Bugnion. Zygos:
+                                                                                    Achieving low tail latency for microsecond-scale networked
+      [36] Jacob Leverich and Christos Kozyrakis. Reconciling high                  tasks. In Proceedings of the 26th Symposium on Operating Sys-
+           server utilization and sub-millisecond quality-of-service. In            tems Principles, SOSP ’17, pages 325–341, Shanghai, China,
+           Proceedings of the Ninth European Conference on Com-                     2017. ACM.
+           puter Systems, EuroSys ’14, pages 4:1–4:14, Amsterdam, The
+           Netherlands, 2014. ACM.                                             [47] N. Provos and N. Mathewson. libevent: An event notification
+                                                                                    library. http://libevent.org , 2018.
+      [37] Jialin Li, Naveen Kr. Sharma, Dan R. K. Ports, and Steven D.
+           Gribble. Tales of the tail: Hardware, os, and application-level     [48] Henry Qin, Qian Li, Jacqueline Speiser, Peter Kraft, and John
+           sources of tail latency. In Proceedings of the ACM Symposium             Ousterhout. Arachne: Core-aware thread management. In 13th
+           on Cloud Computing, SOCC ’14, pages 9:1–9:14, Seattle, WA,               USENIX Symposium on Operating Systems Design and Imple-
+           USA, 2014. ACM.                                                          mentation (OSDI 18), pages 145–160, Carlsbad, CA, 2018.
+                                                                                    USENIX Association.
+      [38] Jing Li, Kunal Agrawal, Sameh Elnikety, Yuxiong He, I-
+           Ting Angelina Lee, Chenyang Lu, and Kathryn S. McKinley.            [49] Gang Ren, Eric Tune, Tipp Moseley, Yixin Shi, Silvius Rus,
+           Work stealing for interactive services to meet target latency. In        and Robert Hundt. Google-wide profiling: A continuous pro-
+           Proceedings of the 21st ACM SIGPLAN Symposium on Princi-                 filing infrastructure for data centers. IEEE Micro, pages 65–79,
+           ples and Practice of Parallel Programming, PPoPP ’16, pages              2010.
+           14:1–14:13, Barcelona, Spain, 2016. ACM.
+
+
+
+
+358    16th USENIX Symposium on Networked Systems Design and Implementation                                                    USENIX Association
+    [50] Sepideh Roghanchi, Jakob Eriksson, and Nilanjana Basu.                   databases. In Proceedings of the Twenty-Fourth ACM Sympo-
+         Ffwd: Delegation is (much) faster than you think. In Proceed-            sium on Operating Systems Principles, SOSP ’13, pages 18–32,
+         ings of the 26th Symposium on Operating Systems Principles,              Farminton, Pennsylvania, 2013. ACM.
+         SOSP ’17, pages 342–358, Shanghai, China, 2017. ACM.
+                                                                             [55] Kaushik Veeraraghavan, Justin Meza, David Chou, Wonho
+    [51] Daniel Sanchez, Richard M. Yoo, and Christos Kozyrakis.                  Kim, Sonia Margulis, Scott Michelson, Rajesh Nishtala, Daniel
+         Flexible architectural support for fine-grain scheduling. In Pro-        Obenshain, Dmitri Perelman, and Yee Jiun Song. Kraken:
+         ceedings of the Fifteenth Edition of ASPLOS on Architectural             Leveraging live traffic tests to identify and resolve resource
+         Support for Programming Languages and Operating Systems,                 utilization bottlenecks in large scale web services. In 12th
+         ASPLOS XV, pages 311–322, Pittsburgh, Pennsylvania, USA,                 USENIX Symposium on Operating Systems Design and Imple-
+         2010. ACM.                                                               mentation (OSDI 16), pages 635–651, Savannah, GA, 2016.
+    [52] Mellanox Technologies. Rdma over converged ethernet.                     USENIX Association.
+         http://www.mellanox.com/related-docs/                               [56] Rob von Behren, Jeremy Condit, Feng Zhou, George C. Nec-
+         whitepapers/roce_in_the_data_center.pdf            ,                     ula, and Eric Brewer. Capriccio: Scalable threads for internet
+         2014.                                                                    services. In Proceedings of the Nineteenth ACM Symposium
+    [53] Mellanox Technologies. Bluefield multicore system on                     on Operating Systems Principles, SOSP ’03, pages 268–281,
+         chip. http://www.mellanox.com/related-docs/                              Bolton Landing, NY, USA, 2003. ACM.
+         npu-multicore-processors/PB_Bluefield_
+         SoC.pdf , 2017.                                                     [57] Adam Wierman and Bert Zwart. Is tail-optimal scheduling pos-
+                                                                                  sible? Oper. Res., 60(5):1249–1257, September 2012.
+    [54] Stephen Tu, Wenting Zheng, Eddie Kohler, Barbara Liskov, and
+         Samuel Madden. Speedy transactions in multicore in-memory
+
+
+
+
+USENIX Association                                 16th USENIX Symposium on Networked Systems Design and Implementation                            359
+

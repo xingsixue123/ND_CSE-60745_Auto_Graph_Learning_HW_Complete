@@ -1,0 +1,45 @@
+tasks and 0.8% slower on eight, and the authors honestly note the run-to-run standard deviation
+was as large as the effect; the one significant measurement, 1.7% faster on the database server, is
+attributed in a footnote to incidental cache and TLB locality. “Efficient lottery scheduling does
+not pose any challenging problems” therefore rests on data that mostly cannot separate the two
+schedulers. Currencies, finally, are what make inflation safe, yet in the measured artifact they are
+unprotected: the user commands are setuid root, and the access-control lists deciding who may
+inflate a currency are proposed but left as what “a complete lottery scheduling system should”
+provide.
+Paper 2-4 — Waldspurger and Weihl, Stride Scheduling (MIT/LCS/TM-528,
+1995)
+Summary.
+Stride scheduling is the same authors’ deterministic replacement for their own dice.
+Each client holds a stride inversely proportional to its tickets and a pass value; the scheduler always
+runs the minimum-pass client and advances that client’s pass by its stride, in O(lg nc) time with
+a priority queue. A partial quantum advances the pass by only f · stride, while joins, leaves and
+ticket changes are handled by saving and rescaling the client’s unconsumed remainder against a
+smoothly advancing global pass. Because each client’s state is independent, the transfers, inflation
+and currencies of paper 2-3 all survive on the deterministic substrate. The error bounds are the
+argument: lottery scheduling’s absolute error grows as O(√na) in the number of allocations, whereas
+stride’s pairwise relative error never exceeds one quantum whatever na is. Absolute error can still
+reach O(nc) under skew, 101 clients at 100:1:. . .:1 giving an error of 50, which motivates hierarchical
+stride scheduling: a balanced tree of aggregated groups bounding absolute error to O(lg nc), which
+measured 4.5 on that example. In simulation at 19:1 over one million allocations, the one-ticket
+client saw response times of µ = 20.00, σ = 0.01 quanta under stride against µ = 20.13, σ = 19.64
+and a range of 1–194 quanta under lottery. Linux 1.1.50 prototypes held CPU ratios within 1% of
+ideal (3:1 gave 3.001:1) and UDP ratios within 5%, in under 300 lines each.
+Critical judgment.
+The head-to-head case against lottery scheduling is made entirely in simula-
+tion. The prototypes are measured against the ideal ratio and against stock Linux, never against a
+lottery-scheduled kernel, so the headline claim of significantly improved accuracy over lottery is
+nowhere demonstrated on hardware. They also leave the modularity argument unexercised: Section
+3 shows how transfers and currencies would be built, but the CPU prototype implements neither, so
+the abstractions that justify the design are never run. The overhead figure is softer than it reads,
+because the authors concede their prototype does a linear scan rather than the O(lg nc) structure
+the complexity analysis assumes; the cheap measurement and the good bound describe different
+programs.
+Against that, the paper is unusually candid and criticism should not pretend otherwise. It reports
+that the network result required lowering a hard-coded delay constant in ttcp, without which ratios
+were “consistently lower than specified”; it volunteers that its core algorithm turned out to be
+nearly VirtualClock and WFQ rediscovered; and its conclusion concedes that lottery scheduling is
+“conceptually simpler” and “effectively stateless” while stride demands careful state fixups on every
+dynamic change. History settled the trade: Linux’s CFS and its EEVDF successor both schedule by
+picking the minimum-virtual-time task and advancing it by a weight-scaled increment, stride’s rule
+under another name, while no production kernel ever shipped the lottery.
+9

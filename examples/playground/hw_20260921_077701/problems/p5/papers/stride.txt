@@ -1,0 +1,1331 @@
+                               Stride Scheduling:
+             Deterministic Proportional-Share Resource Management
+                                       Carl A. Waldspurger                      William E. Weihl 
+                                           Technical Memorandum MIT/LCS/TM-528
+                                             MIT Laboratory for Computer Science
+                                                     Cambridge, MA 02139
+
+                                                               June 22, 1995
+
+
+                            Abstract                                         rates is required to achieve service rate objectives for
+                                                                             users and applications. Such control is desirable across a
+This paper presents stride scheduling, a deterministic schedul-
+                                                                             broad spectrum of systems, including databases, media-
+ing technique that efficiently supports the same flexible
+                                                                             based applications, and networks. Motivating examples
+resource management abstractions introduced by lottery
+                                                                             include control over frame rates for competing video
+scheduling. Compared to lottery scheduling, stride schedul-
+                                                                             viewers, query rates for concurrent clients by databases
+ing achieves significantly improved accuracy over relative
+                                                                             and Web servers, and the consumption of shared re-
+throughput rates, with significantly lower response time vari-
+                                                                             sources by long-running computations.
+ability. Stride scheduling implements proportional-share con-
+trol over processor time and other resources by cross-applying                  Few general-purpose approaches have been proposed
+elements of rate-based flow control algorithms designed for                  to support flexible, responsive control over service rates.
+networks. We introduce new techniques to support dynamic                     We recently introduced lottery scheduling, a random-
+changes and higher-level resource management abstractions.                   ized resource allocation mechanism that provides effi-
+We also introduce a novel hierarchical stride scheduling al-                 cient, responsive control over relative computation rates
+gorithm that achieves better throughput accuracy and lower                   [Wal94]. Lottery scheduling implements proportional-
+response time variability than prior schemes. Stride schedul-                share resource management – the resource consumption
+ing is evaluated using both simulations and prototypes imple-                rates of active clients are proportional to the relative
+mented for the Linux kernel.                                                 shares that they are allocated. Higher-level abstractions
+                                                                             for flexible, modular resource management were also
+Keywords: dynamic scheduling, proportional-share resource
+                                                                             introduced with lottery scheduling, but they do not de-
+allocation, rate-based service, service rate objectives
+                                                                             pend on the randomized implementation of proportional
+                                                                             sharing.
+1 Introduction                                                                  In this paper we introduce stride scheduling, a deter-
+                                                                             ministic scheduling technique that efficiently supports
+Schedulers for multithreaded systems must multiplex                          the same flexible resource management abstractions in-
+scarce resources in order to service requests of varying                     troduced by lottery scheduling. One contribution of our
+importance. Accurate control over relative computation                       work is a cross-application and generalization of rate-
+    E-mail: fcarl, weihlg@lcs.mit.edu. World Wide Web:                      based flow control algorithms designed for networks
+http://www.psg.lcs.mit.edu/. Prof. Weihl is currently sup-                   [Dem90, Zha91, ZhK91, Par93] to schedule other re-
+ported by DEC while on sabbatical at DEC SRC. This research                  sources such as processor time. We present new tech-
+was also supported by ARPA under contract N00014-94-1-0985, by               niques to support dynamic operations such as the modifi-
+grants from AT&T and IBM, and by an equipment grant from DEC.
+The views and conclusions contained in this document are those of
+                                                                             cation of relative allocations and the transfer of resource
+the authors and should not be interpreted as representing the official       rights between clients. We also introduce a novel hier-
+policies, either expressed or implied, of the U.S. government.               archical stride scheduling algorithm. Hierarchical stride
+
+                                                                         1
+scheduling is a recursive application of the basic tech-               ence between the specified and actual number of alloca-
+nique that achieves better throughput accuracy and lower               tions that a client receives during a series of allocations.
+response time variability than previous schemes.                       If a client has t tickets in a system with a total of T
+    Simulation results demonstrate that, compared to lot-              tickets, then its specified allocation after na consecutive
+tery scheduling, stride scheduling achieves significantly              allocations is na        t=T . Due to quantization, it is
+improved accuracy over relative throughput rates, with                 typically impossible to achieve this ideal exactly. We
+significantly lower response time variability. In con-                 define a client’s absolute error as the absolute value of
+trast to other deterministic schemes, stride scheduling                the difference between its specified and actual number
+efficiently supports operations that dynamically modify                of allocations. We define the pairwise relative error
+relative allocations and the number of clients competing               between clients ci and cj as the absolute error for the
+for a resource. We have also implemented prototype                     subsystem containing only ci and cj , where T = ti + tj ,
+stride schedulers for the Linux kernel, and found that                 and na is the total number of allocations received by both
+they provide accurate control over both processor time                 clients.
+and the relative network transmission rates of competing                   While lottery scheduling offers probabilistic guaran-
+sockets.                                                               tees about throughput and response time, stride schedul-
+    In the next section, we present the core stride-                   ing provides stronger deterministic guarantees. For lot-
+scheduling mechanism. Section 3 describes extensions                   tery scheduling, after a series of na allocations, a client’s
+that support the resource management abstractions in-
+troduced with lottery scheduling. Section 4 introduces
+                                                                                p
+                                                                       expected relative error and expected absolute error are
+                                                                       both O ( na ). For stride scheduling, the relative error
+hierarchical stride scheduling. Simulation results with                for any pair of clients is never greater than one, inde-
+quantitative comparisons to lottery scheduling appear in               pendent of na . However, for skewed ticket distributions
+Section 5. A discussion of our Linux prototypes and re-                it is still possible for a client to have O (nc ) absolute
+lated implementation issues are presented in Section 6.                error, where nc is the number of clients. Nevertheless,
+In Section 7, we examine related work. Finally, we                     stride scheduling is considerably more accurate than lot-
+summarize our conclusions in Section 8.                                tery scheduling, since its error does not grow with the
+                                                                       number of allocations. In Section 4, we introduce a
+                                                                       hierarchical variant of stride scheduling that provides a
+                                                                       tighter O (lg nc ) bound on each client’s absolute error.
+2 Stride Scheduling
+Stride scheduling is a deterministic allocation mecha-                     This section first presents the basic stride-scheduling
+nism for time-shared resources. Resources are allocated                algorithm, and then introduces extensions that support
+in discrete time slices; we refer to the duration of a                 dynamic client participation, dynamic modifications to
+standard time slice as a quantum. Resource rights are                  ticket allocations, and nonuniform quanta.
+represented by tickets – abstract, first-class objects that
+can be issued in different amounts and passed between                  2.1 Basic Algorithm
+clients.1 Throughput rates for active clients are directly             The core stride scheduling idea is to compute a repre-
+proportional to their ticket allocations. Thus, a client               sentation of the time interval, or stride, that a client must
+with twice as many tickets as another will receive twice               wait between successive allocations. The client with the
+as much of a resource in a given time interval. Client                 smallest stride will be scheduled most frequently. A
+response times are inversely proportional to ticket allo-              client with half the stride of another will execute twice
+cations. Therefore a client with twice as many tickets                 as quickly; a client with double the stride of another
+as another will wait only half as long before acquiring a              will execute twice as slowly. Strides are represented in
+resource.                                                              virtual time units called passes, instead of units of real
+   The throughput accuracy of a proportional-share                     time such as seconds.
+scheduler can be characterized by measuring the differ-                   Three state variables are associated with each client:
+   1                                                                   tickets, stride, and pass. The tickets field specifies
+    In this paper we use the same terminology (e.g., tickets and
+currencies) that we introduced for lottery scheduling [Wal94].         the client’s resource allocation, relative to other clients.
+
+                                                                   2
+                                                                 The stride field is inversely proportional to tickets, and
+                                                                 represents the interval between selections, measured in
+                                                                 passes. The pass field represents the virtual time index
+                                                                 for the client’s next selection.
+                                                                    Performing a resource allocation is very simple: the
+                                                                 client with the minimum pass is selected, and its pass
+/* per-client state */
+typedef struct f
+                                                                 is advanced by its stride. If more than one client has
+    :::                                                          the same minimum pass value, then any of them may be
+  int tickets, stride, pass;                                     selected. A reasonable deterministic approach is to use
+g *client t;                                                     a consistent ordering to break ties, such as one defined
+/* large integer stride constant (e.g. 1M) */
+                                                                 by unique client identifiers.
+const int stride1 = (1 << 20);                                      Figure 1 lists ANSI C code for the basic stride
+                                                                 scheduling algorithm. For simplicity, we assume a static
+/* current resource owner */                                     set of clients with fixed ticket assignments. The stride
+client t current;
+                                                                 scheduling state for each client must be initialized via
+/* initialize client with specified allocation */                client init() before any allocations are performed by al-
+void client init(client t c, queue t q, int tickets)             locate(). These restrictions will be relaxed in subsequent
+f                                                                sections to permit more dynamic behavior.
+   /* stride is inverse of tickets */
+   c->tickets = tickets;
+                                                                    To accurately represent stride as the reciprocal of
+   c->stride = stride1 / tickets;                                tickets, a floating-point representation could be used.
+   c->pass = c->stride;                                          We present a more efficient alternative that uses a high-
+                                                                 precision fixed-point integer representation. This is eas-
+    /* join competition for resource */
+                                                                 ily implemented by multiplying the inverted ticket value
+    queue insert(q, c);
+g                                                                by a large integer constant. We will refer to this constant
+                                                                 as stride1 , since it represents the stride corresponding to
+/* proportional-share resource allocation */                     the minimum ticket allocation of one.2
+void allocate(queue t q)
+                                                                    The cost of performing an allocation depends
+f
+   /* select client with minimum pass value */                   on the data structure used to implement the client
+   current = queue remove min(q);                                queue. A priority queue can be used to imple-
+                                                                 ment queue remove min() and other queue operations
+    /* use resource for quantum */
+                                                                 in O (lg nc ) time or better, where nc is the number of
+    use resource(current);
+                                                                 clients [Cor90]. A skip list could also provide expected
+    /* compute next pass using stride */                         O(lg nc) time queue operations with low constant over-
+    current->pass += current->stride;                            head [Pug90]. For small nc or heavily skewed ticket
+    queue insert(q, current);                                    distributions, a simple sorted list is likely to be most
+g                                                                efficient in practice.
+                                                                    Figure 2 illustrates an example of stride scheduling.
+Figure 1: Basic Stride Scheduling Algorithm. ANSI                Three clients, A, B , and C , are competing for a time-
+C code for scheduling a static set of clients. Queue ma-         shared resource with a 3 : 2 : 1 ticket ratio. For simplicity,
+nipulations can be performed in O(lg nc ) time by using an       a convenient stride1 = 6 is used instead of a large number,
+appropriate data structure.                                      yielding respective strides of 2, 3, and 6. The pass value
+                                                                 of each client is plotted as a function of time. For each
+                                                                 quantum, the client with the minimum pass value is
+                                                                 selected, and its pass is advanced by its stride. Ties are
+                                                                    2
+                                                                     Appendix A discusses the representation of strides in more
+                                                                 detail.
+
+
+                                                             3
+                                                                             A state variable is also associated with each client
+               20
+                                                                         to store the remaining portion of its stride when a dy-
+                                                                         namic change occurs. The remain field represents the
+               15
+                                                                         number of passes that are left before a client’s next se-
+                                                                         lection. When a client leaves the system, remain is
+
+
+  Pass Value
+                                                                         computed as the difference between the client’s pass
+               10                                                        and the global pass. When a client rejoins the system,
+                                                                         its pass value is recomputed by adding its remain value
+                                                                         to the global pass.
+                5                                                            This mechanism handles situations involving either
+                                                                         positive or negative error between the specified and ac-
+                                                                         tual number of allocations. If remain < stride, then
+                0                                                        the client is effectively given credit when it rejoins for
+                    0       5                  10
+                                                                         having previously waited for part of its stride without
+                                                                         receiving a quantum. If remain > stride, then the client
+                           Time (quanta)
+                                                                         is effectively penalized when it rejoins for having previ-
+Figure 2: Stride Scheduling Example. Clients A (trian-                   ously received a quantum without waiting for its entire
+gles), B (circles), and C (squares) have a 3 : 2 : 1 ticket ratio.       stride.4
+In this example, stride1 = 6, yielding respective strides of 2,              This approach makes an implicit assumption that a
+3, and 6. For each quantum, the client with the minimum pass             partial quantum now is equivalent to a partial quantum
+value is selected, and its pass is advanced by its stride.               later. In general, this is a reasonable assumption, and
+                                                                         resembles the treatment of nonuniform quanta that will
+                                                                         be presented Section 2.4. However, it may not be ap-
+broken using the arbitrary but consistent client ordering                propriate if the total number of tickets competing for
+A, B , C .                                                               a resource varies significantly between the time that a
+                                                                         client leaves and rejoins the system.
+2.2 Dynamic Client Participation                                             The time complexity for both the client leave() and
+                                                                         client join() operations is O (lg nc ), where nc is the num-
+   The algorithm presented in Figure 1 does not support
+                                                                         ber of clients. These operations are efficient because the
+dynamic changes in the number of clients competing for
+                                                                         stride scheduling state associated with distinct clients is
+a resource. When clients are allowed to join and leave
+                                                                         completely independent; a change to one client does not
+                                                                         require updates to any other clients. The O (lg nc ) cost
+at any time, their state must be appropriately modified.
+Figure 3 extends the basic algorithm to efficiently handle
+                                                                         results from the need to perform queue manipulations.
+dynamic changes.
+   A key extension is the addition of global variables
+that maintain aggregate information about the set of ac-                 2.3 Dynamic Ticket Modifications
+tive clients. The global tickets variable contains the                      Additional support is needed to dynamically modify
+total ticket sum for all active clients. The global pass                 client ticket allocations. Figure 4 illustrates a dynamic
+variable maintains the “current” pass for the scheduler.                 allocation change, and Figure 5 lists ANSI C code for
+The global pass advances at the rate of global stride per
+quantum, where global stride = stride1 / global tickets.                 global pass to drift away from client pass values over a long period
+                                                                         of time. This is unlikely to be a practical problem, since client pass
+Conceptually, the global pass continuously advances at                   values are recomputed using global pass each time they leave and
+a smooth rate. This is implemented by invoking the                       rejoin the system. However, this problem can be avoided by very
+global pass update() routine whenever the global pass                    infrequently resetting global pass to the minimum pass value for the
+value is needed.3                                                        set of active clients.
+                                                                             4
+                                                                               Several interesting alternatives could also be implemented. For
+     3
+     Due to the use of a fixed-point integer representation for          example, a client could be given credit for some or all of the passes
+strides, small quantization errors may accumulate slowly, causing        that elapse while it is inactive.
+
+
+                                                                     4
+      /* per-client state */                                            /* join competition for resource */
+      typedef struct f                                                  void client join(client t c, queue t q)
+          :::                                                           f
+        int tickets, stride, pass, remain;                                 /* compute pass for next allocation */
+      g *client t;                                                         global pass update();
+                                                                           c->pass = global_pass + c->remain;
+      /* quantum in real time units (e.g. 1M cycles) */
+      const int quantum = (1 << 20);                                        /* add to queue */
+                                                                            global tickets update(c->tickets);
+      /* large integer stride constant (e.g. 1M) */                         queue insert(q, c);
+      const int stride1 = (1 << 20);                                    g
+
+      /* current resource owner */                                      /* leave competition for resource */
+      client t current;                                                 void client leave(client t c, queue t q)
+                                                                        f
+      /* global aggregate tickets, stride, pass */                         /* compute remainder of current stride */
+      int global tickets, global stride, global pass;                      global pass update();
+                                                                           c->remain = c->pass - global_pass;
+      /* update global pass based on elapsed real time */
+      void global pass update(void)                                         /* remove from queue */
+      f                                                                     global tickets update(-c->tickets);
+         static int last update = 0;                                        queue remove(q, c);
+         int elapsed;                                                   g
+
+          /* compute elapsed time, advance last update */               /* proportional-share resource allocation */
+          elapsed = time() - last update;                               void allocate(queue t q)
+          last update += elapsed;                                       f
+                                                                           int elapsed;
+          /* advance global pass by quantum-adjusted stride */
+          global pass +=                                                    /* select client with minimum pass value */
+             (global stride * elapsed) / quantum;                           current = queue remove min(q);
+      g
+                                                                            /* use resource, measuring elapsed real time */
+      /* update global tickets and stride to reflect change */              elapsed = use resource(current);
+      void global tickets update(int delta)
+      f                                                                     /* compute next pass using quantum-adjusted stride */
+         global tickets += delta;                                           current->pass +=
+         global stride = stride1 / global tickets;                             (current->stride * elapsed) / quantum;
+      g                                                                     queue insert(q, current);
+                                                                        g
+      /* initialize client with specified allocation */
+      void client init(client t c, int tickets)
+      f
+         /* stride is inverse of tickets, whole stride remains */
+         c->tickets = tickets;
+         c->stride = stride1 / tickets;
+         c->remain = c->stride;
+      g
+
+
+Figure 3: Dynamic Stride Scheduling Algorithm. ANSI C code for stride scheduling operations, including support for
+joining, leaving, and nonuniform quanta. Queue manipulations can be performed in O(lg nc ) time by using an appropriate data
+structure.
+
+
+
+
+                                                                    5
+                                                                      dynamically changing a client’s ticket allocation. When
+                                                                      a client’s allocation is dynamically changed from tickets
+                            stride
+                                                                      to tickets0 , its stride and pass values must be recom-
+                              global_pass            pass             puted. The new stride0 is computed as usual, inversely
+                     done                remain
+                                                                      proportional to tickets0 . To compute the new pass0 , the
+                                                                      remaining portion of the client’s current stride, denoted
+                                        remain’
+                                                                      by remain, is adjusted to reflect the new stride0 . This
+                              global_pass         pass’               is accomplished by scaling remain by stride0 / stride.
+                                                                      In Figure 4, the client’s ticket allocation is increased,
+                              stride’                                 so pass is decreased, compressing the time remaining
+                                                                      until the client is next selected. If its allocation had de-
+                                                                      creased, then pass would have increased, expanding the
+Figure 4: Allocation Change. Modifying a client’s al-                 time remaining until the client is next selected.
+location from tickets to tickets0 requires only a constant-time          The client modify() operation requires O (lg nc ) time,
+recomputation of its stride and pass. The new stride0 is in-          where nc is the number of clients. As with dy-
+versely proportional to tickets0 . The new pass0 is determined        namic changes to the number of clients, ticket allocation
+by scaling remain, the remaining portion of the the current           changes are efficient because the stride scheduling state
+stride, by stride0 / stride.                                          associated with distinct clients is completely indepen-
+                                                                      dent; the dominant cost is due to queue manipulations.
+
+                                                                      2.4 Nonuniform Quanta
+/* dynamically modify client ticket allocation */                     With the basic stride scheduling algorithm presented in
+void client modify(client t c, queue t q, int tickets)
+                                                                      Figure 1, a client that does not consume its entire allo-
+f
+   int remain, stride;                                                cated quantum would receive less than its entitled share
+                                                                      of a resource. Similarly, it may be possible for a client’s
+    /* leave queue for resource */                                    usage to exceed a standard quantum in some situations.
+    client leave(c, q);
+                                                                      For example, under a non-preemptive scheduler, client
+    /* compute new stride */                                          run lengths can vary considerably.
+    stride = stride1 / tickets;                                          Fortunately, fractional and variable-size quanta can
+                                                                      easily be accommodated. When a client consumes a
+    /* scale remaining passes to reflect change in stride */
+                                                                      fraction f of its allocated time quantum, its pass should
+    remain = (c->remain * stride) / c->stride;
+                                                                                             
+                                                                      be advanced by f stride instead of stride. If f < 1,
+    /* update client state */                                         then the client’s pass will be increased less, and it will
+    c->tickets = tickets;                                             be scheduled sooner. If f > 1, then the client’s pass
+    c->stride = stride;                                               will be increased more, and it will be scheduled later.
+    c->remain = remain;
+                                                                      The extended code listed in Figure 3 supports nonuni-
+    /* rejoin queue for resource */                                   form quanta by effectively computing f as the elapsed
+    client join(c, q);                                                resource usage time divided by a standard quantum in
+g                                                                     the same time units.
+                                                                         Another extension would permit clients to specify
+                                                                      the quantum size that they require.5 This could be im-
+Figure 5: Dynamic Ticket Modification. ANSI C code
+                                                                      plemented by associating an additional quantumc field
+for dynamic modifications to client ticket allocations. Queue
+                                                                      with each client, and scaling each client’s stride field by
+manipulations can be performed in O(lg nc ) time by using
+                                                                         5
+an appropriate data structure.                                            An alternative would be to allow a client to specify its scheduling
+                                                                      period. Since a client’s period and quantum are related by its relative
+                                                                      resource share, specifying one quantity yields the other.
+
+
+                                                                  6
+quantumc / quantum. Deviations from a client’s speci-               simply consists of a dynamic ticket modification for a
+fied quantum would still be handled as described above,             client. Ticket inflation causes a client’s stride and pass to
+with f redefined as the elapsed resource usage divided              decrease; deflation causes its stride and pass to increase.
+by the client-specific quantumc.                                       Ticket inflation is useful among mutually trusting
+                                                                    clients, since it permits resource rights to be reallocated
+                                                                    without explicitly reshuffling tickets among clients.
+3 Flexible Resource Management                                      However, ticket inflation is also dangerous, since any
+Since stride scheduling enables low-overhead dynamic                client can monopolize a resource simply by creating a
+modifications, it can efficiently support the flexible re-          large number of tickets. In order to avoid the dangers
+source management abstractions introduced with lottery              of inflation while still exploiting its advantages, we in-
+scheduling [Wal94]. In this section, we explain how                 troduced a currency abstraction for lottery scheduling
+ticket transfers, ticket inflation, and ticket currencies           [Wal94] that is loosely borrowed from economics.
+can be implemented on top of a stride-based substrate
+for proportional sharing.                                           3.3 Ticket Currencies
+                                                                    A ticket currency defines a resource management ab-
+3.1 Ticket Transfers
+                                                                    straction barrier that contains the effects of ticket in-
+A ticket transfer is an explicit transfer of tickets from           flation in a modular way. Tickets are denominated in
+one client to another. Ticket transfers are particularly            currencies, allowing resource rights to be expressed in
+useful when one client blocks waiting for another. For              units that are local to each group of mutually trusting
+example, during a synchronous RPC, a client can loan its            clients. Each currency is backed, or funded, by tick-
+resource rights to the server computing on its behalf. A            ets that are denominated in more primitive currencies.
+transfer of t tickets between clients A and B essentially           Currency relationships may form an arbitrary acyclic
+consists of two dynamic ticket modifications. Using                 graph, such as a hierarchy of currencies. The effects of
+the code presented in Figure 5, these modifications are             inflation are locally contained by effectively maintain-
+implemented by invoking client modify(A, q, A.tickets               ing an exchange rate between each local currency and a
+– t) and client modify(B, q, B.tickets + t). When A                 common base currency that is conserved. The currency
+transfers tickets to B , A’s stride and pass will increase,         abstraction is useful for flexibly naming, sharing, and
+while B ’s stride and pass will decrease.                           protecting resource rights.
+   A slight complication arises in the case of a complete              The currency abstraction introduced for lottery
+ticket transfer; i.e., when A transfers its entire ticket al-       scheduling can also be used with stride scheduling. One
+location to B . In this case, A’s adjusted ticket value is          implementation technique is to always immediately con-
+zero, leading to an adjusted stride of infinity (division           vert ticket values denominated in arbitrary currencies
+by zero). To circumvent this problem, we record the                 into units of the common base currency. Any changes
+fraction of A’s stride that is remaining at the time of the         to the value of a currency would then require dynamic
+transfer, and then adjust that remaining fraction when              modifications to all clients holding tickets denominated
+A once again obtains tickets. This can easily be imple-             in that currency, or one derived from it.6 Thus, the
+mented by computing A’s remain value at the time of the             scope of any changes in currency values is limited to
+transfer, and deferring the computation of its stride and           exactly those clients which are affected. Since curren-
+pass values until A receives a non-zero ticket allocation           cies are used to group and isolate logical sets of clients,
+(perhaps via a return transfer from B ).                            the impact of currency fluctuations will typically be very
+                                                                    localized.
+3.2 Ticket Inflation                                                    6
+                                                                          An important exception is that changes to the number of tick-
+                                                                    ets in the base currency do not require any modifications. This is
+An alternative to explicit ticket transfers is ticket infla-        because all stride scheduling state is computed from ticket values
+tion, in which a client can escalate its resource rights            expressed in base units, and the state associated with distinct clients
+by creating more tickets. Ticket inflation (or deflation)           is independent.
+
+
+                                                                7
+4 Hierarchical Stride Scheduling
+Stride scheduling guarantees that the relative throughput
+error for any pair of clients never exceeds a single quan-
+tum. However, depending on the distribution of tickets
+to clients, a large O (nc ) absolute throughput error is
+                                                                   /* binary tree node */
+                                                                   typedef struct node f
+still possible, where nc is the number of clients.                     :::
+
+    For example, consider a set of 101 clients with a                struct node *left, *right, *parent;
+100 : 1 : : : : : 1 ticket allocation. A schedule that mini-         int tickets, stride, pass;
+                                                                   g *node t;
+mizes absolute error and response time variability would
+alternate the 100-ticket client with each of the single-           /* quantum in real time units (e.g. 1M cycles) */
+ticket clients. However, the standard stride algorithm             const int quantum = (1 << 20);
+schedules the clients in order, with the 100-ticket client
+                                                                   /* large integer stride constant (e.g. 1M) */
+receiving 100 quanta before any other client receives              const int stride1 = (1 << 20);
+a single quantum. Thus, after 100 allocations, the in-
+tended allocation for the 100-ticket client is 50, while           /* current resource owner */
+its actual allocation is 100, yielding a large absolute            client t current;
+error of 50. This behavior is also exhibited by sim-               /* proportional-share resource allocation */
+ilar rate-based flow control algorithms for networks               void allocate(node t root)
+[Dem90, Zha91, ZhK91, Par93].                                      f
+    In this section we describe a novel hierarchical variant          int elapsed;
+                                                                      node t n;
+of stride scheduling that limits the absolute throughput
+error of any client to O (lg nc ) quanta. For the 101-client           /* traverse root-to-leaf path following min pass */
+example described above, hierarchical stride scheduler                 for (n = root; !node is leaf(n); )
+simulations produced a maximum absolute error of only                     if (n->left == NULL ||
+                                                                                n->right->pass < n->left->pass)
+4.5. Our algorithm also significantly reduces response
+                                                                             n = n->right;
+time variability by aggregating clients to improve in-                    else
+terleaving. Since it is common for systems to consist                        n = n->left;
+of a small number of high-throughput clients together
+                                                                       /* use resource, measuring elapsed real time */
+with a large number of low-throughput clients, hierarchi-
+                                                                       current = n;
+cal stride scheduling represents a practical improvement               elapsed = use_resource(current);
+over previous work.
+                                                                       /* update pass for each ancestor using its stride */
+                                                                       for (n = current; n != NULL; n = n->parent)
+4.1 Basic Algorithm                                                       n->pass += (n->stride * elapsed) / quantum;
+
+    Hierarchical stride scheduling is essentially a recur-         g
+sive application of the basic stride scheduling algo-
+rithm. Individual clients are combined into groups with            Figure 6: Hierarchical Stride Scheduling Algorithm.
+larger aggregate ticket allocations, and correspondingly           ANSI C code for hierachical stride scheduling with a static set
+smaller strides. An allocation is performed by invok-              of clients. The main data structure is a binary tree of nodes.
+ing the normal stride scheduling algorithm first among             Each node represents either a client (leaf) or a group (internal
+groups, and then among individual clients within groups.           node) that summarizes aggregate information.
+    Although many different groupings are possible, we
+consider a balanced binary tree of groups. Each leaf
+node represents an individual client. Each internal node
+represents the group of clients (leaf nodes) that it covers,
+and contains their aggregate tickets, stride, and pass
+
+                                                               8
+values. Thus, for an internal node, tickets is the total
+ticket sum for all of the clients that it covers, and stride
+= stride1 / tickets. The pass value for an internal node
+is updated whenever the pass value for any of the clients
+that it covers is modified.
+    Figure 6 presents ANSI C code for the basic hierar-
+chical stride scheduling algorithm. Each node has the
+normal tickets, stride, and pass scheduling state, as well
+as the usual tree links to its parent, left child, and right
+child. An allocation is performed by tracing a path from
+the root of the tree to a leaf, choosing the child with the
+smaller pass value at each level. Once the selected client         /* dynamically modify node allocation by delta tickets */
+has finished using the resource, its pass value is updated         void node modify(node t n, node t root, int delta)
+to reflect its usage. The client update is identical to            f
+                                                                      int old stride, remain;
+that used in the dynamic stride algorithm that supports
+nonuniform quanta, listed in Figure 3. However, the hi-                /* compute new tickets, stride */
+erarchical scheduler requires additional updates to each               old stride = n->stride;
+of the client’s ancestors, following the leaf-to-root path             n->tickets += delta;
+                                                                       n->stride = stride1 / n->tickets;
+formed by successive parent links.
+    Each client allocation can be viewed as a series of                /* done when reach root */
+pairwise allocations among groups of clients at each                   if (n == root)
+level in the tree. The maximum error for each pairwise                    return;
+allocation is 1, and in the worst case, error can accumu-
+                                                                       /* scale remaining passes to reflect change in stride */
+late at each level. Thus, the maximum absolute error                   remain = n->pass - root->pass;
+for the overall tree-based allocation is the height of the             remain = (remain * n->stride) / old stride;
+              d      e
+tree, which is lg nc , where nc is the number of clients.              n->pass = root->pass + remain;
+Since the error for a pairwise A : B ratio is minimized
+when A = B , absolute error can be further reduced by
+                                                                       /* propagate change to ancestors */
+                                                                       node modify(n->parent, root, delta);
+carefully choosing client leaf positions to better balance         g
+the tree based on the number of tickets at each node.
+
+4.2 Dynamic Modifications                                          Figure 7: Dynamic Ticket Modification. ANSI C code
+                                                                   for dynamic modifications to client ticket allocations un-
+    Extending the basic hierarchical stride algorithm to           der hierarchical stride scheduling. A modification requires
+support dynamic modifications requires a careful consid-           O(lg nc ) time to propagate changes.
+eration of the effects of changes at each level in the tree.
+Figure 7 lists ANSI C code for performing a ticket mod-
+ification that works for both clients and internal nodes.
+Changes to client ticket allocations essentially follow
+the same scaling and update rules used for normal stride
+scheduling, listed in Figure 5. The hierarchical sched-
+uler requires additional updates to each of the client’s
+ancestors, following the leaf-to-root path formed by suc-
+cessive parent links. Note that the root pass value used
+in Figure 7 effectively takes the place of the global pass
+variable used in Figure 5; both represent the aggregate
+global scheduler pass.
+
+                                                               9
+   Although not presented here, we have also devel-
+oped operations to support dynamic client participa-
+tion under hierarchical stride scheduling [Wal95]. As
+for allocate(), the time complexity for client join() and
+client leave() operations is O (lg nc ), where nc is the
+number of clients.
+                                                                                          50
+                                                                                                                        A
+
+5 Simulation Results                                                                      40
+
+
+
+
+                                                                      Cumulative Quanta
+This section presents the results of several quantitative                                 30                            B
+experiments designed to evaluate the effectiveness of
+stride scheduling. We examine the behavior of stride                                      20
+scheduling in both static and dynamic environments,                                                                     C
+and also test hierarchical stride scheduling. When stride
+                                                                                          10
+scheduling is compared to lottery scheduling, we find
+that the stride-based approach provides more accurate
+                                                                                          0
+control over relative throughput rates, with much lower                                        0   20    40      60     80     100
+variance in response times.
+    For example, Figure 8 presents the results of schedul-                                50
+ing three clients with a 3 : 2 : 1 ticket ratio for 100 al-                                                             A
+locations. The dashed lines represent the ideal alloca-                                   40
+
+
+
+
+                                                                      Cumulative Quanta
+tions for each client. It is clear from Figure 8(a) that
+lottery scheduling exhibits significant variability at this
+                                                                                          30                            B
+time scale, due to the algorithm’s inherent use of ran-
+domization. In contrast, Figure 8(b) indicates that the
+                                                                                          20
+deterministic stride scheduler produces precise periodic
+                                                                                                                        C
+behavior.
+                                                                                          10
+
+
+5.1 Throughput Accuracy                                                                   0
+                                                                                               0   20    40      60     80     100
+Under randomized lottery scheduling, the expected                                                       Time (quanta)
+value for the absolute error between the specified and
+   p
+actual number of allocations for any set of clients is
+O( na), where na is the number of allocations. This                 Figure 8: Lottery vs. Stride Scheduling. Simulation
+is because the number of lotteries won by a client has              results for 100 allocations involving three clients, A, B , and
+a binomial distribution. The probability p that a client            C , with a 3 : 2 : 1 allocation. The dashed lines represent ideal
+holding t tickets will win a given lottery with a total of T        proportional-share behavior. (a) Allocation by randomized
+tickets is simply p = t=T . After na identical lotteries,           lottery scheduler shows significant variability. (b) Allocation
+the expected number of wins w is E [w] = na p, with                 by deterministic stride scheduler exhibits precise periodic be-
+variance w 2 = n p(1
+                  a     ,  p).                                      havior: A, B , A, A, B , C .
+   Under deterministic stride scheduling, the relative er-
+ror between the specified and actual number of alloca-
+tions for any pair of clients never exceeds one, indepen-
+dent of na . This is because the only source of relative
+error is due to quantization.
+
+                                                               10
+                             10                                                                  10
+
+
+
+
+       Mean Error (quanta)
+                             5                                                  Error (quanta)   5
+
+
+
+                                               (a) Lottery 7:3                                                       (b) Stride 7:3
+
+                             0                                                                   0
+                                  0   200    400     600      800   1000                              0   20    40         60          80   100
+
+
+
+
+                             10                                                                  10
+
+
+
+
+       Mean Error (quanta)
+                             5                                                  Error (quanta)   5
+
+
+
+                                               (c) Lottery 19:1                                                      (d) Stride 19:1
+
+                             0                                                                   0
+                                  0   200    400     600      800   1000                              0   20    40         60          80   100
+                                            Time (quanta)                                                      Time (quanta)
+
+
+Figure 9: Throughput Accuracy. Simulation results for two clients with 7 : 3 (top) and 19 : 1 (bottom) ticket ratios over 1000
+allocations. Only the first 100 quanta are shown for the stride scheduler, since its quantization error is deterministic and periodic.
+(a) Mean lottery scheduler error, averaged over 1000 separate 7 : 3 runs. (b) Stride scheduler error for a single 7 : 3 run. (c) Mean
+lottery scheduler error, averaged over 1000 separate 19 : 1 runs. (d) Stride scheduler error for a single 19 : 1 run.
+
+
+
+
+                                                                           11
+    Figure 9 plots the absolute error7 that results from                       dynamic [2,12] : 3 ratio. The error never exceeds a sin-
+simulating two clients under both lottery scheduling and                       gle quantum, although it is much more erratic than the
+stride scheduling. The data depicted is representative                         periodic pattern exhibited for the static 7 : 3 ratio in Fig-
+of our simulation results over a large range of pairwise                       ure 9(b). Figures 10(c) and 10(d) present data for similar
+ratios. Figure 9(a) shows the mean error averaged over                         experiments involving a larger dynamic 190 : [5,15] ra-
+1000 separate lottery scheduler runs with a 7 : 3 ticket                       tio. The results for this allocation are comparable to
+ratio. As expected, the error increases slowly with na ,                       those measured for the static 19 : 1 ticket ratio depicted
+indicating that accuracy steadily improves when error                          in Figures 9(c) and 9(d).
+is measured as a percentage of na . Figure 9(b) shows                             Overall, the error measured under both lottery
+the error for a single stride scheduler run with the same                      scheduling and stride scheduling is largely unaffected
+7 : 3 ticket ratio. As expected, the error never exceeds                       by dynamic ticket modifications. This suggests that both
+a single quantum, and follows a deterministic pattern                          mechanisms are well-suited to dynamic environments.
+with period 10. The error drops to zero at the end of                          However, stride scheduling is clearly more accurate in
+each complete period, corresponding to a precise 7 : 3                         both static and dynamic environments.
+allocation. Figures 9(c) and 9(d) present data for similar
+experiments involving a larger 19 : 1 ticket ratio.                            5.3 Response Time Variability
+                                                                               Another important performance metric is response time,
+5.2 Dynamic Ticket Allocations                                                 which we measure as the elapsed time from a client’s
+                                                                               completion of one quantum up to and including its com-
+    Figure 10 plots the absolute error that results from
+                                                                               pletion of another. Under randomized lottery schedul-
+simulating two clients under both lottery scheduling and
+                                                                               ing, client response times have a geometric distribution.
+                                                                               The expected number of lotteries na that a client must
+stride scheduling with rapidly-changing dynamic ticket
+
+                                                                               wait before its first win is E [na ] = 1=p, with variance
+allocations. This data is representative of simulation re-
+sults over a large range of pairwise ratios and a variety
+of dynamic modification techniques. For easy compar-
+                                                                                            ,
+                                                                               n2 a = (1 p)=p2 . Deterministic stride scheduling
+                                                                               exhibits dramatically less response-time variability.
+ison, the average dynamic ticket ratios are identical to
+                                                                                   Figures 11 and 12 present client response time distri-
+the static ticket ratios used in Figure 9.
+    The notation [A,B ] indicates a random ticket allo-
+                                                                               butions under both lottery scheduling and stride schedul-
+cation that is uniformly distributed from A to B . New,
+                                                                               ing. Figure 11 shows the response times that result from
+                                                                               simulating two clients with a 7 : 3 ticket ratio for one mil-
+randomly-generated ticket allocations were dynamically
+                                                                               lion allocations. The stride scheduler distributions are
+assigned every other quantum. The client modify() oper-
+                                                                               very tight, while the lottery scheduler distributions are
+ation was executed for each change under stride schedul-
+                                                                               geometric with long tails. For example, the client with
+ing; no special actions were necessary under lottery
+                                                                               the smaller allocation had a maximum response time of
+scheduling. To compute error values, specified allo-
+                                                                               4 quanta under stride scheduling, while the maximum
+cations were determined incrementally. Each client’s
+specified allocation was advanced by t=T on every quan-
+                                                                               response time under lottery scheduling was 39.
+tum, where t is the client’s current ticket allocation, and
+                                                                                   Figure 12 presents similar data for a larger 19 : 1 ticket
+T is the current ticket total.                                                 ratio. Although there is little difference in the response
+                                                                               time distributions for the client with the larger allocation,
+    Figure 10(a) shows the mean error averaged over 1000
+                                                                               the difference is enormous for the client with the smaller
+separate lottery scheduler runs with a [2,12] : 3 ticket ra-
+                                                                               allocation. Under stride scheduling, virtually all of the
+tio. Despite the dynamic changes, the mean error is
+                                                                               response times were exactly 20 quanta. The lottery
+nearly the same as that measured for the static 7 : 3 ratio
+                                                                               scheduler produced geometrically-distributed response
+depicted in Figure 9(a). Similarly, Figure 10(b) shows
+                                                                               times ranging from 1 to 194 quanta. In this case, the
+the error for a single stride scheduler run with the same
+                                                                               standard deviation of the stride scheduler’s distribution
+   7                                                                           is three orders of magnitude smaller than the standard
+     In this case the relative and absolute errors are identical, since
+there are only two clients.                                                    deviation of the lottery scheduler’s distribution.
+
+                                                                          12
+                             10                                                                   10
+
+
+
+
+       Mean Error (quanta)
+                              5                                                  Error (quanta)    5
+
+
+
+                                             (a) Lottery [2,12]:3                                                  (b) Stride [2,12]:3
+
+                              0                                                                    0
+                                  0   200    400     600      800    1000                              0   200    400      600      800   1000
+
+
+
+
+                             10                                                                   10
+
+
+
+
+       Mean Error (quanta)
+                              5                                                  Error (quanta)    5
+
+
+
+                                            (c) Lottery 190:[5,15]                                                (d) Stride 190:[5,15]
+
+                              0                                                                    0
+                                  0   200    400     600      800    1000                              0   200    400      600      800   1000
+                                            Time (quanta)                                                        Time (quanta)
+
+
+Figure 10: Throughput Accuracy – Dynamic Allocations. Simulation results for two clients with [2,12] : 3 (top) and
+190 : [5,15] (bottom) ticket ratios over 1000 allocations. The notation [ A,B ] indicates a random ticket allocation that is uniformly
+distributed from A to B . Random ticket allocations were dynamically updated every other quantum. (a) Mean lottery scheduler
+error, averaged over 1000 separate [2,12] : 3 runs. (b) Stride scheduler error for a single [2,12] : 3 run. (c) Mean lottery scheduler
+error, averaged over 1000 separate 190 : [5,15] runs. (d) Stride scheduler error for a single 190 : [5,15] run.
+
+
+
+
+                                                                            13
+                               500                                                                   500
+
+
+
+
+       Frequency (thousands)                                                 Frequency (thousands)
+                               400                                                                   400
+
+
+                               300                                                                   300
+
+
+
+                               200                                                                   200
+
+
+
+                               100               (a) Lottery - 7                                     100                (b) Stride - 7
+
+
+                                0                                                                      0
+                                     0    5        10         15   20                                      0    5        10          15   20
+
+
+
+
+                               200                                                                   200
+
+
+
+
+       Frequency (thousands)                                                 Frequency (thousands)
+                               150                                                                   150
+
+
+
+
+                               100                                                                   100
+
+
+
+                               50                (c) Lottery - 3                                      50                (d) Stride - 3
+
+
+                                0                                                                      0
+                                     0    5        10         15   20                                      0    5        10          15   20
+                                         Response Time (quanta)                                                Response Time (quanta)
+
+
+Figure 11: Response Time Distribution. Simulation results for two clients with a 7 : 3 ticket ratio over one million
+allocations. (a) Client with 7 tickets under lottery scheduling:  = 1:43,  = 0:78. (b) Client with 7 tickets under stride
+scheduling:  = 1:43,  = 0:49. (c) Client with 3 tickets under lottery scheduling:  = 3:33,  = 2:79. (d) Client with 3
+tickets under stride scheduling:  = 3:33,  = 0:47.
+
+
+
+
+                                                                        14
+                                    1000                                                                                                 1000
+
+
+
+
+       Frequency (thousands)                                                                             Frequency (thousands)
+                                               800                                                                                        800
+
+
+
+                                               600                                                                                        600
+
+
+
+                                               400                                                                                        400
+
+
+                                               200                 (a) Lottery - 19                                                       200                     (b) Stride - 19
+
+
+                                                 0                                                                                          0
+                                                     0        5         10          15        20                                                0        5         10          15        20
+
+
+
+
+                                                10                                                                                        100
+
+
+
+
+                       Frequency (thousands)                                                                     Frequency (thousands)
+                                                 8                                                                                         80
+
+
+                                                 6                                                                                         60
+
+
+
+                                                 4                                                                                         40
+
+
+                                                 2                     (c) Lottery - 1                                                     20                     (d) Stride - 1
+
+
+                                                 0                                                                                          0
+                                                     0   20       40         60          80   100                                               0   20       40         60          80   100
+                                                          Response Time (quanta)                                                                     Response Time (quanta)
+
+
+Figure 12: Response Time Distribution. Simulation results for two clients with a 19 : 1 ticket ratio over one million
+allocations. (a) Client with 19 tickets under lottery scheduling:  = 1:05,  = 0:24. (b) Client with 19 tickets under stride
+scheduling:  = 1:05,  = 0:22. (c) Client with 1 ticket under lottery scheduling:  = 20:13,  = 19:64. (d) Client with 1
+ticket under stride scheduling:  = 20:00,  = 0:01.
+
+
+
+
+                                                                                                    15
+5.4 Hierarchical Stride Scheduling
+As discussed in Section 4, stride scheduling can produce
+an absolute error of O (nc ) for skewed ticket distribu-
+tions, where nc is the number of clients. In contrast,
+hierarchical stride scheduling bounds the absolute er-
+ror to O (lg nc ). As a result, response-time variability
+                                                                                                  500
+can be significantly reduced under hierarchical stride
+scheduling.
+
+
+
+
+                                                                          Frequency (thousands)
+    Figure 13 presents client response time distributions                                         400
+
+under both hierarchical stride scheduling and ordinary
+stride scheduling. Eight clients with a 7 : 1 : : : : : 1 ticket                                  300
+ratio were simulated for one million allocations. Ex-
+cluding the very first allocation, the response time for                                          200
+each of the low-throughput clients was always 14, under
+both schedulers. Thus we only present response time
+                                                                                                  100
+distributions for the high-throughput client.
+    The ordinary stride scheduler runs the high-
+                                                                                                    0
+throughput client for 7 consecutive quanta, and then                                                    0   2         4       6          8   10
+runs each of the low-throughput clients for one quan-
+tum. The hierarchical stride scheduler interleaves the                                            500
+clients, resulting in a tighter distribution. In this case,
+the standard deviation of the ordinary stride scheduler’s
+
+
+
+
+                                                                          Frequency (thousands)
+                                                                                                  400
+distribution is more than twice as large as that for the
+hierarchical stride scheduler. We observed a maximum
+                                                                                                  300
+absolute error of 4 quanta for the high-throughput client
+under ordinary stride scheduling, and only 1.5 quanta
+                                                                                                  200
+under hierarchical stride scheduling.
+
+                                                                                                  100
+6 Prototype Implementations
+                                                                                                    0
+We implemented two prototype stride schedulers by                                                       0   2         4       6          8   10
+modifying the Linux 1.1.50 kernel on a 25MHz i486-                                                              Response Time (quanta)
+based IBM Thinkpad 350C. The first prototype enables
+proportional-share control over processor time, and the
+second enables proportional-share control over network                  Figure 13: Hierarchical Stride Scheduling. Response
+transmission bandwidth.                                                 time distributions for a simulation of eight clients with a
+                                                                        7 : 1 : : : : : 1 ticket ratio over one million allocations. Re-
+6.1 Process Scheduler                                                   sponse times are shown only for the client with 7 tickets. (a)
+                                                                        Hierarchical Stride Scheduler:  = 2:00,  = 1:07. (b)
+The goal of our first prototype was to permit                           Ordinary Stride Scheduler:  = 2:00,  = 2:45.
+proportional-share allocation of processor time to con-
+trol relative computation rates. We primarily changed
+the kernel code that handles process scheduling, switch-
+ing from a conventional priority scheduler to a stride-
+based algorithm with a scheduling quantum of 100 mil-
+liseconds. Ticket allocations can be specified via a new
+
+                                                                   16
+                             10                                                                            2500
+
+
+
+
+  Observed Iteration Ratio                                                  Average Iterations (per sec)
+                              8                                                                            2000
+
+
+
+                              6                                                                            1500
+
+
+
+                              4                                                                            1000
+
+
+
+                              2                                                                             500
+
+
+
+                              0                                                                               0
+                                  0   2      4       6      8   10                                                0   20                40   60
+
+                                          Allocated Ratio                                                                  Time (sec)
+
+
+Figure 14: CPU Rate Accuracy. For each allocation                         Figure 15: CPU Fairness Over Time. Two processes
+ratio, the observed iteration ratio is plotted for each of three          executing the compute-bound arith benchmark with a 3 : 1
+30 second runs. The gray line indicates the ideal where the               ticket allocation. Averaged over the entire run, the two pro-
+two ratios are identical. The observed ratios are within 1% of            cesses executed 2409.18 and 802.89 iterations/sec., for an
+the ideal for all data points.                                            actual ratio of 3.001:1.
+
+
+
+
+stride cpu set tickets() system call. We did not                          ratios throughout the experiment. Note that if we used a
+implement support for higher-level abstractions such as                   10 millisecond time quantum instead of the scheduler’s
+ticket transfers and currencies. Fewer than 300 lines of                  100 millisecond quantum, the same degree of fairness
+source code were added or modified to implement our                       would be observed over a series of 200 millisecond time
+changes.                                                                  windows.
+
+   Our first experiment tested the accuracy with which                       To assess the overhead imposed by our prototype
+our prototype could control the relative execution rate                   stride scheduler, we ran performance tests consisting
+of computations. Each point plotted in Figure 14 indi-                    of concurrent arith benchmark processes. Overall, we
+cates the relative execution rate that was observed for                   found that the performance of our prototype was com-
+two processes running the compute-bound arith inte-                       parable to that of the standard Linux process scheduler.
+ger arithmetic benchmark [Byt91]. Three thirty-second                     Compared to unmodified Linux, groups of 1, 2, 4, and
+runs were executed for each integral ratio between one                    8 arith processes each completed fewer iterations un-
+and ten. In all cases, the observed ratios are within 1%                  der stride scheduling, but the difference was always less
+of the ideal. We also ran experiments involving higher                    than 0.2%.
+ratios, and found that the observed ratio for a 20 : 1 al-
+                                                                             However, neither the standard Linux scheduler nor
+location ranged from 19.94 to 20.04, and the observed
+                                                                          our prototype stride scheduler are particularly efficient.
+ratio for a 50 : 1 allocation ranged from 49.93 to 50.44.
+                                                                          For example, the Linux scheduler performs a linear scan
+   Our next experiment examined the scheduler’s behav-                    of all processes to find the one with the highest priority.
+ior over shorter time intervals. Figure 15 plots average                  Our prototype also performs a linear scan to find the
+iteration counts over a series of 2-second time windows                   process with the minimum pass; an O (lg nc ) time im-
+during a single 60 second execution with a 3 : 1 alloca-                  plementation would have required substantial changes
+tion. The two processes remain close to their allocated                   to existing kernel code.
+
+                                                                     17
+6.2 Network Device Scheduler
+                                                                                                           10
+
+The goal of our second prototype was to permit
+
+
+
+
+                                                                               Observed Throughput Ratio
+proportional-share control over transmission bandwidth                                                      8
+for network devices such as Ethernet and SLIP inter-
+faces. Such control would be particularly useful for                                                        6
+applications such as concurrent ftp file transfers, and
+concurrent http Web server replies. For example, many
+                                                                                                            4
+Web servers have relatively slow connections to the In-
+ternet, resulting in substantial delays for transfers of
+large objects such as graphical images. Given control                                                       2
+
+over relative transmission rates, a Web server could pro-
+vide different levels of service to concurrent clients. For                                                 0
+example, tickets8 could be issued by servers based upon                                                         0   2      4       6      8   10
+
+the requesting user, machine, or domain. Commercial                                                                     Allocated Ratio
+servers could even sell tickets to clients demanding faster
+service.                                                                     Figure 16: Ethernet UDP Rate Accuracy. For each
+   We primarily changed the kernel code that han-                            allocation ratio, the observed data transmission ratio is plotted
+dles generic network device queueing. This involved                          for each of three runs. The gray line indicates the ideal where
+switching from conventional FIFO queueing to stride-                         the two ratios are identical. The observed ratios are within
+based queueing that respects per-socket ticket alloca-                       5% of the ideal for all data points.
+tions. Ticket allocations can be specified via a new
+SO TICKETS option to the setsockopt() system call.
+Although not implemented in our prototype, a more                            DECStation 5000/133 running Ultrix. Both machines
+complete system should also consider additional forms                        were on the same physical subnet, connected via a
+of admission control to manage other system resources,                       10Mbps Ethernet that also carried network traffic for
+such as network buffers. Fewer than 300 lines of source                      other users.
+code were added or modified to implement our changes.                           Each point plotted in Figure 16 indicates the rela-
+   Our first experiment tested the prototype’s ability to                    tive UDP data transmission rate that was observed for
+control relative network transmission rates on a local                       two processes running the ttcp benchmark. Each ex-
+area network. We used the ttcp network test program9                         periment started with both processes on the sending ma-
+[TTC91] to transfer fabricated buffers from an IBM                           chine attempting to transmit 4K buffers, each containing
+Thinkpad 350C running our modified Linux kernel, to a                        8Kbytes of data, for a total 32Mbyte transfer. As soon
+                                                                             as one process finished sending its data, it terminated the
+   8
+      To be included with http requests, tickets would require an            other process via a Unix signal. Metrics were recorded
+external data representation. If security is a concern, cryptographic        on the receiving machine to capture end-to-end applica-
+techniques could be employed to prevent forgery and theft.
+    9
+      We made a few minor modifications to the standard ttcp bench-
+                                                                             tion throughput. The observed ratios are very accurate;
+mark. Other than extensions to specify ticket allocations and facili-        all data points are within 5% of the ideal. For larger
+tate coordinated timing, we also decreased the value of a hard-coded         ticket ratios, the observed throughput ratio is slightly
+delay constant. This constant is used to temporarily put a trans-            lower than the specified allocation. For example, a 20 : 1
+mitting process to sleep when it is unable to write to a socket due
+                                                                             allocation resulted in actual throughput ratios ranging
+to a lack of buffer space (ENOBUFS). Without this modification, the
+observed throughput ratios were consistently lower than specified            from 18.51 : 1 to 18.77 : 1.
+allocations, with significant differences for large ratios. With the            To assess the overhead imposed by our prototype,
+larger delay constant, we believe that the low-throughput client is          we ran performance tests consisting of concurrent ttcp
+able to continue sending packets while the high-throughput client is
+sleeping, distorting the intended throughput ratio. Of course, chang-
+                                                                             benchmark processes. Overall, we found that the perfor-
+ing the kernel interface to signal a process when more buffer space          mance of our prototype was comparable to that of stan-
+becomes available would probably be preferable to polling.                   dard Linux. Although the prototype increases the length
+
+                                                                        18
+of the critical path for sending a network packet, we were         Clock is that they effectively maintain a global virtual
+unable to observe any significant difference between un-           clock. Arriving packets are stamped with their stream’s
+modified Linux and stride scheduling. We believe that              virtual tick plus the maximum of their stream’s virtual
+the small additional overhead of stride scheduling was             clock and the global virtual clock. Without this modi-
+masked by the variability of external network traffic from         fication, an inactive stream can later monopolize a link
+other users; individual differences were in the range of           as its virtual clock caught up to those of active streams;
+ 5%.                                                              such behavior is possible under the VirtualClock algo-
+                                                                   rithm [Par93].
+                                                                      Our stride scheduler’s use of a global pass vari-
+7 Related Work                                                     able is based on the global virtual clock employed by
+                                                                   WFQ/PGPS, which follows an update rule that produces
+We independently developed stride scheduling as a de-              a smoothly varying global virtual time. Before we be-
+terministic alternative to the randomized selection as-            came aware of the WFQ/PGPS work, we used a simpler
+pect of lottery scheduling [Wal94]. We then discov-                global pass update rule: global pass was set to the pass
+ered that the core allocation algorithm used in stride             value of the client that currently owns the resource. To
+scheduling is nearly identical to elements of rate-based           see the difference between these approaches, consider
+flow-control algorithms designed for packet-switched               the set of minimum pass values over time in Figure 2.
+networks [Dem90, Zha91, ZhK91, Par93]. Despite the                 Although the average pass value increase per quantum
+relevance of this networking research, to the best of our          is 1, the actual increases occur in non-uniform steps.
+knowledge it has not been discussed in the processor               We adopted the smoother WFQ/PGPS virtual time rule
+scheduling literature. In this section we discuss a va-            to improve the accuracy of pass updates associated with
+riety of related scheduling work, including rate-based             dynamic modifications.
+network flow control, deterministic proportional-share                To the best of our knowledge, our work on stride
+schedulers, priority schedulers, real-time schedulers,             scheduling is the first cross-application of rate-based
+and microeconomic schedulers.                                      network flow control algorithms to scheduling other re-
+                                                                   sources such as processor time. New techniques were
+7.1 Rate-Based Network Flow Control                                required to support dynamic changes and higher-level
+                                                                   abstractions such as ticket transfers and currencies. Our
+Our basic stride scheduling algorithm is very similar              hierarchical stride scheduling algorithm is a novel recur-
+to Zhang’s VirtualClock algorithm for packet-switched              sive application of the basic technique that exhibits im-
+networks [Zha91]. In this scheme, a network switch                 proved throughput accuracy and reduced response time
+orders packets to be forwarded through outgoing links.             variability compared to prior schemes.
+Every packet belongs to a client data stream, and each
+stream has an associated bandwidth reservation. A vir-
+                                                                   7.2 Proportional-Share Schedulers
+tual clock is assigned to each stream, and each of its
+packets is stamped with its current virtual time upon ar-          Several other deterministic approaches have recently
+rival. With each arrival, the virtual clock advances by a          been proposed for proportional-share processor schedul-
+virtual tick that is inversely proportional to the stream’s        ing [Fon95, Mah95, Sto95]. However, all require expen-
+reserved data rate. Using our stride-oriented terminol-            sive operations to transform client state in response to
+ogy, a virtual tick is analogous to a stride, and a virtual        dynamic changes. This makes them less attractive than
+clock is analogous to a pass value.                                stride scheduling for supporting dynamic or distributed
+   The VirtualClock algorithm is closely related to the            environments. Moreover, although each algorithm is ex-
+weighted fair queueing (WFQ) algorithm developed by                plicitly compared to lottery scheduling, none provides
+Demers, Keshav, and Shenker [Dem90], and Parekh and                efficient support for the flexible resource management
+Gallager’s equivalent packet-by-packet generalized pro-            abstractions introduced with lottery scheduling.
+cessor sharing (PGPS) algorithm [Par93]. One differ-                  Stoica and Abdel-Wahab have devised an interesting
+ence that distinguishes WFQ and PGPS from Virtual-                 scheduler using a deterministic generator that employs
+
+                                                              19
+a bit-reversed counter in place of the random number               time, presented in Section 5. TFS also offers the poten-
+generator used by lottery scheduling [Sto95]. Their al-            tial to specify performance goals that are more general
+gorithm results in an absolute error for throughput that           than proportional sharing. However, when proportional
+is O (lg na ), where na is the number of allocations. Al-          sharing is the goal, stride scheduling has advantages in
+locations can be performed efficiently in O (lg nc ) time          terms of efficiency and accuracy.
+using a tree-based data structure, where nc is the number
+of clients. However, dynamic modifications to the set              7.3 Priority Schedulers
+of active clients or their allocations require executing a
+relatively complex “restart” operation with O (nc ) time           Conventional operating systems typically employ prior-
+complexity. Also, no support is provided for fractional            ity schemes for scheduling processes [Dei90, Tan92].
+or nonuniform quanta.                                              Priority schedulers are not designed to provide
+                                                                   proportional-share control over relative computation
+   Maheshwari has developed a deterministic charge-
+                                                                   rates, and are often ad-hoc. Even popular priority-based
+based proportional-share scheduler [Mah95]. Loosely
+                                                                   approaches such as decay-usage scheduling are poorly
+based on an analogy to digitized line drawing, this
+                                                                   understood, despite the fact that they are employed by
+scheme has a maximum relative throughput error of
+                                                                   numerous operating systems, including Unix [Hel93].
+one quantum, and also supports fractional quanta. Al-
+though efficient in many cases, allocation has a worst-               Fair share schedulers allocate resources so that users
+case O (nc ) time complexity, where nc is the number               get fair machine shares over long periods of time
+of clients. Dynamic modifications require executing a              [Hen84, Kay88, Hel93]. These schedulers are layered
+“refund” operation with O (nc ) time complexity.                   on top of conventional priority schedulers, and dynam-
+                                                                   ically adjust priorities to push actual usage closer to
+    Fong and Squillante have introduced a general
+                                                                   entitled shares. The algorithms used by these systems
+scheduling approach called time-function scheduling
+                                                                   are generally complex, requiring periodic usage moni-
+(TFS) [Fon95]. TFS is intended to provide differen-
+                                                                   toring, complicated dynamic priority adjustments, and
+tial treatment of job classes, where specific throughput
+                                                                   administrative parameter setting to ensure fairness on a
+ratios are specified across classes, while jobs within each
+                                                                   time scale of minutes.
+class are scheduled in a FCFS manner. Time functions
+are used to compute dynamic job priorities as a func-
+tion of the time each job has spent waiting since it was           7.4 Real-Time Schedulers
+placed on the run queue. Linear functions result in pro-           Real-time schedulers are designed for time-critical sys-
+portional sharing: a job’s value is equal to its waiting           tems [Bur91]. In these systems, which include many
+time multipled by its job-class slope, plus a job-class            aerospace and military applications, timing require-
+constant. An allocation is performed by selecting the              ments impose absolute deadlines that must be met to
+job with the maximum time-function value. A naive                  ensure correctness and safety; a missed deadline may
+implementation would be very expensive, but since jobs             have dire consequences. One of the most widely
+are grouped into classes, allocation can be performed in           used techniques in real-time systems is rate-monotonic
+O(n) time, where n is the number of distinct classes. If           scheduling, in which priorities are statically assigned
+time-function values are updated infrequently compared             as a monotonic function of the rate of periodic tasks
+to the scheduling quantum, then a priority queue can be            [Liu73, Sha91]. The importance of a task is not re-
+used to reduce the allocation cost to O (lg n), with an            flected in its priority; tasks with shorter periods are sim-
+O(n lg n) cost to rebuild the queue after each update.             ply assigned higher priorities. Bounds on total processor
+   When Fong and Squillante compared TFS to lottery                utilization (ranging from 69% to nearly 100%, depend-
+scheduling, they found that although throughput accu-              ing on various assumptions) ensure that rate monotonic
+racy was comparable, the waiting time variance of low-             scheduling will meet all task deadlines. Another pop-
+throughput tasks was often several orders of magnitude             ular technique is earliest deadline scheduling, which
+larger under lottery scheduling. This observation is con-          always schedules the task with the closest deadline first.
+sistent with our simulation results involving response             The earliest deadline approach permits high processor
+
+                                                              20
+utilization, but has increased runtime overhead due to               cessor and memory resources [Ell75, Har92, Che93].
+the use of dynamic priorities; the task with the nearest                Stride scheduling and lottery scheduling are compat-
+deadline varies over time.                                           ible with a market-based resource management philoso-
+    In general, real-time schedulers depend upon very                phy. Our mechanisms for proportional sharing provide a
+restrictive assumptions, including precise static knowl-             convenient substrate for pricing individual time-shared
+edge of task execution times and prohibitions on task                resources in a computational economy. For example,
+interactions. In addition, limitations are placed on pro-            tickets are analogous to monetary income streams, and
+cessor utilization, and even transient overloads are disal-          the number of tickets competing for a resource can be
+lowed. In contrast, the proportional-share model used by             viewed as its price. Our currency abstraction for flexi-
+stride scheduling and lottery scheduling is designed for             ble resource management is also loosely borrowed from
+more general-purpose environments. Task allocations                  economics.
+degrade gracefully in overload situations, and active
+tasks proportionally benefit from extra resources when
+some allocations are not fully utilized. These proper-               8 Conclusions
+ties facilitate adaptive applications that can respond to
+changes in resource availability.                                    We have presented stride scheduling, a determinis-
+    Mercer, Savage, and Tokuda recently introduced                   tic technique that provides accurate control over rel-
+a higher-level processor capacity reserve abstraction                ative computation rates. Stride scheduling also effi-
+[Mer94] for measuring and controlling processor usage                ciently supports the same flexible, modular resource
+in a microkernel system with an underlying real-time                 management abstractions introduced by lottery schedul-
+scheduler. Reserves can be passed across protection                  ing. Compared to lottery scheduling, stride scheduling
+boundaries during interprocess communication, with an                achieves significantly improved accuracy over relative
+effect similar to our use of ticket transfers. While this ap-        throughput rates, with significantly less response time
+proach works well for many multimedia applications, its              variability. However, lottery scheduling is conceptu-
+reliance on resource reservations and admission control              ally simpler than stride scheduling. For example, stride
+is still more restrictive than the general-purpose model             scheduling requires careful state updates for dynamic
+that we advocate.                                                    changes, while lottery scheduling is effectively stateless.
+                                                                        The core allocation mechanism used by stride
+                                                                     scheduling is based on rate-based flow-control algo-
+7.5 Microeconomic Schedulers
+                                                                     rithms for networks. One contribution of this paper is
+Microeconomic schedulers are based on metaphors to                   a cross-application of these algorithms to the domain of
+resource allocation in real economic systems. Money                  processor scheduling. New techniques were developed
+encapsulates resource rights, and a price mechanism                  to support dynamic modifications to client allocations
+is used to allocate resources. Several microeconomic                 and resource right transfers between clients. We also in-
+schedulers [Dre88, Mil88, Fer88, Fer89, Wal89, Wal92,                troduced a new hierarchical stride scheduling algorithm
+Wel93] use auctions to determine prices and allocate re-             that exhibits improved throughput accuracy and lower
+sources among clients that bid monetary funds. Both the              response time variability compared to prior schemes.
+escalator algorithm proposed for uniprocessor schedul-
+ing [Dre88] and the distributed Spawn system [Wal92]
+                                                                     Acknowledgements
+rely upon auctions in which bidders increase their bids
+linearly over time. Since auction dynamics can be unex-              We would like to thank Kavita Bala, Dawson Engler,
+pectedly volatile, auction-based approaches sometimes                Paige Parsons, and Lyle Ramshaw for their many helpful
+fail to achieve resource allocations that are proportional           comments. Thanks to Tom Rodeheffer for suggesting
+to client funding. The overhead of bidding also limits               the connection between our work and rate-based flow-
+the applicability of auctions to relatively coarse-grained           control algorithms in the networking literature. Special
+tasks. Other market-based approaches that do not rely                thanks to Paige for her help with the visual presentation
+upon auctions have also been applied to managing pro-                of stride scheduling.
+
+                                                                21
+References                                                         [Hel93]   J. L. Hellerstein. “Achieving Service Rate Objec-
+                                                                             tives with Decay Usage Scheduling,” IEEE Trans-
+[Bur91]   A. Burns. “Scheduling Hard Real-Time Systems:                      actions on Software Engineering, August 1993.
+          A Review,” Software Engineering Journal, May
+          1991.                                                    [Hen84]   G. J. Henry. “The Fair Share Scheduler,” AT&T
+                                                                             Bell Laboratories Technical Journal, October
+[Byt91]   Byte Unix Benchmarks, Version 3, 1991. Avail-                      1984.
+          able via Usenet and anonymous ftp from many
+          locations, including gatekeeper.dec.com.                 [Kay88]   J. Kay and P. Lauder. “A Fair Share Scheduler,”
+                                                                             Communications of the ACM, January 1988.
+[Che93]   D. R. Cheriton and K. Harty. “A Market Approach
+          to Operating System Memory Allocation,” Work-            [Liu73]   C. L. Liu and J. W. Layland. “Scheduling Algo-
+          ing Paper, Computer Science Department, Stan-                      rithms for Multiprogramming in a Hard Real-Time
+          ford University, June 1993.                                        Environment,” Journal of the ACM, January 1973.
+
+[Cor90]   T. H. Cormen, C. E. Leiserson, and R. L. Rivest.         [Mah95]   U. Maheshwari. “Charge-Based Proportional
+          Introduction to Algorithms, MIT Press, 1990.                       Scheduling,” Working Draft, MIT Laboratory for
+                                                                             Computer Science, Cambridge, MA, February
+[Dei90]   H. M. Deitel. Operating Systems, Addison-                          1995.
+          Wesley, 1990.
+                                                                   [Mer94]   C. W. Mercer, S. Savage, and H. Tokuda. “Proces-
+[Dem90] A. Demers, S. Kehav, and S. Shenker. “Anal-                          sor Capacity Reserves: Operating System Sup-
+        ysis and Simulation of a Fair Queueing Algo-                         port for Multimedia Applications,” Proceedings
+        rithm,” Internetworking: Research and Experi-                        of the IEEE International Conference on Multi-
+        ence, September 1990.                                                media Computing and Systems, May 1994.
+
+[Dre88]   K. E. Drexler and M. S. Miller. “Incentive En-           [Mil88]   M. S. Miller and K. E. Drexler. “Markets and Com-
+          gineering for Computational Resource Manage-                       putation: Agoric Open Systems,” in The Ecol-
+          ment” in The Ecology of Computation, B. Huber-                     ogy of Computation, B. Huberman (ed.), North-
+          man (ed.), North-Holland, 1988.                                    Holland, 1988.
+
+[Ell75]   C. M. Ellison. “The Utah TENEX Scheduler,”               [Par93]   A. K. Parekh and R. G. Gallager. “A Generalized
+          Proceedings of the IEEE, June 1975.                                Processor Sharing Approach to Flow Control in
+                                                                             Integrated Services Networks: The Single-Node
+[Fer88]   D. Ferguson, Y. Yemini, and C. Nikolaou. “Mi-                      Case,” IEEE/ACM Transactions on Networking,
+          croeconomic Algorithms for Load-Balancing in                       June 1993.
+          Distributed Computer Systems,” International
+          Conference on Distributed Computer Systems,              [Pug90]   W. Pugh. “Skip Lists: A Probabilistic Alternative
+          1988.                                                              to Balanced Trees,” Communications of the ACM,
+                                                                             June 1990.
+[Fer89]   D. F. Ferguson. “The Application of Microeco-
+          nomics to the Design of Resource Allocation and          [Sha91]   L. Sha, M. H. Klein, and J. B. Goodenough. “Rate
+          Control Algorithms,” Ph.D. thesis, Columbia Uni-                   Monotonic Analysis for Real-Time Systems,” in
+          versity, 1989.                                                     Foundations of Real-Time Computing: Schedul-
+                                                                             ing and Resource Management, A. M. van Tilborg
+[Fon95]   L. L. Fong and M. S. Squillante. “Time-Functions:                  and G. M. Koob (eds.), Kluwer Academic Publish-
+          A General Approach to Controllable Resource                        ers, 1991.
+          Management,” Working Draft, IBM Research Di-
+          vision, T.J. Watson Research Center, Yorktown            [Sto95]   I. Stoica and H. Abdel-Wahab. “A New Approach
+          Heights, NY, March 1995.                                           to Implement Proportional Share Resource Al-
+                                                                             location,” Technical Report 95-05, Department
+[Har92]   K. Harty and D. R. Cheriton. “Application-                         of Computer Science, Old Dominion University,
+          Controlled Physical Memory using External Page-                    Norfolk, VA, April 1995.
+          Cache Management,” Fifth International Confer-
+          ence on Architectural Support for Programming            [Tan92]   A. S. Tanenbaum. Modern Operating Systems,
+          Languages and Operating Systems, October 1992.                     Prentice Hall, 1992.
+
+
+                                                              22
+[TTC91] TTCP benchmarking tool. SGI version, 1991.                A Fixed-Point Stride Representation
+        Originally developed at the US Army Ballis-
+        tics Research Lab (BRL). Available via anony-             The precision of relative rates that can be achieved de-
+        mous ftp from many locations, including                   pends on both the value of stride1 and the relative ratios
+        ftp.sgi.com.                                              of client ticket allocations. For example, with stride1
+[Wal89]   C. A. Waldspurger. “A Distributed Computational         = 220 , and a maximum ticket allocation of 210 tickets,
+          Economy for Utilizing Idle Resources,” Master’s         ratios are represented with 10 bits of precision. Thus,
+          thesis, MIT, May 1989.                                  ratios close to unity resulting from allocations that differ
+                                                                  by only one part per thousand, such as 1001 : 1000, can
+[Wal92]   C. A. Waldspurger, T. Hogg, B. A. Huberman, J.
+                                                                  be supported.
+          O. Kephart, and W. S. Stornetta. “Spawn: A Dis-
+          tributed Computational Economy,” IEEE Trans-               Since stride1 is a large integer, stride values will also
+          actions on Software Engineering, February 1992.         be large for clients with small allocations. Since pass
+                                                                  values are monotonically increasing, they will eventually
+[Wal94]   C. A. Waldspurger and W. E. Weihl. “Lot-                overflow the machine word size after a large number of
+          tery Scheduling: Flexible Proportional-Share Re-        allocations. For a machine with 64-bit integers, this is
+          source Management,” Proceedings of the First
+                                                                  not a practical problem. For example, with stride1 = 220
+          Symposium on Operating Systems Design and Im-
+          plementation, November 1994.                            and a worst-case client tickets = 1, approximately 244
+                                                                  allocations can be performed before overflow occurs.
+[Wal95]   C. A. Waldspurger. “Lottery and Stride Schedul-         At one allocation per millisecond, centuries of real time
+          ing: Flexible Proportional-Share Resource Man-          would elapse before an overflow.
+          agement,” Ph.D. thesis, MIT, 1995 (to appear).
+                                                                     For a machine with 32-bit integers, the pass values
+[Wel93]   M. P. Wellman. “A Market-Oriented Programming           associated with all clients can be adjusted by subtract-
+          Environment and its Application to Distributed          ing the minimum pass value from all clients whenever
+          Multicommodity Flow Problems,” Journal of Ar-           an overflow is detected. Alternatively, such adjustments
+          tificial Intelligence Research, August 1993.            can periodically be made after a fixed number of allo-
+[Zha91]   L. Zhang. “Virtual Clock: A New Traffic Control         cations. For example, with stride1 = 220 , a conservative
+          Algorithm for Packet Switching Networks,” ACM           adjustment period would be a few thousand allocations.
+          Transactions on Computer Systems, May 1991.             Perhaps the most straightforward approach is to simply
+                                                                  use a 64-bit integer type if one is available. Our pro-
+[ZhK91]   H. Zhang and S. Kehav. “Comparison of Rate-             totype implementation makes use of the 64-bit “long
+          Based Service Disciplines,” Proceedings of SIG-
+                                                                  long” integer type provided by the GNU C compiler.
+          COMM ’91, September 1991.
+
+
+
+
+                                                             23
+

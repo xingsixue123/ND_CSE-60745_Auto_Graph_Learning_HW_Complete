@@ -1,0 +1,4 @@
+total 8
+-rw-r--r-- 1 xing xing 1 Sep 21 16:37 alpha.txt
+-rw-r--r-- 1 xing xing 2 Sep 21 16:37 beta.txt
+parent: child 100 exited with status 0

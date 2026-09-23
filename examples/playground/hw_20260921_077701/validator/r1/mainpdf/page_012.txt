@@ -1,0 +1,44 @@
+priority-inheritance protocols added an explicit blocking term to the test; the 1997 Mars Pathfinder
+resets showed what it costs in the field. The framework itself won completely — but the paper’s
+parting advice, to make periodicity and constant run-times “a design goal”, is the part practice
+discarded, in favour of sporadic-task and server models.
+Paper 2 — Lozi, Lepers, Funston, Gaud, Quéma and Fedorova, “The Linux
+Scheduler: a Decade of Wasted Cores” (EuroSys, 2016)
+Summary.
+The paper takes one invariant — “make sure that ready threads are scheduled on
+available cores” — and shows Linux’s Completely Fair Scheduler violating it for seconds at a time.
+The cause is structural: per-core runqueues force periodic load balancing, balancing is too expensive
+to run often, and the load metric (weight scaled by utilisation, then divided by the cgroup’s thread
+count) is complicated enough to hide imbalance.
+Four bugs follow. Group Imbalance: a stealing core compares the average load of a scheduling group,
+so one heavy thread masks idle cores beside it; comparing minimum load instead made a kernel make
+13 % faster and NAS lu 13× faster. Scheduling Group Construction: groups are built from core 0’s
+viewpoint, so nodes two hops apart land in both of the groups {0, 1, 2, 4, 6} and {1, 2, 3, 4, 5, 7}, their
+averages always match and no work moves — lu takes 1040 s instead of 38 s. Overload-on-Wakeup:
+for cache reuse a waking thread is placed only among cores of the waker’s node, so it can wake
+onto a busy core while others idle; the fix cut TPC-H query 18 by 22.2 % and the full benchmark
+by 13.2 %. Missing Scheduling Domains: a call dropped during refactoring means disabling and
+re-enabling any core silently stops all cross-NUMA balancing, and lu runs 137.59× slower. None
+of these crash anything, so the authors add an online sanity checker for the invariant and a trace
+visualiser, the latter needing under 150 lines of kernel instrumentation.
+Critical judgment.
+The bug analyses are exact, but the evidence is wide in workloads and narrow
+in hardware: every measurement comes from one 8-node AMD Bulldozer server. Table 4 nevertheless
+records “Impacted applications: All” for three of the four bugs, two of them topology-dependent —
+Scheduling Group Construction needs nodes two hops apart — so a claim about which applications
+suffer is doing duty as one about which machines do, on a sample of one.
+The energy claim is weaker. The introduction asserts that “Energy waste is proportional” to the lost
+performance, yet power runs through the paper as a design pressure without ever being measured —
+no power figure, axis or table — and it bites on the Overload-on-Wakeup fix. The authors raise that
+tradeoff themselves rather than hiding it, since waking a thread on a long-idle core forces it out
+of a low-power state, but their answer is to “only enforce the new wakeup strategy if the system’s
+power management policy does not allow cores to enter low-power states at all”. The fix that wins
+most on their database workload is therefore disabled on virtually every production server, and the
+energy argument that might justify re-enabling it is asserted rather than measured.
+History has been kind to both forecasts. “New scheduler designs come and go” held: CFS was itself
+replaced, by EEVDF, in kernel 6.6 (2023). The modular alternative of Section 5 — “a scheduler
+that is a collection of modules: the core module and optimization modules” — was then taken up in
+spirit by sched_ext in 6.12 (2024), which moves policy into BPF programs outside the core. The
+fit is loose, since sched_ext replaces the whole scheduler rather than advising an invariant-keeping
+core, but the instinct is the paper’s.
+12

@@ -1,0 +1,121 @@
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10 11 12 13 14 15 16 17 18 19 20 21 22
+time (units)
+CPU idle
+T4
+T3
+T2
+T1
+T1
+T2
+T4
+arrival
+idle
+Figure 2: FIFO (non-preemptive).
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10 11 12 13 14 15 16 17 18 19 20 21 22
+time (units)
+CPU idle
+T4
+T3
+T2
+T1
+T1
+T2
+T4
+arrival
+idle
+Figure 3: SJF (non-preemptive).
+Round-Robin (q = 1)
+FIFO
+SJF
+Task
+ai
+ei
+C
+T
+W
+C
+T
+W
+C
+T
+W
+T1
+1
+10
+22
+21
+11
+11
+10
+0
+11
+10
+0
+T2
+2
+4
+12
+10
+6
+15
+13
+9
+16
+14
+10
+T3
+3
+1
+5
+2
+1
+16
+13
+12
+12
+9
+8
+T4
+4
+6
+19
+15
+9
+22
+18
+12
+22
+18
+12
+average
+12.00
+6.75
+13.50
+8.25
+12.75
+7.50
+Table 1: Completion C, turnaround T = C −ai and waiting W = T −ei times.
+Round-Robin gives the lowest average turnaround and waiting times because the three short tasks
+interleave with T1 instead of queueing behind its 10-unit burst, and FIFO the highest because T3
+waits 12 units to run for 1. The preemptive variant of SJF (SRTF) would give a different schedule:
+2

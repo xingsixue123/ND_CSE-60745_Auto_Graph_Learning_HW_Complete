@@ -1,0 +1,20 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./wrap.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/size11.clo)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/geometry/geometry.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/keyval.sty) (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/ifvtex.sty (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amstext.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsgen.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsbsy.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsopn.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amssymb.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amsfonts.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/algorithms/algorithm.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/float/float.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/base/ifthen.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/algorithmicx/algpseudocode.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/algorithmicx/algorithmicx.sty
+Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
+)
+Document Style - pseudocode environments for use with the `algorithmicx' style
+) (/home/xing/.TinyTeX/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def) (./wrap.aux)
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+(./answer.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd) [1{/home/xing/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2] [3]) [4] (./wrap.aux) )</home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmcsc10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
+Output written on wrap.pdf (4 pages, 139173 bytes).
+Transcript written on wrap.log.

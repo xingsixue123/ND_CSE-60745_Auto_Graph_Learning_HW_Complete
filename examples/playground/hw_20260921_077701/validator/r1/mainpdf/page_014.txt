@@ -1,0 +1,9 @@
+(EuroSys ’16), London, April 2016. DOI: 10.1145/2901318.2901326.
+[3] K. Kaffes, T. Chong, J. T. Humphries, A. Belay, D. Mazières and C. Kozyrakis. “Shinjuku:
+Preemptive Scheduling for µsecond-scale Tail Latency.” Proc. 16th USENIX Symposium on
+Networked Systems Design and Implementation (NSDI ’19), Boston, February 2019, pp. 345–
+360. https://www.usenix.org/conference/nsdi19/presentation/kaffes
+[4] L. Sha, R. Rajkumar and J. P. Lehoczky. “Priority Inheritance Protocols: An Approach to
+Real-Time Synchronization.” IEEE Transactions on Computers, vol. 39, no. 9, September
+1990, pp. 1175–1185. (Cited above for the blocking term missing from [1].)
+14

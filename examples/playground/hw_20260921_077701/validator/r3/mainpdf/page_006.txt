@@ -1,0 +1,87 @@
+Algorithm 2 exec(path, argv, envp) — replace the caller’s program image
+1: procedure Exec(path, argv, envp)
+2:
+inode ←Namei(path); if inode = Null then return −ENOENT
+3:
+if inode is not executable by Current.uid then return −EACCES
+4:
+hdr ←ReadHeader(inode)
+5:
+loader ←LoaderFor(hdr.magic)
+▷magic number selects a.out / ELF / script
+6:
+if loader = Null then return −ENOEXEC
+7:
+kargv, kenvp ←CopyIntoKernel(argv, envp)
+▷they live in the old address space
+— point of no return: every error above is still reportable to the caller —
+8:
+DestroyAddressSpace(Current.addrspace)
+9:
+Current.addrspace ←loader.MapImage(inode)
+▷text r-x, data rw, bss zeroed
+10:
+create a fresh heap and user stack
+11:
+for all signals s caught by a user handler do
+12:
+disposition of s ←Default
+▷the handler’s code is gone
+13:
+end for
+ignored dispositions and the blocked signal mask are left untouched
+14:
+close every descriptor marked close-on-exec
+15:
+if inode is set-uid then Current.euid ←inode.owner
+16:
+sp ←PushOntoNewStack(kargv, kenvp)
+17:
+Current.savedregs ←{ pc : hdr.entry, sp : sp, others : 0 }
+18:
+return to user mode
+▷on success there is no caller left to return to
+19: end procedure
+Algorithm 3 waitpid(pid, statusp, options) — collect a terminated child
+1: procedure Waitpid(pid, statusp, options)
+2:
+loop
+3:
+found ←False
+4:
+for all c ∈Current.children matching pid do
+▷pid = −1 matches any child
+5:
+found ←True
+6:
+if c.state = Zombie then
+7:
+if statusp̸ = Null then CopyOut(statusp, c.exitstatus)
+8:
+Current.childcputime += c.cputime + c.childcputime
+9:
+remove c from Current.children
+10:
+p ←c.pid;
+FreePCB(c);
+FreePid(p)
+▷the reaping step
+11:
+return p
+12:
+end if
+13:
+end for
+14:
+if found = False then return −ECHILD
+15:
+if options contains WNOHANG then return 0
+16:
+if a signal is pending for Current then return −EINTR
+17:
+Sleep(Current, its wait channel)
+▷a child’s exit wakes us; then rescan
+18:
+end loop
+19: end procedure
+6

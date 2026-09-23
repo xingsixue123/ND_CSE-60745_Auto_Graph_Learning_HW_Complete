@@ -1,0 +1,44 @@
+Paper 2-1 — Buttazzo, Rate Monotonic vs. EDF: Judgment Day (Real-Time
+Systems 29(1), 2005)
+Summary.
+This is a rebuttal rather than a new result. Buttazzo takes the five claims habitually
+used to prefer Rate Monotonic to Earliest Deadline First (simpler implementation, lower overhead,
+easier analysis, more predictable overload, less jitter) and answers each with theory, counterexamples
+and simulation. He grants RM one real point: on a commercial kernel with at most 256 priority
+levels, a new deadline falling between two adjacent levels can force every active deadline to be
+remapped, and only RM admits O(1) insertion via one FIFO per level. Written natively, the two
+differ only in the ready-queue sort key. On overhead he argues the accounting is backwards: EDF
+pays one deadline computation per job, but RM forces far more preemptions, and his simulations
+show preemption counts rising roughly linearly with load under RM while falling under EDF at high
+load, because a long job holding the earliest deadline can push a successor past an arrival and avoid
+a preemption outright. On analysis, EDF is exact in O(n) at U ≤1 when deadlines equal periods,
+while RM’s ln 2 ≈0.69 bound needs pseudo-polynomial response-time analysis to become exact.
+Under permanent overload EDF rescales every period to TiU while RM can block low-priority tasks
+outright; under transient overload a 1.5-unit overrun in the highest-rate task makes τ2 miss rather
+than the longest-period τ4, refuting the belief that RM fails predictably from the bottom up. A
+three-task example gives jitters of 0, 2, 8 under RM against 1, 2, 3 under EDF.
+Critical judgment.
+The method is asymmetric in a way the paper notices locally and forgets
+globally. A counterexample refutes “RM always wins”; it cannot establish “EDF wins”, and Buttazzo
+says exactly that of his jitter example, which “does not prove that EDF always introduces less
+jitter”, yet the abstract and conclusions generalise anyway. The overhead argument is the weakest
+link: Section 3 counts preemptions, never measures a context switch on real hardware, and never
+nets the saved switches against EDF’s per-job deadline update, so the verdict rests on a proxy
+measured over synthetic task sets. Two things that would decide the industrial argument are absent:
+multiprocessors, and the certification and tooling ecosystem built on fixed priorities, which he
+reduces to a circularity.
+He does not, however, stack the deck. He grants RM the O(1) ready queue and the cheaper exact
+test when deadlines are shorter than periods, grants that RM confines an overrun to tasks of
+lower priority while EDF confines it nowhere, and concludes both that which overload behaviour
+is preferable is “highly application dependent” and that the two algorithms are “not very well
+suited” to overload at all, the remedy being resource reservation. That concession aged best: Linux’s
+SCHED_DEADLINE (merged in 3.14, 2014) ships EDF together with the Constant Bandwidth Server,
+the Abeni–Buttazzo mechanism of his own Section 7.3, rather than EDF alone.
+All three argue the same way: 2-4 unseats its own predecessor’s randomness, and 2-1 unseats static
+rate priorities, each on the ground that a scheduler should carry the extra state needed to decide
+accurately.
+References
+[1] C. A. Waldspurger and W. E. Weihl. “Lottery Scheduling: Flexible Proportional-Share
+Resource Management.” Proceedings of the First USENIX Symposium on Operating Systems
+Design and Implementation (OSDI), Monterey, CA, November 1994. (Paper list ID 2-3.)
+10

@@ -1,0 +1,45 @@
+Paper 3 — Kaffes, Chong, Humphries, Belay, Mazières and Kozyrakis, “Shinjuku:
+Preemptive Scheduling for µsecond-scale Tail Latency” (NSDI, 2019)
+Summary.
+Dataplane operating systems reach microsecond latencies by never preempting: IX
+hashes requests to per-core queues (distributed FCFS), and ZygOS work-steals to approximate a
+central FCFS queue. Both let a short request queue behind a long one, which is fatal when service
+times are heavy-tailed or bimodal, where theory prefers processor sharing — and processor sharing
+needs preemption. Linux cannot supply it, since CFS targets a 6 ms preemption latency with a
+0.75 ms minimum.
+Shinjuku is a single-address-space OS on Dune in which one dispatcher thread owns the queues and
+interrupts workers directly. Removing both VM exits from the interrupt path — posted interrupts
+on the receiver, a directly mapped APIC on the sender — takes the sender from 2081 to 298 cycles
+and the receiver from 2662 to 1212, and context switches drop to 36–109 cycles; at a 5 µs quantum
+that costs under 10 % of worker throughput. Two policies exploit it: a single queue preempting
+every 5–15 µs, and a multi-queue policy serving whichever queue’s head request has the largest
+ratio of queueing time to its SLO target. Against ZygOS, Shinjuku obtains roughly 50 % lower
+tail latency and 5× the throughput at a 300 µs target on a bimodal synthetic workload, and on
+RocksDB serving 99.5 % GET plus 0.5 % SCAN, 88 % lower tail latency with 6.6× the throughput.
+Critical judgment.
+Centralisation is what makes the policies possible and is the claim least
+tested. Section 3.6 admits one dispatcher saturates at about a socket — near-linear to 11 workers
+and 5 M requests/s, 9.5 M with two — and proposes to scale further by “steer[ing] requests to
+different dispatchers using the NIC RSS feature”. That is the distributed queueing Section 2 blames
+for head-of-line blocking, reintroduced at the granularity of dispatcher groups, and what it costs
+is never measured: the only multi-dispatcher experiment issues “short requests with 1µsec fixed
+service time to stress the dispatcher”, the one distribution under which head-of-line blocking cannot
+occur. The headline claim is about heavy tails; the scaling result is measured where tails are absent.
+The security discussion is honest, but its remedy is still a promise. Mapping APIC registers into
+the process means, as the authors say, that “one process could launch a denial-of-service attack on
+another process by issuing a large number of interrupts to a specific core”; they answer that “future
+versions of Shinjuku will run application code in ring 3 . . . eliminating this attack vector with very
+small overhead”, citing an 84-cycle ring transition. But every evaluation number was taken with
+applications in ring 0, chosen “to avoid the address space crossings” — crossings that, at a 5 µs
+quantum, would recur on every preemption. The system that was measured is not the system that
+would be deployable.
+The premise — that the obstacle was mechanism rather than policy — has held up: the hardware
+the paper asks for, “support for lightweight user-level interrupts”, later shipped as Intel’s user
+interrupts (UINTR) in Sapphire Rapids.
+References
+[1] C. L. Liu and J. W. Layland. “Scheduling Algorithms for Multiprogramming in a Hard-Real-
+Time Environment.” Journal of the ACM, vol. 20, no. 1, January 1973, pp. 46–61. DOI:
+10.1145/321738.321743.
+[2] J.-P. Lozi, B. Lepers, J. Funston, F. Gaud, V. Quéma and A. Fedorova. “The Linux Sched-
+uler: a Decade of Wasted Cores.” Proc. 11th European Conference on Computer Systems
+13

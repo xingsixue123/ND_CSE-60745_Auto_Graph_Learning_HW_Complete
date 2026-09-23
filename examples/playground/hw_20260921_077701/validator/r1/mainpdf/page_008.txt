@@ -1,0 +1,45 @@
+Ex. 2.6 (5 pts) — Zombie processes
+A zombie is a process that has already run exit() but has not yet been reaped. Its address space,
+open files and kernel stack are gone; all that is left is its process-table entry, holding the exit status,
+the pid and the CPU time it used.
+The kernel keeps that entry because the status belongs to the parent, and the child cannot report
+it once it no longer exists. The pid must stay allocated for the same reason: reusing it while the
+parent can still name it in waitpid would let the parent wait on an unrelated process.
+The cost is one process-table slot and one pid — no memory, no CPU time, no descriptors. A
+zombie also cannot be killed, since it is already dead: SIGKILL is discarded, as no execution context
+is left to receive it. In ps it appears in state Z, with its command shown as <defunct>.
+It disappears when the parent calls wait or waitpid, or when the parent itself exits and init inherits
+and reaps it. A long-lived parent that forks children and never waits leaks table entries until fork
+fails with EAGAIN, which is why such a parent should handle or explicitly ignore SIGCHLD.
+An orphan is the complement: a child still alive when its parent dies. init adopts it and reaps it
+when it eventually exits.
+Ex. 2.7 — Three papers from the “Scheduling” group
+Paper 2-3 — Waldspurger and Weihl, Lottery Scheduling (OSDI 1994)
+Summary.
+Lottery scheduling represents resource rights as tickets and settles each quantum by
+drawing one at random: a client holding t of T tickets wins with probability p = t/T, so throughput
+tracks the allocation, no non-zero holding can starve, and a reallocation takes effect at the very next
+decision. The abstractions built on the draw matter more than the draw itself. Ticket transfers
+hand a blocked client’s rights to whoever is computing on its behalf, dissolving priority inversion
+much as priority inheritance does. Currencies denominate tickets locally and convert through an
+exchange rate into a conserved base currency, so inflation inside one trust boundary cannot leak
+out. Compensation tickets multiply a client’s funding by 1/f when it used only a fraction f of
+its quantum, so a thread that yields early for I/O is not quietly punished. A Mach 3.0 prototype
+(25 MHz MIPS DECStation, 100 ms quantum) reports a 2:1 Dhrystone allocation yielding 25378
+against 12619 iterations/s (2.01:1), an 8:3:1 database allocation reproduced in response time as
+well as throughput (17.19, 43.19 and 132.20 s), and currencies insulating one user’s inflation from
+another (aggregate ratio 1.01:1 before, 1.00:1 after).
+Critical judgment.
+The evaluation’s soft spot is one the paper half-concedes. Individual 60-
+second runs scatter badly, a 10:1 allocation being observed at 13.42:1, and the authors’ reply is
+that large ratios “converge toward their allocated values over longer time intervals”, offering a 20:1
+allocation that averaged 19.08:1 over three minutes. That answer costs them their framing: the
+introduction argues interactive systems need control “at a time scale of milliseconds to seconds”,
+and the related-work section dismisses fair-share schedulers precisely for delivering fairness only “on
+a time scale of minutes”. Randomisation makes the error fall only as 1/√n, their own coefficient
+of variation
+√︁
+(1 −p)/np, so on the timescale the paper says matters it supplies roughly what it
+criticises.
+The overhead claim is thinner than its conclusion. The prototype ran 2.7% slower on three Dhrystone
+8

@@ -1,0 +1,774 @@
+        Lottery Scheduling: Flexible Proportional-Share Resource Management
+
+                                       Carl A. Waldspurger                       William E. Weihl 
+                                               MIT Laboratory for Computer Science
+                                                  Cambridge, MA 02139 USA
+
+
+                              Abstract                                       to rapidly focus available resources on tasks that are cur-
+                                                                             rently important [Dui90].
+    This paper presents lottery scheduling, a novel randomized
+resource allocation mechanism. Lottery scheduling provides ef-                   Few general-purpose schemes even come close to sup-
+ficient, responsive control over the relative execution rates of             porting flexible, responsive control over service rates.
+computations. Such control is beyond the capabilities of conven-             Those that do exist generally rely upon a simple notion of
+tional schedulers, and is desirable in systems that service requests         priority that does not provide the encapsulation and modu-
+of varying importance, such as databases, media-based applica-               larity properties required for the engineering of large soft-
+tions, and networks. Lottery scheduling also supports modular                ware systems. In fact, with the exception of hard real-time
+resource management by enabling concurrent modules to insulate               systems, it has been observed that the assignment of pri-
+their resource allocation policies from one another. A currency ab-          orities and dynamic priority adjustment schemes are often
+straction is introduced to flexibly name, share, and protect resource        ad-hoc [Dei90]. Even popular priority-based schemes for
+rights. We also show that lottery scheduling can be generalized              CPU allocation such as decay-usage scheduling are poorly
+to manage many diverse resources, such as I/O bandwidth, mem-                understood, despite the fact that they are employed by nu-
+ory, and access to locks. We have implemented a prototype lottery            merous operating systems, including Unix [Hel93].
+scheduler for the Mach 3.0 microkernel, and found that it provides               Existing fair share schedulers [Hen84, Kay88] and mi-
+flexible and responsive control over the relative execution rates            croeconomic schedulers [Fer88, Wal92] successfully ad-
+of a wide range of applications. The overhead imposed by our                 dress some of the problems with absolute priority schemes.
+unoptimized prototype is comparable to that of the standard Mach             However, the assumptions and overheads associated with
+timesharing policy.                                                          these systems limit them to relatively coarse control over
+                                                                             long-running computations. Interactive systems require
+                                                                             rapid, dynamic control over scheduling at a time scale of
+1 Introduction                                                               milliseconds to seconds.
+                                                                                 We have developed lottery scheduling, a novel ran-
+   Scheduling computations in multithreaded systems is a
+                                                                             domized mechanism that provides responsive control over
+complex, challenging problem. Scarce resources must be
+                                                                             the relative execution rates of computations. Lottery
+multiplexed to service requests of varying importance, and
+                                                                             scheduling efficiently implements proportional-share re-
+the policy chosen to manage this multiplexing can have an
+                                                                             source management — the resource consumption rates of
+enormous impact on throughput and response time. Accu-
+                                                                             active computations are proportional to the relative shares
+rate control over the quality of service provided to users
+                                                                             that they are allocated. Lottery scheduling also provides
+and applications requires support for specifying relative
+                                                                             excellent support for modular resource management. We
+computation rates. Such control is desirable across a wide
+                                                                             have developed a prototype lottery scheduler for the Mach
+spectrum of systems. For long-running computations such
+                                                                             3.0 microkernel, and found that it provides efficient, flexible
+as scientific applications and simulations, the consumption
+                                                                             control over the relative execution rates of compute-bound
+of computing resources that are shared among users and ap-
+                                                                             tasks, video-based applications, and client-server interac-
+plications of varying importance must be regulated [Hel93].
+                                                                             tions. This level of control is not possible with current
+For interactive computations such as databases and media-
+                                                                             operating systems, in which adjusting scheduling parame-
+based applications, programmers and users need the ability
+                                                                             ters to achieve specific results is at best a black art.
+     E-mail: carl, weihl @lcs.mit.edu. World Wide Web:
+              f                g                                                 Lottery scheduling can be generalized to manage many
+http://www.psg.lcs.mit.edu/. The first author was supported
+in part by an AT&T USL Fellowship and by a grant from the MIT X Con-         diverse resources, such as I/O bandwidth, memory, and
+sortium. Prof. Weihl is currently supported by DEC while on sabbatical       access to locks. We have developed a prototype lottery-
+at DEC SRC. This research was also supported by ARPA under contract          scheduled mutex implementation, and found that it provides
+N00014-94-1-0985, by grants from AT&T and IBM, and by an equipment
+grant from DEC. The views and conclusions contained in this document
+                                                                             flexible control over mutex acquisition rates. A variant of
+are those of the authors and should not be interpreted as representing the   lottery scheduling can also be used to efficiently manage
+official policies, either expressed or implied, of the U.S. government.      space-shared resources such as memory.
+    In the next section, we describe the basic lottery schedul-                The number of lotteries required for a client’s first win
+ing mechanism. Section 3 discusses techniques for modular                  has a geometric distribution. The expected number of
+resource management based on lottery scheduling. Imple-                    lotteries n that a client must wait before its first win is
+mentation issues and a description of our prototype are                    E [n] = 1=p, with variance n2 = (1 ; p)=p2 . Thus, a
+presented in Section 4. Section 5 discusses the results of                 client’s average response time is inversely proportional to
+several quantitative experiments. Generalizations of the                   its ticket allocation. The properties of both binomial and
+lottery scheduling approach are explored in Section 6. In                  geometric distributions are well-understood [Tri82].
+Section 7, we examine related work. Finally, we summarize                      With a scheduling quantum of 10 milliseconds (100 lot-
+our conclusions in Section 8.                                              teries per second), reasonable fairness can be achieved over
+                                                                           subsecond time intervals. As computation speeds continue
+                                                                           to increase, shorter time quanta can be used to further im-
+2 Lottery Scheduling                                                       prove accuracy while maintaining a fixed proportion of
+                                                                           scheduler overhead.
+   Lottery scheduling is a randomized resource allocation                      Since any client with a non-zero number of tickets will
+mechanism. Resource rights are represented by lottery                      eventually win a lottery, the conventional problem of star-
+tickets.1 Each allocation is determined by holding a lot-                  vation does not exist. The lottery mechanism also operates
+tery; the resource is granted to the client with the winning               fairly when the number of clients or tickets varies dynami-
+ticket. This effectively allocates resources to competing                  cally. For each allocation, every client is given a fair chance
+clients in proportion to the number of tickets that they hold.             of winning proportional to its share of the total number of
+                                                                           tickets. Since any changes to relative ticket allocations are
+2.1 Resource Rights                                                        immediately reflected in the next allocation decision, lottery
+   Lottery tickets encapsulate resource rights that are ab-                scheduling is extremely responsive.
+stract, relative, and uniform. They are abstract because they
+quantify resource rights independently of machine details.
+Lottery tickets are relative, since the fraction of a resource             3 Modular Resource Management
+that they represent varies dynamically in proportion to the
+                                                                              The explicit representation of resource rights as lot-
+contention for that resource. Thus, a client will obtain
+                                                                           tery tickets provides a convenient substrate for modular
+more of a lightly contended resource than one that is highly
+                                                                           resource management. Tickets can be used to insulate the
+contended; in the worst case, it will receive a share propor-
+                                                                           resource management policies of independent modules, be-
+tional to its share of tickets in the system. Finally, tickets
+                                                                           cause each ticket probabilistically guarantees its owner the
+are uniform because rights for heterogeneous resources can
+                                                                           right to a worst-case resource consumption rate. Since lot-
+be homogeneously represented as tickets. These properties
+                                                                           tery tickets abstractly encapsulate resource rights, they can
+of lottery tickets are similar to those of money in computa-
+                                                                           also be treated as first-class objects that may be transferred
+tional economies [Wal92].
+                                                                           in messages.
+                                                                              This section presents basic techniques for implementing
+2.2 Lotteries
+                                                                           resource management policies with lottery tickets. Detailed
+   Scheduling by lottery is probabilistically fair. The ex-                examples are presented in Section 5.
+pected allocation of resources to clients is proportional to
+the number of tickets that they hold. Since the scheduling                 3.1 Ticket Transfers
+algorithm is randomized, the actual allocated proportions
+                                                                              Ticket transfers are explicit transfers of tickets from one
+are not guaranteed to match the expected proportions ex-
+                                                                           client to another. Ticket transfers can be used in any situ-
+actly. However, the disparity between them decreases as
+                                                                           ation where a client blocks due to some dependency. For
+the number of allocations increases.
+                                                                           example, when a client needs to block pending a reply from
+   The number of lotteries won by a client has a binomial
+distribution. The probability p that a client holding t tickets
+                                                                           an RPC, it can temporarily transfer its tickets to the server
+will win a given lottery with a total of T tickets is simply
+                                                                           on which it is waiting. This idea also conveniently solves
+p = t=T . After n identical lotteries, the expected number of              the conventional priority inversion problem in a manner
+wins w is E [w] = np, with variance w      = np(1 ; p). The
+                                         2                                 similar to priority inheritance [Sha90]. Clients also have
+
+                   p
+coefficient of variation for the observed proportion of wins
+is w =E [w] = (1 ; p)=np. Thus, a client’s throughput
+                                                                           the ability to divide ticket transfers across multiple servers
+                                                                           on which they may be waiting.
+is proportionalp to its ticket allocation, with accuracy that
+improves with n.                                                           3.2 Ticket Inflation
+    1 A single physical ticket may represent any number of logical tick-      Ticket inflation is an alternative to explicit ticket transfers
+ets. This is similar to monetary notes, which may be issued in different   in which a client can escalate its resource rights by creating
+denominations.                                                             more lottery tickets. In general, such inflation should be
+disallowed, since it violates desirable modularity and load                      total = 20
+insulation properties. For example, a single client could                        random [0 .. 19] = 15
+easily monopolize a resource by creating a large number of
+lottery tickets. However, ticket inflation can be very use-                                  10                 2          5         1     2
+ful among mutually trusting clients; inflation and deflation
+can be used to adjust resource allocations without explicit                               Σ = 10             Σ = 12     Σ = 17
+communication.                                                                            Σ > 15?            Σ > 15?    Σ > 15?
+                                                                                            no                 no         yes
+3.3 Ticket Currencies
+   In general, resource management abstraction barriers are                   Figure 1: Example Lottery. Five clients compete in a list-based
+desirable across logical trust boundaries. Lottery schedul-                   lottery with a total of 20 tickets. The fifteenth ticket is randomly
+ing can easily be extended to express resource rights in units                selected, and the client list is searched for the winner. A running
+that are local to each group of mutually trusting clients. A                  ticket sum is accumulated until the winning ticket value is reached.
+                                                                              In this example, the third client is the winner.
+unique currency is used to denominate tickets within each
+trust boundary. Each currency is backed, or funded, by
+tickets that are denominated in more primitive currencies.                    Park-Miller algorithm [Par88, Car90] that executes in ap-
+Currency relationships may form an arbitrary acyclic graph,                   proximately 10 RISC instructions. Our assembly-language
+such as a hierarchy of currencies. The effects of inflation                   implementation is listed in Appendix A.
+can be locally contained by maintaining an exchange rate
+between each local currency and a base currency that is                       4.2 Lotteries
+conserved. The currency abstraction is useful for flexibly
+                                                                                 A straightforward way to implement a centralized lot-
+naming, sharing, and protecting resource rights. For exam-
+                                                                              tery scheduler is to randomly select a winning ticket, and
+ple, an access control list associated with a currency could
+                                                                              then search a list of clients to locate the client holding that
+                                                                              ticket. This requires a random number generation and O(n)
+specify which principals have permission to inflate it by
+                                                                              operations to traverse a client list of length n, accumulating
+creating new tickets.
+                                                                              a running ticket sum until it reaches the winning value. An
+3.4 Compensation Tickets                                                      example list-based lottery is presented in Figure 1.
+    A client which consumes only a fraction f of its al-                         Various optimizations can reduce the average number of
+located resource quantum can be granted a compensation                        clients that must be examined. For example, if the distri-
+ticket that inflates its value by 1=f until the client starts its             bution of tickets to clients is uneven, ordering the clients
+next quantum. This ensures that each client’s resource con-                   by decreasing ticket counts can substantially reduce the av-
+sumption, equal to f times its per-lottery win probability p,                 erage search length. Since those clients with the largest
+is adjusted by 1=f to match its allocated share p. Without                    number of tickets will be selected most frequently, a simple
+compensation tickets, a client that does not consume its en-                  “move to front” heuristic can be very effective.
+tire allocated quantum would receive less than its entitled                      For large n, a more efficient implementation is to use
+share of the processor.                                                       a tree of partial ticket sums, with clients at the leaves.
+                                                                              To locate the client holding a winning ticket, the tree is
+                                                                              traversed starting at the root node, and ending with the
+4 Implementation                                                              winning client leaf node, requiring only O(lg n) operations.
+                                                                              Such a tree-based implementation can also be used as the
+   We have implemented a prototype lottery scheduler                          basis of a distributed lottery scheduler.
+by modifying the Mach 3.0 microkernel (MK82) [Acc86,
+Loe92] on a 25MHz MIPS-based DECStation 5000/125.                             4.3 Mach Kernel Interface
+Full support is provided for ticket transfers, ticket inflation,                  The kernel representation of tickets and currencies is
+ticket currencies, and compensation tickets.2 The schedul-                    depicted in Figure 2. A minimal lottery scheduling interface
+ing quantum on this platform is 100 milliseconds.                             is exported by the microkernel. It consists of operations to
+                                                                              create and destroy tickets and currencies, operations to fund
+4.1 Random Numbers                                                            and unfund a currency (by adding or removing a ticket from
+                                                                              its list of backing tickets), and operations to compute the
+   An efficient lottery scheduler requires a fast way to gen-
+                                                                              current value of tickets and currencies in base units.
+erate uniformly-distributed random numbers. We have im-
+                                                                                  Our lottery scheduling policy co-exists with the standard
+plemented a pseudo-random number generator based on the
+                                                                              timesharing and fixed-priority policies. A few high-priority
+   2 Our first lottery scheduler implementation, developed for the Prelude    threads (such as the Ethernet driver) created by the Unix
+[Wei91] runtime system, lacked support for ticket transfers and currencies.   server (UX41) remain at their original fixed priorities.
+                                                             list of
+                                             ...             backing                                                base
+                                                             tickets                                                        3000
+                                             ...
+                  amount                                      unique
+                                                              name                                           1000            2000
+    1000
+                  currency                alice                                                              base            base
+    base                                           300
+                                                             active
+                                                             amount
+                                            ...
+                                                              list of                               alice                           bob
+                                            ...                                                             200                           100
+   ticket                                                     issued
+                                                              tickets
+                                                                                                 100         200                     100
+                                       currency                                                 alice       alice                    bob
+
+
+
+
+Figure 2: Kernel Objects. A ticket object contains an amount                            task1                  task2                 task3
+denominated in some currency. A currency object contains a                                         0                   500                      100
+name, a list of tickets that back the currency, a list of all tickets
+issued in the currency, and an active amount sum for all issued                          100                 200     300                   100
+tickets.                                                                                task1               task2   task2                 task3
+
+
+
+
+4.4 Ticket Currencies                                                             thread1               thread2         thread3            thread4
+
+    Our prototype uses a simple scheme to convert ticket
+amounts into base units. Each currency maintains an ac-
+                                                                              Figure 3: Example Currency Graph. Two users compete for
+tive amount sum for all of its issued tickets. A ticket is                    computing resources. Alice is executing two tasks: task1 is cur-
+active while it is being used by a thread to compete in a                     rently inactive, and task2 has two runnable threads. Bob is exe-
+lottery. When a thread is removed from the run queue, its                     cuting one single-threaded task, task3. The current values in base
+tickets are deactivated; they are reactivated when the thread                 units for the runnable threads are thread2 = 400, thread3 = 600,
+rejoins the run queue.3 If a ticket deactivation changes a                    and thread4 = 2000. In general, currencies can also be used for
+currency’s active amount to zero, the deactivation propa-                     groups of users or applications, and currency relationships may
+gates to each of its backing tickets. Similarly, if a ticket                  form an acyclic graph instead of a strict hierarchy.
+activation changes a currency’s active amount from zero,
+the activation propagates to each of its backing tickets.                     4.5 Compensation Tickets
+    A currency’s value is computed by summing the value of
+its backing tickets. A ticket’s value is computed by multi-                       As discussed in Section 3.4, a thread which consumes
+plying the value of the currency in which it is denominated                   only a fraction f of its allocated time quantum is automati-
+by its share of the active amount issued in that currency.                    cally granted a compensation ticket that inflates its value by
+The value of a ticket denominated in the base currency is                     1=f until the thread starts its next quantum. This is consis-
+defined to be its face value amount. An example currency                      tent with proportional sharing, and permits I/O-bound tasks
+graph with base value conversions is presented in Figure 3.                   that use few processor cycles to start quickly.
+Currency conversions can be accelerated by caching values                         For example, suppose threads A and B each hold tickets
+or exchange rates, although this is not implemented in our                    valued at 400 base units. Thread A always consumes its
+prototype.                                                                    entire 100 millisecond time quantum, while thread B uses
+    Our scheduler uses the simple list-based lottery with                     only 20 milliseconds before yielding the processor. Since
+a move-to-front heuristic, as described earlier in Section                    both A and B have equal funding, they are equally likely to
+4.2. To handle multiple currencies, a winning ticket value                    win a lottery when both compete for the processor. How-
+is selected by generating a random number between zero                        ever, thread B uses only f = 1=5 of its allocated time,
+and the total number of active tickets in the base currency.                  allowing thread A to consume five times as much CPU,
+The run queue is then traversed as described earlier, except                  in violation of their 1 : 1 allocation ratio. To remedy this
+that the running ticket sum accumulates the value of each                     situation, thread B is granted a compensation ticket valued
+thread’s currency in base units until the winning value is                    at 1600 base units when it yields the processor. When B
+reached.                                                                      next competes for the processor, its total funding will be
+                                                                              400=f = 2000 base units. Thus, on average B will win
+                                                                              the processor lottery five times as often as A, each time
+                                                                              consuming 1=5 as much of its quantum as A, achieving the
+    3 A blocked thread may transfer its tickets to another thread that will
+
+actively use them. For example, a thread blocked pending a reply from an
+RPC transfers its tickets to the server thread on which it is waiting.        desired 1 : 1 allocation ratio.
+4.6 Ticket Transfers                                                                                          15
+
+   The mach msg system call was modified to temporarily
+
+
+
+
+                                                                                   Observed Iteration Ratio
+transfer tickets from client to server for synchronous RPCs.
+This automatically redirects resource rights from a blocked
+                                                                                                              10
+client to the server computing on its behalf. A transfer is
+implemented by creating a new ticket denominated in the
+client’s currency, and using it to fund the server’s currency.
+If the server thread is already waiting when mach msg
+                                                                                                               5
+performs a synchronous call, it is immediately funded with
+the transfer ticket. If no server thread is waiting, then the
+transfer ticket is placed on a list that is checked by the
+server thread when it attempts to receive the call message.4
+                                                                                                               0
+During a reply, the transfer ticket is simply destroyed.                                                           0   2     4        6      8   10
+                                                                                                                           Allocated Ratio
+4.7 User Interface
+   Currencies and tickets can be manipulated via a                               Figure 4: Relative Rate Accuracy. For each allocated ratio, the
+command-line interface. User-level commands exist to cre-                        observed ratio is plotted for each of three 60 second runs. The
+ate and destroy tickets and currencies (mktkt, rmtkt,                            gray line indicates the ideal where the two ratios are identical.
+mkcur, rmcur), fund and unfund currencies (fund,
+unfund), obtain information (lstkt, lscur), and to                               With the exception of the run for which the 10 : 1 allocation
+execute a shell command with specified funding (fundx).                          resulted in an average ratio of 13.42 : 1, all of the observed
+Since the Mach microkernel has no concept of user and we                         ratios are close to their corresponding allocations. As ex-
+did not modify the Unix server, these commands are setuid                        pected, the variance is greater for larger ratios. However,
+root.5 A complete lottery scheduling system should pro-                          even large ratios converge toward their allocated values
+tect currencies by using access control lists or Unix-style                      over longer time intervals. For example, the observed ratio
+permissions based on user and group membership.                                  averaged over a three minute period for a 20 : 1 allocation
+                                                                                 was 19.08 : 1.
+                                                                                     Although the results presented in Figure 4 indicate that
+5 Experiments                                                                    the scheduler can successfully control computation rates,
+                                                                                 we should also examine its behavior over shorter time in-
+   In order to evaluate our prototype lottery scheduler, we                      tervals. Figure 5 plots average iteration counts over a se-
+conducted experiments designed to quantify its ability to                        ries of 8 second time windows during a single 200 second
+flexibly, responsively, and efficiently control the relative                     execution with a 2 : 1 allocation. Although there is clearly
+execution rates of computations. The applications used                           some variation, the two tasks remain close to their allocated
+in our experiments include the compute-bound Dhrystone                           ratios throughout the experiment. Note that if a schedul-
+benchmark, a Monte-Carlo numerical integration program,                          ing quantum of 10 milliseconds were used instead of the
+a multithreaded client-server application for searching text,                    100 millisecond Mach quantum, the same degree of fair-
+and competing MPEG video viewers.                                                ness would be observed over a series of subsecond time
+                                                                                 windows.
+5.1 Fairness
+   Our first experiment measured the accuracy with which                         5.2 Flexible Control
+our lottery scheduler could control the relative execution                          A more interesting use of lottery scheduling involves
+rates of computations. Each point plotted in Figure 4 indi-                      dynamically controlled ticket inflation. A practical appli-
+cates the relative execution rate that was observed for two                      cation that benefits from such control is the Monte-Carlo
+tasks executing the Dhrystone benchmark [Wei84] for sixty                        algorithm [Pre88]. Monte-Carlo is a probabilistic algorithm
+seconds with a given relative ticket allocation. Three runs                      that is widely used in the physical sciences for computing
+were executed for each integral ratio between one and ten.
+                                                                                                                   p errors in the computed
+                                                                                 average properties of systems. Since
+                                                                                 average are proportional to 1= n, where n is the number
+    4 In this case, it would be preferable to instead fund all threads capable
+
+of receiving the message. For example, a server task with fewer threads          of trials, accurate results require a large number of trials.
+than incoming messages should be directly funded. This would accelerate             Scientists frequently execute several separate Monte-
+all server threads, decreasing the delay until one becomes available to          Carlo experiments to explore various hypotheses. It is often
+service the waiting message.
+    5 The fundx command only executes as root to initialize its task cur-        desirable to obtain approximate results quickly whenever a
+rency funding. It then performs a setuid back to the original user before        new experiment is started, while allowing older experiments
+invoking exec.                                                                   to continue reducing their error at a slower rate [Hog88].
+                               30000
+
+
+
+
+                                                                                                    Cumulative Trials (millions)
+                                                                                                                                   10
+
+
+
+
+Average Iterations (per sec)
+                               20000
+
+
+                                                                                                                                    5
+                               10000
+
+
+
+
+                                  0                                                                                                 0
+                                       0         50          100            150          200                                            0   500             1000
+                                                          Time (sec)                                                                        Time (sec)
+
+
+Figure 5: Fairness Over Time. Two tasks executing the Dhry-                                      Figure 6: Monte-Carlo Execution Rates. Three identical
+stone benchmark with a 2 : 1 ticket allocation. Averaged over the                                Monte-Carlo integrations are started two minutes apart. Each
+entire run, the two tasks executed 25378 and 12619 iterations/sec.,                              task periodically sets its ticket value to be proportional to the
+for an actual ratio of 2.01 : 1.                                                                 square of its relative error, resulting in the convergent behavior.
+                                                                                                 The “bumps” in the curves mirror the decreasing slopes of new
+                                                                                                 tasks that quickly reduce their error.
+This goal would be impossible with conventional sched-
+ulers, but can be easily achieved in our system by dynam-
+ically adjusting an experiment’s ticket value as a function                                          We developed a simple multithreaded client-server ap-
+of its current relative error. This allows a new experiment                                      plication that shares properties with real databases and in-
+with high error to quickly catch up to older experiments by                                      formation retrieval systems. Our server initially loads a
+executing at a rate that starts high but then tapers off as its                                  4.6 Mbyte text file “database” containing the complete text
+relative error approaches that of its older counterparts.                                        to all of William Shakespeare’s plays.7 It then forks off
+   Figure 6 plots the total number of trials computed by each                                    several worker threads to process incoming queries from
+of three staggered Monte-Carlo tasks. Each task is based                                         clients. One query operation supported by the server is a
+on the sample code presented in [Pre88], and is allocated a                                      case-insensitive substring search over the entire database,
+share of time that is proportional to the square of its relative                                 which returns a count of the matches found.
+error.6 When a new task is started, it initially receives a                                          Figure 7 presents the results of executing three database
+large share of the processor. This share diminishes as the                                       clients with an 8 : 3 : 1 ticket allocation. The server has
+task reduces its error to a value closer to that of the other                                    no tickets of its own, and relies completely upon the tickets
+executing tasks.                                                                                 transferred by clients. Each client repeatedly sends requests
+   A similar form of dynamic control may also be useful                                          to the server to count the occurrences of the same search
+in graphics-intensive programs. For example, a rendering                                         string.8 The high-priority client issues a total of 20 queries
+operation could be granted a large share of processing re-                                       and then terminates. The other two clients continue to issue
+sources until it has displayed a crude outline or wire-frame,                                    queries for the duration of the entire experiment.
+and then given a smaller share of resources to compute a                                             The ticket allocations affect both response time and
+more polished image.                                                                             throughput. When the high-priority client has completed
+                                                                                                 its 20 requests, the other clients have completed a total of
+5.3 Client-Server Computation                                                                    10 requests, matching their overall 8 : 4 allocation. Over
+                                                                                                 the entire experiment, the clients with a 3 : 1 ticket alloca-
+    As mentioned in Section 4.6, the Mach IPC primitive                                          tion respectively complete 38 and 13 queries, which closely
+mach msg was modified to temporarily transfer tickets                                            matches their allocation, despite their transient competition
+from client to server on synchronous remote procedure                                            with the high-priority client. While the high-priority client
+calls. Thus, a client automatically redirects its resource                                       is active, the average response times seen by the clients are
+rights to the server that is computing on its behalf. Multi-                                     17.19, 43.19, and 132.20 seconds, yielding relative speeds
+threaded servers will process requests from different clients                                    of 7.69 : 2.51 : 1. After the high-priority client terminates,
+at the rates defined by their respective ticket allocations.
+                                                                                                     7 A disk-based database could use lotteries to schedule disk bandwidth;
+                           6 Any monotonically increasing function of the relative error would   this is not implemented in our prototype.
+cause convergence. A linear function would cause the tasks to converge                               8 The string used for this experiment was lottery, which incidentally
+
+more slowly; a cubic function would result in more rapid convergence.                            occurs a total of 8 times in Shakespeare’s plays.
+                      40                                                                     600
+
+
+                      30
+
+
+
+
+  Queries Processed                                                      Cumulative Frames
+                                                                                             400                  A
+
+                      20                                                                                                  B
+
+                                                                                             200                              C
+                      10
+
+
+
+                       0                                                                       0
+                           0   200      400       600        800                                   0   100                200           300
+                                     Time (sec)                                                              Time (sec)
+
+Figure 7: Query Processing Rates. Three clients with an                Figure 8: Controlling Video Rates. Three MPEG viewers are
+8 : 3 : 1 ticket allocation compete for service from a multithreaded   given an initial A : B : C = 3 : 2 : 1 allocation, which is changed
+database server. The observed throughput and response time ratios      to 3 : 1 : 2 at the time indicated by the arrow. The total number
+closely match this allocation.                                         of frames displayed is plotted for each viewer. The actual frame
+                                                                       rate ratios were 1.92 : 1.50 : 1 and 1.92 : 1 : 1.53, respectively, due
+                                                                       to distortions caused by the X server.
+the response times are 44.17 and 15.18 seconds,for a 2.91 : 1
+ratio. For all average response times, the standard deviation
+is less than 7% of the average.
+                                                                       Unfortunately, these results were distorted by the round-
+    A similar form of control could be employed by database
+                                                                       robin processing of client requests by the single-threaded
+or transaction-processing applications to manage the re-
+                                                                       X11R5 server. When run with the -no display option,
+sponse times seen by competing clients or transactions.
+                                                                       frame rates such as 6.83 : 4.56 : 2.23 (3.06 : 2.04 : 1 ratio)
+This would be useful in providing different levels of ser-
+                                                                       were typical.
+vice to clients or transactions with varying importance (or
+real monetary funding).
+
+5.4 Multimedia Applications                                            5.5 Load Insulation
+
+    Media-based applications are another domain that can
+benefit from lottery scheduling. Compton and Tennen-                      Support for multiple ticket currencies facilitates modu-
+house described the need to control the quality of service             lar resource management. A currency defines a resource
+when two or more video viewers are displayed — a level of              management abstraction barrier that locally contains intra-
+control not offered by current operating systems [Com94].              currency fluctuations such as inflation. The currency ab-
+They attempted, with mixed success, to control video dis-              straction can be used to flexibly isolate or group users, tasks,
+play rates at the application level among a group of mutually          and threads.
+trusting viewers. Cooperating viewers employed feedback                    Figure 9 plots the progress of five tasks executing the
+mechanisms to adjust their relative frame rates. Inadequate            Dhrystone benchmark. Let amount.currency denote a ticket
+and unstable metrics for system load necessitated substan-             allocation of amount denominated in currency. Currencies
+tial tuning, based in part on the number of active viewers.            A and B have identical funding. Tasks A1 and A2 have
+Unexpected positive feedback loops also developed, lead-               allocations of 100:A and 200:A, respectively. Tasks B 1
+ing to significant divergence from intended allocations.               and B 2 have allocations of 100:B and 200:B , respectively.
+    Lottery scheduling enables the desired control at the              Halfway through the experiment, a new task, B 3, is started
+operating-system level, eliminating the need for mutually              with an allocation of 300:B . Although this inflates the total
+trusting or well-behaved applications. Figure 8 depicts the            number of tickets denominated in currency B from 300 to
+execution of three mpeg play video viewers (A, B , and                 600, there is no effect on tasks in currency A. The aggregate
+C ) displaying the same music video. Tickets were initially            iteration ratio of A tasks to B tasks is 1.01 : 1 before B 3 is
+allocated to achieve relative display rates of A : B : C =             started, and 1.00 : 1 after B 3 is started. The slopes for the
+3 : 2 : 1, and were then changed to 3 : 1 : 2 at the time indi-        individual tasks indicate that A1 and A2 are not affected
+cated by the arrow. The observed per-second frame rates                by task B 3, while B 1 and B 2 are slowed to approximately
+were initially 2.03 : 1.59 : 1.06 (1.92 : 1.50 : 1 ratio), and         half their original rates, corresponding to the factor of two
+then 2.02 : 1.05 : 1.61 (1.92 : 1 : 1.53 ratio) after the change.      inflation caused by B 3.
+                        6000000                                        ecuted under lottery scheduling. For the same experiment
+                                                                       with eight tasks, lottery scheduling was observed to be 0.8%
+
+
+
+
+Cumulative Iterations
+                                                 A1+A2                 slower. However, the standard deviations across individual
+                        4000000                                        runs for unmodified Mach were comparable to the abso-
+                                                                       lute differences observed between the kernels. Thus, the
+                                                     A2
+                                                                       measured differences are not very significant.
+                        2000000                                           We also ran a performance test using the multithreaded
+                                                     A1                database server described in Section 5.3. Five client tasks
+                                                                       each performed 20 queries, and the time between the start
+                             0                                         of the first query and the completion of the last query was
+                                                                       measured. We found that this application executed 1.7%
+                        6000000
+                                                                       faster under lottery scheduling. For unmodified Mach, the
+
+
+
+
+Cumulative Iterations
+                                                                       average run time was 1155.5 seconds; with lottery schedul-
+                                             B1+B2+B3                  ing, the average time was 1135.5 seconds. The standard
+                        4000000
+                                                                       deviations across runs for this experiment were less than
+                                                                       0.1% of the averages, indicating that the small measured
+                                                     B2
+                                                                       differences are significant.9
+                        2000000
+                                                     B1
+                                                           B3
+                                                                       6 Managing Diverse Resources
+                             0
+                                  0   100            200      300
+                                                                          Lotteries can be used to manage many diverse resources,
+                                            Time (sec)
+                                                                       such as processor time, I/O bandwidth, and access to locks.
+                                                                       Lottery scheduling also appears promising for scheduling
+Figure 9: Currencies Insulate Loads. Currencies A and B are            communication resources, such as access to network ports.
+identically funded. Tasks A1 and A2 are respectively allocated
+tickets worth 100:A and 200:A. Tasks B 1 and B 2 are respectively
+                                                                       For example, ATM switches schedule virtual circuits to
+allocated tickets worth 100:B and 200:B . Halfway through the
+                                                                       determine which buffered cell should next be forwarded.
+experiment, task B 3 is started with an allocation of 300:B . The      Lottery scheduling could be used to provide different levels
+resulting inflation is locally contained within currency B , and af-   of service to virtual circuits competing for congested chan-
+fects neither the progress of tasks in currency A, nor the aggregate   nels. In general, a lottery can be used to allocate resources
+A : B progress ratio.                                                  wherever queueing is necessary for resource access.
+
+                                                                       6.1 Synchronization Resources
+5.6 System Overhead
+                                                                           Contention due to synchronization can substantially af-
+    The core lottery scheduling mechanism is extremely                 fect computation rates. Lottery scheduling can be used to
+lightweight; a tree-based lottery need only generate a ran-            control the relative waiting times of threads competing for
+dom number and perform lg n additions and comparisons                  lock access. We have extended the Mach CThreads library
+to select a winner among n clients. Thus, low-overhead                 to support a lottery-scheduled mutex type in addition to the
+lottery scheduling is possible in systems with a scheduling            standard mutex implementation. A lottery-scheduled mu-
+granularity as small as a thousand RISC instructions.                  tex has an associated mutex currency and an inheritance
+    Our prototype scheduler, which includes full support for           ticket issued in that currency.
+currencies, has not been optimized. To assess system over-                 All threads that are blocked waiting to acquire the mutex
+head, we used the same executables and workloads under                 perform ticket transfers to fund the mutex currency. The
+both our kernel and the unmodified Mach kernel; three sep-             mutex transfers its inheritance ticket to the thread which
+arate runs were performed for each experiment. Overall,                currently holds the mutex. The net effect of these transfers is
+we found that the overhead imposed by our prototype lot-               that a thread which acquires the mutex executes with its own
+tery scheduler is comparable to that of the standard Mach              funding plus the funding of all waiting threads, as depicted
+timesharing policy. Since numerous optimizations could be              in Figure 10. This solves the priority inversion problem
+made to our list-based lottery, simple currency conversion             [Sha90], in which a mutex owner with little funding could
+scheme, and other untuned aspects of our implementation,               execute very slowly due to competition with other threads
+efficient lottery scheduling does not pose any challenging
+                                                                           9 Under unmodified Mach, threads with equal priority are run round-
+problems.
+                                                                       robin; with lottery scheduling, it is possible for a thread to win several
+    Our first experiment consisted of three Dhrystone bench-           lotteries in a row. We believe that this ordering difference may affect
+mark tasks running concurrently for 200 seconds. Com-                  locality, resulting in slightly improved cache and TLB behavior for this
+pared to unmodified Mach, 2.7% fewer iterations were ex-               application under lottery scheduling.
+                                                                                           100
+
+
+
+
+                                                                      Mutex Acquisitions
+         waiting threads
+         blocked on lock           ...                                                                                           Group B
+             ...                                     ...
+                                                                                            50
+                                   t3
+                                         1
+             t7                                      t8
+                        1                                  1
+                                    1                                                          0
+                                   t3                                                              0         1              2             3             4
+                    1                            1
+                   t7                           t8
+                                                                                           150
+
+
+
+
+                                                                      Mutex Acquisitions
+                                  lock       lock currency
+                                         1
+                                                                                           100
+
+                                    1
+                                  lock                                                                                           Group A
+                            ...
+                                                                                            50
+
+                                   t2        lock owner
+
+                                                                                               0
+                                                                                                   0         1           2          3                   4
+Figure 10: Lock Funding. Threads t3, t7, and t8 are waiting                                                      Waiting Time (sec)
+to acquire a lottery-scheduled lock, and have transferred their
+funding to the lock currency. Thread t2 currently holds the lock,
+and inherits the aggregate waiter funding through the backing
+                                                                    Figure 11: Mutex Waiting Times. Eight threads compete to
+                                                                    acquire a lottery-scheduled mutex. The threads are divided into
+                                                                    two groups (A, B ) of four threads each, with the ticket allocation
+ticket denominated in the lock currency. Instead of showing the
+backing tickets associated with each thread, shading is used to
+                                                                                           =
+                                                                    A : B 2 : 1. For each histogram, the solid line indicates the
+                                                                    mean (); the dashed lines indicate one standard deviation about
+indicate relative funding levels.
+                                                                                                   
+                                                                    the mean (  ). The ratio of average waiting times is A : B =
+                                                                    1 : 2.11; the mutex acquisition ratio is 1.80 : 1.
+for the processor, while a highly funded thread remains
+blocked on the mutex.
+    When a thread releases a lottery-scheduled mutex, it            ratio of 1 : 2.11. Thus, both throughput and response time
+holds a lottery among the waiting threads to determine the          closely tracked the specified 2 : 1 ticket allocation.
+next mutex owner. The thread then moves the mutex inheri-
+tance ticket to the winner, and yields the processor. The next      6.2 Space-Shared Resources
+thread to execute may be the selected waiter or some other
+                                                                        Lotteries are useful for allocating indivisible time-shared
+thread that does not need the mutex; the normal processor
+                                                                    resources, such as an entire processor. A variant of lottery
+lottery will choose fairly based on relative funding.
+                                                                    scheduling can efficiently provide the same type of prob-
+    We have experimented with our mutex implementa-                 abilistic proportional-share guarantees for finely divisible
+tion using a synthetic multithreaded application in which           space-shared resources, such as memory. The basic idea
+n threads compete for the same mutex. Each thread repeat-           is to use an inverse lottery, in which a “loser” is chosen to
+edly acquires the mutex, holds it for h milliseconds, releases      relinquish a unit of a resource that it holds. Conducting an
+the mutex, and computes for another t milliseconds. Fig-            inverse lottery is similar to holding a normal lottery, except
+ure 11 provides frequency histograms for a typical experi-          that inverse probabilities are used. The probability p that a
+ment with n = 8, h = 50, and t = 50. The eight threads              client holding t tickets will be selected by an inverse lottery
+were divided into two groups (A, B ) of four threads each,          with a total of n clients and T tickets is p = n;   1 (1 ; t=T ).
+                                                                                                                      1
+with the ticket allocation A : B = 2 : 1. Over the entire two-      Thus, the more tickets a client has, the more likely it is to
+minute experiment, group A threads acquired the mutex a             avoid having a unit of its resource revoked.10
+total of 763 times, while group B threads completed 423                 For example, consider the problem of allocating a phys-
+acquisitions, for a relative throughput ratio of 1.80 : 1. The      ical page to service a virtual memory page fault when all
+group A threads had a mean waiting time of  = 450 mil-
+liseconds , while the group B threads had a mean waiting              10 The
+                                                                                            n;1 factor is a normalization term which ensures that the client
+                                                                                               1
+
+time of  = 948 milliseconds, for a relative waiting time           probabilities sum to unity.
+physical pages are in use. A proportional-share policy based     usage scheduling by manipulating base priorities and var-
+on inverse lotteries could choose a client from which to se-     ious scheduler parameters [Hel93]. While this technique
+lect a victim page with probability proportional to both         avoids the addition of feedback loops introduced by other
+(1 ; t=T ) and the fraction of physical memory in use by         fair share schedulers, it still assumes a fixed workload con-
+that client.                                                     sisting of long-running compute-bound processes to ensure
+                                                                 steady-state fairness at a time scale of minutes.
+6.3 Multiple Resources                                               Microeconomic schedulers [Dre88, Fer88, Wal92] use
+   Since rights for numerous resources are uniformly rep-        auctions to allocate resources among clients that bid mone-
+resented by lottery tickets, clients can use quantitative com-   tary funds. Funds encapsulate resource rights and serve as a
+parisons to make decisions involving tradeoffs between dif-      form of priority. Both the escalator algorithm proposed for
+ferent resources. This raises some interesting questions re-     uniprocessor scheduling [Dre88] and the distributed Spawn
+garding application funding policies in environments with        system [Wal89, Wal92] rely upon auctions in which bidders
+multiple resources. For example, when does it make sense         increase their bids linearly over time. The Spawn system
+to shift funding from one resource to another? How fre-          successfully allocated resources proportional to client fund-
+quently should funding allocations be reconsidered?              ing in a network of heterogeneous workstations. However,
+   One way to abstract the evaluation of resource manage-        experience with Spawn revealed that auction dynamics can
+ment options is to associate a separate manager thread with      be unexpectedly volatile. The overhead of bidding also
+each application. A manager thread could be allocated a          limits the applicability of auctions to relatively coarse-grain
+small fixed percentage (e.g., 1%) of an application’s overall    tasks.
+funding, causing it to be periodically scheduled while limit-        A market-based approach for memory allocation has
+ing its overall resource consumption. For inverse lotteries,     also been developed to allow memory-intensive applica-
+it may be appropriate to allow the losing client to execute      tions to optimize their memory consumption in a decen-
+a short manager code fragment in order to adjust funding         tralized manner [Har92]. This scheme charges applica-
+levels. The system should supply default managers for            tions for both memory leases and I/O capacity, allowing
+most applications; sophisticated applications could define       application-specific tradeoffs to be made. However, unlike
+their own management strategies. We plan to explore these        a true market, prices are not permitted to vary with demand,
+preliminary ideas and other alternatives for more complex        and ancillary parameters are introduced to restrict resource
+environments with multiple resources.                            consumption [Che93].
+                                                                     The statistical matching technique for fair switching in
+                                                                 the AN2 network exploits randomness to support frequent
+7 Related Work                                                   changes of bandwidth allocation [And93]. This work is
+                                                                 similar to our proposed application of lottery scheduling to
+   Conventional operating systems commonly employ a              communication channels.
+simple notion of priority in scheduling tasks. A task with
+higher priority is given absolute precedence over a task
+with lower priority. Priorities may be static, or they may       8 Conclusions
+be allowed to vary dynamically. Many sophisticated prior-
+ity schemes are somewhat arbitrary, since priorities them-           We have presented lottery scheduling, a novel mecha-
+selves are rarely meaningfully assigned [Dei90]. The abil-       nism that provides efficient and responsive control over the
+ity to express priorities provides absolute, but extremely       relative execution rates of computations. Lottery schedul-
+crude, control over scheduling, since resource rights do         ing also facilitates modular resource management, and can
+not vary smoothly with priorities. Conventional priority         be generalized to manage diverse resources. Since lottery
+mechanisms are also inadequate for insulating the resource       scheduling is conceptually simple and easily implemented,
+allocation policies of separate modules. Since priorities are    it can be added to existing operating systems to provide
+absolute, it is difficult to compose or abstract inter-module    greatly improved control over resource consumption rates.
+priority relationships.                                          We are currently exploring various applications of lottery
+   Fair share schedulers allocate resources so that users        scheduling in interactive systems, including graphical user
+get fair machine shares over long periods of time [Hen84,        interface elements. We are also examining the use of lot-
+Kay88]. These schedulers monitor CPU usage and dynam-            teries for managing memory, virtual circuit bandwidth, and
+ically adjust conventional priorities to push actual usage       multiple resources.
+closer to entitled shares. However, the algorithms used
+by these systems are complex, requiring periodic usage           Acknowledgements
+updates, complicated dynamic priority adjustments, and
+administrative parameter setting to ensure fairness on a            We would like to thank Kavita Bala, Eric Brewer, Daw-
+time scale of minutes. A technique also exists for achiev-       son Engler, Wilson Hsieh, Bob Gruber, Anthony Joseph,
+ing service rate objectives in systems that employ decay-        Frans Kaashoek, Ulana Legedza, Paige Parsons, Patrick
+Sobalvarro, and Debby Wallach for their comments and as-           [Kay88] J. Kay and P. Lauder. “A Fair Share Scheduler,” Com-
+sistance. Special thanks to Kavita for her invaluable help                 munications of the ACM, January 1988.
+with Mach, and to Anthony for his patient critiques of sev-        [Loe92] K. Loepere. Mach 3 Kernel Principles. Open Software
+eral drafts. Thanks also to Jim Lipkis and the anonymous                   Foundation and Carnegie Mellon University, 1992.
+reviewers for their many helpful suggestions.                      [Par88] S. K. Park and K. W. Miller. “Random Number Gener-
+                                                                           ators: Good Ones Are Hard to Find,” Communications
+                                                                           of the ACM, October 1988.
+References                                                         [Pre88] W. H. Press, B. P. Flannery, S. A. Teukolsky, and W. T.
+                                                                           Vetterling. Numerical Recipes in C: The Art of Scientific
+[Acc86] M. Accetta, R. Baron, D. Golub, R. Rashid, A. Teva-                Computing. Cambridge University Press, Cambridge,
+        nian, and M. Young. “Mach: A New Kernel Foundation                 1988.
+        for UNIX Development,” Proceedings of the Summer           [Sha90] L. Sha, R. Rajkumar, and J. P. Lehoczky. “Priority Inher-
+        1986 USENIX Conference, June 1986.                                 itance Protocols: An Approach to Real-Time Synchro-
+[And93] T. E. Anderson, S. S. Owicki, J. B. Saxe, and C. P.                nization,” IEEE Transactions on Computers, Septem-
+        Thacker. “High-Speed Switch Scheduling for Local-                  ber 1990.
+        Area Networks,” ACM Transactions on Computer Sys-          [Tri82] K. S. Trivedi. Probability and Statistics with Relia-
+        tems, November 1993.                                               bility, Queuing, and Computer Science Applications.
+[Car90]   D. G. Carta. “Two Fast Implementations of the ‘Min-              Prentice-Hall, 1982.
+          imal Standard’ Random Number Generator,” Commu-          [Wal89] C. A. Waldspurger. “A Distributed Computational
+          nications of the ACM, January 1990.                              Economy for Utilizing Idle Resources,” Master’s thesis,
+[Che93] D. R. Cheriton and K. Harty. “A Market Approach to                 MIT, May 1989.
+        Operating System Memory Allocation,” Working Pa-           [Wal92] C. A. Waldspurger, T. Hogg, B. A. Huberman, J. O.
+        per, Computer Science Department, Stanford Univer-                 Kephart, and W. S. Stornetta. “Spawn: A Distributed
+        sity, June 1993.                                                   Computational Economy,” IEEE Transactions on Soft-
+                                                                           ware Engineering, February 1992.
+[Com94] C. L. Compton and D. L. Tennenhouse. “Collaborative
+        Load Shedding for Media-based Applications,” Pro-          [Wei84] R. P. Weicker. “Dhrystone: A Synthetic Systems Pro-
+        ceedings of the International Conference on Multimedia             gramming Benchmark,” Communications of the ACM,
+        Computing and Systems, May 1994.                                   October 1984.
+                                                                   [Wei91] W. Weihl, E. Brewer, A. Colbrook, C. Dellarocas, W.
+[Dei90]   H. M. Deitel. Operating Systems, Addison-Wesley,
+                                                                           Hsieh, A. Joseph, C. Waldspurger, and P. Wang. “Pre-
+          1990.
+                                                                           lude: A System for Portable Parallel Software,” Tech-
+[Dre88]   K. E. Drexler and M. S. Miller. “Incentive Engineer-             nical Report MIT/LCS/TR-519, MIT Lab for Computer
+          ing for Computational Resource Management” in The                Science, October 1991.
+          Ecology of Computation, B. Huberman (ed.), North-
+          Holland, 1988.
+[Dui90]   D. Duis and J. Johnson. “Improving User-Interface Re-    A    Random Number Generator
+          sponsiveness Despite Performance Limitations,” Pro-
+                                                                      This MIPS assembly-language code [Kan89] is a fast
+          ceedings of the Thirty-Fifth IEEE Computer Society
+          International Conference (COMPCON), March 1990.
+                                                                   implementation of the Park-Miller pseudo-random number
+                                                                   generator [Par88, Car90]. It uses the multiplicative lin-
+[Fer88]   D. Ferguson, Y. Yemini, and C. Nikolaou. “Microeco-      ear congruential generator S 0 = (A  S ) mod (231 ; 1),
+          nomic Algorithms for Load-Balancing in Distributed
+                                                                   for A = 16807. The generator’s ANSI C prototype is:
+          Computer Systems,” International Conference on Dis-
+                                                                   unsigned int fastrand(unsigned int s).
+          tributed Computer Systems, 1988.
+[Har92]   K. Harty and D. R. Cheriton. “Application-Controlled     fastrand:
+                                                                       move       $2, $4             | R2 = S (arg passed in R4)
+          Physical Memory using External Page-Cache Manage-
+                                                                       li         $8, 33614                   
+                                                                                                     | R8 = 2 constant A
+          ment,” Fifth International Conference on Architectural       multu      $2, $8             | HI, LO = A S
+          Support for Programming Languages and Operating              mflo       $9                 | R9 = Q = bits 00..31 of A  S
+          Systems, October 1992.                                       srl        $9, $9, 1
+                                                                       mfhi       $10                | R10 = P = bits 32..63 of A  S
+[Hel93]   J. L. Hellerstein. “Achieving Service Rate Objectives        addu       $2, $9, $10        | R2 = S’ = P + Q
+          with Decay Usage Scheduling,” IEEE Transactions on           bltz       $2, overflow       | handle overflow (rare)
+          Software Engineering, August 1993.                           j          $31                | return (result in R2)
+[Hen84] G. J. Henry. “The Fair Share Scheduler,” AT&T Bell
+                                                                   overflow:
+        Laboratories Technical Journal, October 1984.                  sll        $2, $2, 1          | zero bit 31 of S’
+[Hog88] T. Hogg. Private communication (during Spawn system            srl        $2, $2, 1
+                                                                       addiu      $2, 1              | increment S’
+        development), 1988.
+                                                                        j         $31                | return (result in R2)
+[Kan89] G. Kane. Mips RISC Architecture, Prentice-Hall, 1989.
+

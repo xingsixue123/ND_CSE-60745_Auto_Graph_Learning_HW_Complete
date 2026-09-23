@@ -1,0 +1,45 @@
+References
+[1] C. A. Waldspurger and W. E. Weihl. “Lottery Scheduling: Flexible Proportional-Share
+Resource Management.” Proceedings of the First USENIX Symposium on Operating Systems
+Design and Implementation (OSDI), Monterey, CA, November 1994. (Paper list ID 2-3.)
+[2] C. A. Waldspurger and W. E. Weihl. “Stride Scheduling: Deterministic Proportional-Share
+Resource Management.” Technical Memorandum MIT/LCS/TM-528, MIT Laboratory for
+Computer Science, June 1995. (Paper list ID 2-4.)
+[3] G. C. Buttazzo. “Rate Monotonic vs. EDF: Judgment Day.” Real-Time Systems, 29(1):5–26,
+2005. (Paper list ID 2-1.)
+Ex. 2.8 (22.5 pts) — Three Papers on Scheduling, Found by Search
+How I found them. I searched for highly cited scheduling papers outside the course paper list
+whose full text is freely downloadable, then picked one from each of three eras — 1973 uniprocessor
+real-time theory, 2016 multicore kernel, 2019 datacentre microsecond-scale — so the three critiques
+would bite on different evidence rather than repeat one argument.
+Paper 1 — Liu and Layland, “Scheduling Algorithms for Multiprogramming in a
+Hard-Real-Time Environment” (JACM, 1973)
+Summary.
+The paper asks how much of one processor can be committed to m periodic tasks while
+still guaranteeing every deadline. A task is reduced to two numbers, its period Ti and its run-time
+Ci, under five assumptions: periodic requests, a deadline equal to the next request, independent
+tasks, constant run-times, and aperiodic work confined to initialisation and failure recovery.
+For fixed priorities, Theorem 1 identifies the critical instant — “A critical instant for any task
+occurs whenever the task is requested simultaneously with requests for all higher priority tasks”
+— which turns an infinite schedule into a finite check. Theorem 2 shows the rate-monotonic rule
+(shorter period, higher priority, regardless of run-time) is optimal among all fixed-priority rules, and
+Theorem 5 bounds utilisation at U = m
+(︂
+21/m −1
+)︂
+: about 0.83 for two tasks, 0.78 for three, falling
+to ln 2 ≈0.69. Section 7 instead assigns priorities by nearest deadline, and Theorem 7 proves that
+deadline driven rule feasible if and only if ∑︁
+i Ci/Ti ≤1, so the same hardware is schedulable at
+100 % load. Section 8 mixes the two, running the k shortest-period tasks rate-monotonically on
+the interrupt hardware; the worked example in Section 9, T = (3, 4, 5) with C1 = C2 = 1, reaches
+98.3 % mixed against 100 % deadline-driven and 78.3 % rate-monotonic.
+Critical judgment.
+The cost model is the weak point. Assumption (A4) folds context-switch
+cost into the constant Ci, claiming “the bookkeeping time necessary to request a successor and the
+costs of preemptions can be taken into account”. It cannot: how often a task is preempted depends
+on the whole task set, not on the task, and rate-monotonic scheduling preempts far more than
+deadline-driven scheduling does. The practical case for the fixed-priority algorithm is exactly the
+quantity the model prices at zero. Section 6 concedes that “the practical costs of switching between
+tasks must still be counted”, and then never counts them.
+11

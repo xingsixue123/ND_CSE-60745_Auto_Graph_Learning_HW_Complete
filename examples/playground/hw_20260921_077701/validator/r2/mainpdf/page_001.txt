@@ -1,0 +1,40 @@
+Operating Systems — Homework 2
+Ex. 2.1 (15 pts) — Schedule diagrams: Round-Robin, FIFO and
+SJF
+Task set (ai, ei): T1(1, 10), T2(2, 4), T3(3, 1), T4(4, 6).
+Conventions.
+• Time is discrete: the task dispatched at instant t holds the CPU over [t, t + 1), and a task
+with arrival time ai is runnable at instant ai.
+• Nothing has arrived before t = 1, so [0, 1) is idle under every policy; it is drawn, not cropped.
+• FIFO is non-preemptive and dispatches in arrival order.
+• SJF is the classical non-preemptive form: at each dispatch point it picks the arrived, unfinished
+task with the smallest total execution time, and that task then runs to completion.
+• Round-Robin uses q = 1. Where a task arrives at the same instant that the running task
+exhausts its quantum, the arriving task is enqueued first and the preempted task then joins
+the tail of the ready queue.
+• Every tie — equal bursts in SJF, equal standing in the ready queue — goes to the smaller
+index.
+Total busy time is 10 + 4 + 1 + 6 = 21 units, so with the single idle unit all three policies complete
+at t = 22.
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10 11 12 13 14 15 16 17 18 19 20 21 22
+time (units)
+CPU idle
+T4
+T3
+T2
+T1
+T1
+arrival
+idle
+Figure 1: Round-Robin, q = 1.
+1

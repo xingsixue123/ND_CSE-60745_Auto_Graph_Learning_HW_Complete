@@ -1,0 +1,174 @@
+2026-09-21 — MASTER LOG — job hw_20260921_077701
+
+[read] Assignment = input/hw2_instruction.md (markdown, kind=text_document -> NO page
+renders, no figures anywhere). Channels reconciled: (1) raw markdown file, (2)
+ingest/pages/hw2_instruction/alltext.txt — byte-identical to the markdown, (3) figure
+channel: empty by construction (manifest.json lists no pages/figures for this entry,
+because ingest classifies .md as text_document). Nothing is hidden in an image channel
+for the exercise text; this is recorded in every brief so workers do not go hunting for
+a PNG that does not exist.
+
+[read] input/PaperList.xlsx IS a rendered document (6 pages). All three channels used:
+  - csv export (ingest/csv/PaperList.csv) -> titles + IDs, but merged Topics cells are
+    flattened, so "Scheduling" appears only on row 2-1;
+  - page_001.png -> colour banding independently confirms 2-1..2-7 is one group
+    (blue band), 1-1..1-11 green, 3-x orange, etc. This is the cross-check that the
+    blank Topics cells are merged-cell continuation, not missing data;
+  - page_001.txt / page_003.txt -> column-major extraction (all IDs, then all titles),
+    zipped by position, consistent with the CSV.
+  Conclusion: Scheduling group = {2-1 Rate Monotonic vs EDF, 2-2 RT DVS, 2-3 Lottery,
+  2-4 Stride, 2-5 Arachne, 2-6 Implementing Lottery Scheduling, 2-7 Microservices}.
+
+[read] specs.md: hw2, with input/hw1_example.md as the reference for house style
+(sectioned by exercise, "Summary" / "Critical judgment" headings for paper questions,
+manual reference list at the end of each paper exercise). R8/R9 copied verbatim into
+all six briefs.
+
+[cut] Points check: 15+5+5+5+20+5+22.5+22.5 = 100. Six problems:
+  p1 = Ex 2.1               (15)   code+diagram
+  p2 = Ex 2.2 + Ex 2.3      (10)   plain+code
+  p3 = Ex 2.4               (5)    plain
+  p4 = Ex 2.5 + Ex 2.6      (25)   plain (pseudo-code)
+  p5 = Ex 2.7               (22.5) plain (3 papers from the list)
+  p6 = Ex 2.8               (22.5) plain (3 papers found by search)
+
+  Merge rationale:
+  - p1: three diagrams of ONE task set under ONE set of tie-break conventions. Split
+    three ways, three workers would invent three conventions and the diagrams would
+    disagree with each other.
+  - p2: 2.2's whole argument is "every creation path reduces to a running process
+    calling fork()+exec()"; 2.3 is that mechanism as a program. Same worker keeps the
+    argument and the code the same shape.
+  - p4: a zombie IS the state exit() leaves the child in and waitpid() reaps. Split,
+    the two answers would describe the exit/wait handshake differently.
+  - p5/p6: one exercise each, three papers each; kept whole so the three critiques
+    share a voice, and so p6 can be told explicitly to avoid the seven list papers
+    that belong to p5. Cross-problem overlap is exactly what a worker validator
+    cannot see, so it is pinned in the briefs.
+  Not merged: p3 (Ex 2.4) is about context-switch cost, a different subject from
+  process creation; bundling it into p2 would be bundling to save a spawn.
+
+  Nothing uncovered.
+
+[decide] p5 papers prescribed as 2-3 Lottery, 2-4 Stride, 2-1 Rate Monotonic vs EDF —
+  2-4 is the same authors' answer to 2-3's O(sqrt(n)) throughput error, so the pair can
+  be judged against each other; 2-1 supplies a different tradition (hard real-time) so
+  the answer is not one long essay on proportional share. Substitution allowed only
+  within the seven, and must be reported.
+[decide] p6 given a pool of six freely-available non-list candidates (Liu & Layland,
+  Wasted Cores, Borg, DRF, Mesos, Shenango/Shinjuku) and told explicitly that
+  Scheduler Activations is on the list (4-8) and off limits.
+
+[write] problems.json + six problems/<pid>/problem.md, each ending with the verbatim
+  "Rules for workers" section from specs.md (R8 length targets, R9 read-past-the-quote).
+
+[spawn] p1 -> PASS in 1 worker round. Verified independently: my own hand simulation of
+  RR(q=1) gives completions T3@5, T2@12, T4@19, T1@22; FIFO 11/15/16/22; SJF 11/12/16/22
+  — identical to the worker's table. Gantt chart rendered and read: legible, arrivals
+  marked, idle [0,1) drawn.
+[spawn] p2 -> PASS in 1 worker round.
+[spawn] p3 -> PASS in 2 worker rounds (r1 FAIL).
+[spawn] p4 -> PASS in 1 worker round.
+[spawn] p5 -> PASS in 1 worker round.
+[spawn] p6 -> PASS in 2 worker rounds (r1 FAIL).
+
+[assemble] final/ = main.tex + preamble.tex + p1..p6.tex + three fig_p1_*.pdf.
+  - compile fix 1: pdfTeX "auto expansion is only possible with scalable fonts" —
+    microtype + [T1]{fontenc} selected bitmap ec fonts. Fixed by loading lmodern
+    before fontenc. Not a worker defect.
+  - compile fix 2: crosscheck flagged p4 using \text{...} (amsmath) without declaring
+    amsmath in its preamble.txt — a genuine R5 defect, the fragment would not compile
+    alone. Added \usepackage{amsmath} to output/p4/preamble.txt and to the merged
+    preamble; removed the duplicate amsmath line from main.tex so the merge stays the
+    single source of truth.
+  - float is loaded before algorithm so [H] is defined for p4's algorithm floats.
+  - built with -outdir into playground/master_scratch/build so no .aux/.log/.fls ever
+    lands in OUTPUT (R4). final/ lint --final: OK. crosscheck: OK, 0 label collisions,
+    100.0 points declared.
+  - crosscheck's two near-miss warnings are false positives: 1995 = Stride tech-report
+    year (p5) vs 1997 = Mars Pathfinder (p6); 2014 = SCHED_DEADLINE merge (p5) vs
+    2016 = EuroSys (p6). Different quantities, not a disagreement.
+  - main.pdf: 14 pages, no overfull boxes, all 14 pages rendered and inspected.
+    Independently re-verified p1's three schedules against my own hand simulation.
+
+[submit] round 1.
+
+[verdict] round 1 -> FAIL. 2 blocking + 4 major + 7 minor, all of them R9 violations in the
+  *critique* paragraphs of p5/p6. Coverage, Ex 2.1-2.6, compile, layout, R8 lengths and
+  lint all passed; the validator re-simulated Ex 2.1 and re-compiled/ran the Ex 2.3
+  program independently. The defect list is specific and correct.
+
+[decide] Fix in place rather than `fw respawn-worker p5/p6`. Respawning discards work the
+  validator has already verified line by line (every number in every summary paragraph
+  checked against the source), and a fresh worker would have to re-earn that while
+  risking new errors in material that is currently clean. The defects are six localised
+  paragraphs with a known-good replacement in each case. Master edits both the worker
+  deliverable (output/<pid>/answer.tex) and the copy in final/, so the two never diverge.
+
+[verify] Did NOT take the validator's quotes on trust — R9 applies to me too. Re-read the
+  surrounding passages in the local PDFs/text in problems/p5/papers and problems/p6/text:
+  - lottery.txt:325-330  "we should also examine its behavior over shorter time intervals"
+    + Figure 5 (8 s windows in a 200 s run) + the 10 ms subsecond extrapolation. D1.1 real.
+  - lottery.txt:310-312  "With the exception of the run for which the 10:1 allocation
+    resulted in an average ratio of 13.42:1, all of the observed ratios are close..."  -> the
+    "runs scatter badly" reading was wrong.
+  - lottery.txt:347 footnote 5 (fundx setuids back) and Sec 5.5 currency barrier. D1.5 real.
+  - lottery.txt:409-410  17.19/43.19/132.20 s -> 7.69:2.51:1, "while the high-priority
+    client is active". D1.13 real.
+  - buttazzo.txt:521-522 "...but just confutes the common belief"; :724 "do not hold in
+    general"; :18 "either wrong, or not precise". D1.2 real - the charge was false.
+  - buttazzo.txt:181-182 "In spite of the extra computation needed for updating the
+    absolute deadline, however, EDF introduces less runtime overhead than RM, when context
+    switches are taken into account." He *does* net them, by assertion. D1.4 real.
+  - buttazzo.txt: no certification/tooling discussion exists. D1.3 real.
+  - buttazzo.txt:451 "highly application dependent" is said of *permanent* overload; :470
+    the RM-confinement grant is immediately qualified. D1.9 real.
+  - liu_layland_1973.txt:126-130 (A3) "does not exclude the situation in which..."; :791
+    "Perhaps the most important and least defensible". D1.6, D1.12a real.
+  - shinjuku_nsdi19.txt:639 "up to 50% lower tail latency at low load and 5x better
+    throughput", vs both IX and ZygOS; :330+:384 the <10% figure is tied to the 1212-cycle
+    receiver interrupt; :745-753 the 11-worker/5M/9.5M numbers are Sec 4.3. D1.7, D1.8 real.
+  Every defect confirmed against the source. None was a validator error.
+
+[fix] p5: heading now carries (22.5 pts) [D1.10]; 8:3:1 response times marked conditional and
+  given as 7.69:2.51:1 [D1.13]; lottery variance paragraph rewritten to credit Figure 5 and
+  aim at the real gap - the subsecond claim is an extrapolation never run, and the
+  cheap-quantum warrant describes the tree-based lottery while every measurement is the
+  unoptimised list-based prototype [D1.1]; currencies narrowed to the missing ACLs [D1.5];
+  Buttazzo overgeneralisation charge deleted and replaced with the register-vs-claims point
+  [D1.2]; "circularity" clause dropped [D1.3]; overhead netting re-stated as "by assertion
+  alone" with his sentence quoted [D1.4]; "highly application dependent" scoped to permanent
+  overload and the RM-confinement qualifier added [D1.9]; closing sentence no longer says
+  "all three" and then names two [D1.11].
+  p6: independence rewritten to acknowledge the (A3) remark and locate the real hole in
+  mutual exclusion, "perhaps" restored [D1.6, D1.12a]; Shinjuku headline restored to "up to
+  50% ... at low load" against both IX and ZygOS [D1.7]; <10% re-attributed to the receiver
+  interrupt cost and the scaling numbers to Sec 4.3 [D1.8].
+  D1.12b not changed: 0.83 and 0.78 are Theorem 5's formula at m=2,3 (eq. 6 is stated to
+  coincide with the two-task bound), so attributing the *bound* to Theorem 5 is correct.
+
+[check] recompiled (14 pages, 0 overfull), lint --final OK, lint OK on all six worker dirs,
+  crosscheck OK (0 collisions; the two near-miss warnings remain false positives).
+
+[submit] round 2.
+
+[verdict] round 2 -> PASS, with one new minor: p5 elided "generate"/"perform" inside a
+  quotation without an ellipsis. Validator also withdrew D1.12b.
+
+[decide] Fix it and re-validate rather than ship the PASS as-is. The defect is a
+  misquotation, which is the exact class of error this assignment's own rules (R9) are
+  about, and shipping a document whose critique of other people's quoting practice
+  contains a silent elision is not worth saving a round. Editing after a PASS invalidates
+  that PASS, so this must go back through `fw submit` (3 rounds remained).
+
+[fix] p5: the sentence now quotes the paper verbatim -- "a tree-based lottery need only
+  generate a random number and perform $\lg n$ additions and comparisons"
+  (lottery.txt:541-542) -- and the trailing clause is tightened to "describes an
+  implementation that was never built".
+
+[check] recompiled 14 pages, 0 overfull/underfull, lint --final OK, crosscheck OK.
+
+[submit] round 3.
+
+[verdict] round 3 -> PASS with no defects outstanding at any severity. STOP. final/ as
+  validated is what is on disk; nothing edited after this verdict.

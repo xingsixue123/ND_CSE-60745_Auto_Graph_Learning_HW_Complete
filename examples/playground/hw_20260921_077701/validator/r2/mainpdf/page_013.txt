@@ -1,0 +1,46 @@
+energy argument that might justify re-enabling it is asserted rather than measured.
+History has been kind to both forecasts. “New scheduler designs come and go” held: CFS was itself
+replaced, by EEVDF, in kernel 6.6 (2023). The modular alternative of Section 5 — “a scheduler
+that is a collection of modules: the core module and optimization modules” — was then taken up in
+spirit by sched_ext in 6.12 (2024), which moves policy into BPF programs outside the core. The
+fit is loose, since sched_ext replaces the whole scheduler rather than advising an invariant-keeping
+core, but the instinct is the paper’s.
+Paper 3 — Kaffes, Chong, Humphries, Belay, Mazières and Kozyrakis, “Shinjuku:
+Preemptive Scheduling for µsecond-scale Tail Latency” (NSDI, 2019)
+Summary.
+Dataplane operating systems reach microsecond latencies by never preempting: IX
+hashes requests to per-core queues (distributed FCFS), and ZygOS work-steals to approximate a
+central FCFS queue. Both let a short request queue behind a long one, which is fatal when service
+times are heavy-tailed or bimodal, where theory prefers processor sharing — and processor sharing
+needs preemption. Linux cannot supply it, since CFS targets a 6 ms preemption latency with a
+0.75 ms minimum.
+Shinjuku is a single-address-space OS on Dune in which one dispatcher thread owns the queues and
+interrupts workers directly. Removing both VM exits from the interrupt path — posted interrupts
+on the receiver, a directly mapped APIC on the sender — takes the sender from 2081 to 298 cycles
+and the receiver from 2662 to 1212, and context switches drop to 36–109 cycles; it is that 1212-cycle
+receiver cost that makes preemption every 5 µs affordable, at under 10 % of worker throughput.
+Two policies exploit it: a single queue preempting every 5–15 µs, and a multi-queue policy serving
+whichever queue’s head request has the largest ratio of queueing time to its SLO target. Against both
+IX and ZygOS, Shinjuku obtains up to 50 % lower tail latency at low load and 5× the throughput
+for a given 300 µs tail-latency target on a bimodal synthetic workload, and on RocksDB serving
+99.5 % GET plus 0.5 % SCAN, 88 % lower tail latency with 6.6× the throughput.
+Critical judgment.
+Centralisation is what makes the policies possible and is the claim least
+tested. Section 3.6 admits that one dispatcher “comfortably saturate[s] a full socket” and no more —
+§4.3 measures it scaling near-linearly to 11 workers at 5 M requests/s, and 9.5 M with two dispatchers
+— and proposes to scale further by “steer[ing] requests to different dispatchers using the NIC RSS
+feature”. That is the distributed queueing Section 2 blames for head-of-line blocking, reintroduced at
+the granularity of dispatcher groups, and what it costs is never measured: the only multi-dispatcher
+experiment issues “short requests with 1µsec fixed service time to stress the dispatcher”, the one
+distribution under which head-of-line blocking cannot occur. The headline claim is about heavy
+tails; the scaling result is measured where tails are absent.
+The security discussion is honest, but its remedy is still a promise. Mapping APIC registers into
+the process means, as the authors say, that “one process could launch a denial-of-service attack on
+another process by issuing a large number of interrupts to a specific core”; they answer that “future
+versions of Shinjuku will run application code in ring 3 . . . eliminating this attack vector with very
+small overhead”, citing an 84-cycle ring transition. But every evaluation number was taken with
+applications in ring 0, chosen “to avoid the address space crossings” — crossings that, at a 5 µs
+quantum, would recur on every preemption. The system that was measured is not the system that
+would be deployable.
+The premise — that the obstacle was mechanism rather than policy — has held up: the hardware
+13
