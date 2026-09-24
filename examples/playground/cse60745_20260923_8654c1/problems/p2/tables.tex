@@ -1,0 +1,128 @@
+% ---- TABLE 1: combined Task 3 + Task 4, mean over seeds {0,1,2}
+% -- TASK 3 (social graph G)
+DeepWalk (uniform) & 0.6040 & 0.7227 & 0.6009 & 0.7207 & 0.7641 & 0.6639 & 0.7629 & 0.6833 \\
+node2vec $p{=}1,q{=}0.5$ & 0.5995 & 0.7202 & 0.5959 & 0.7184 & 0.7636 & 0.6621 & 0.7621 & 0.6825 \\
+node2vec $p{=}1,q{=}2$ & 0.6027 & 0.7210 & 0.6011 & 0.7196 & 0.7619 & 0.6467 & 0.7607 & 0.6802 \\
+node2vec $p{=}q{=}0.25$ & 0.6039 & 0.7217 & 0.6061 & 0.7228 & 0.7610 & 0.6581 & 0.7628 & 0.6796 \\
+RWR $r{=}0.15$ & 0.5870 & 0.7119 & 0.5889 & 0.7124 & 0.7637 & 0.6521 & 0.7620 & 0.6733 \\
+deg-corrected $\alpha{=}1$ & 0.6003 & 0.7144 & 0.5990 & 0.7121 & 0.7575 & 0.6421 & 0.7607 & 0.6781 \\
+triadic & 0.6066 & 0.7247 & 0.6087 & 0.7248 & 0.7645 & \textbf{0.6833} & 0.7661 & \textbf{0.6974} \\
+% -- BUDGET CONTROLS (social graph G)
+DeepWalk $\times15$ (token-matched) & 0.6110 & 0.7267 & 0.6118 & 0.7269 & 0.7650 & 0.6678 & 0.7601 & 0.6764 \\
+DeepWalk $\times22$ (walk-matched) & 0.6170 & 0.7298 & \textbf{0.6179} & 0.7292 & 0.7623 & 0.6643 & 0.7624 & 0.6852 \\
+% -- TASK 4 (heterogeneous graph H)
+type-blind DeepWalk on $H$ & 0.4648 & 0.6306 & 0.4534 & 0.6229 & 0.6898 & 0.4111 & 0.6804 & 0.3794 \\
+metapath \textsf{U-A-U} & 0.4201 & 0.5906 & 0.4133 & 0.5849 & 0.6457 & 0.3630 & 0.6489 & 0.3516 \\
+metapath \textsf{U-U-A-U} & 0.5661 & 0.6994 & 0.5525 & 0.6876 & 0.7624 & 0.5738 & 0.7632 & 0.5675 \\
+metapath \textsf{U-U-U-A-U} & \textbf{0.6215} & \textbf{0.7428} & 0.6163 & \textbf{0.7361} & \textbf{0.7956} & 0.6337 & \textbf{0.7887} & 0.6353 \\
+\textsf{U-A-U} rare-artist $\alpha{=}1$ & 0.4270 & 0.5954 & 0.4261 & 0.5942 & 0.7038 & 0.4245 & 0.6857 & 0.4007 \\
+
+% ---- noise floor: mean within-strategy sd over all 14 strategies
+\textit{noise floor (mean sd)} & 0.0038 & 0.0029 & 0.0050 & 0.0032 & 0.0072 & 0.0134 & 0.0038 & 0.0060 \\
+
+% ---- TABLE 2: per-source-degree breakdown, TEST split, mean over seeds {0,1,2}
+%      source degree is degree in G_train (the SOCIAL graph) in every row
+$0$ (cold) & 216 & 0.0803 & 0.2210 & \textbf{0.3596} & \textbf{0.5320} & 0.2994 & 0.4712 & 0.2824 & 0.4666 \\
+$1$ & 266 & 0.4361 & 0.5642 & 0.4098 & 0.5702 & 0.4273 & 0.5924 & \textbf{0.5063} & \textbf{0.6338} \\
+$2$--$3$ & 469 & \textbf{0.5814} & \textbf{0.6900} & 0.4357 & 0.6026 & 0.5153 & 0.6548 & 0.5465 & 0.6744 \\
+$4$--$7$ & 842 & \textbf{0.6690} & \textbf{0.7734} & 0.4406 & 0.6083 & 0.6065 & 0.7268 & 0.6496 & 0.7606 \\
+$8$--$15$ & 939 & 0.6887 & \textbf{0.7940} & 0.4441 & 0.6092 & 0.6145 & 0.7371 & \textbf{0.6894} & 0.7932 \\
+$\ge 16$ & 1439 & \textbf{0.6504} & \textbf{0.7739} & 0.3785 & 0.5601 & 0.5536 & 0.6931 & 0.6423 & 0.7641 \\
+
+% ---- inline: per-bucket deltas vs Task-3 DeepWalk, test hit@1
+% hetero-deepwalk: +0.3441, -0.0175, -0.1031, -0.1995, -0.2016, -0.1941
+% metapath U-A-U: +0.3148, -0.0288, -0.1258, -0.2268, -0.2343, -0.2592
+% metapath U-U-A-U: +0.2546, -0.0113, -0.0462, -0.0610, -0.0639, -0.0841
+% metapath U-U-U-A-U: +0.2377, +0.0677, -0.0150, -0.0179, +0.0110, +0.0046
+% U-A-U rare-artist a=1: +0.3210, -0.0063, -0.1422, -0.2193, -0.2243, -0.2326
+
+% ---- inline: cold bucket (deg 0), test, per-seed values
+% deepwalk: hit@1 0.0447 +- 0.0335  (seeds [0.0833, 0.0231, 0.0278])  MRR 0.1887
+% triadic: hit@1 0.0293 +- 0.0107  (seeds [0.0231, 0.0231, 0.0417])  MRR 0.1759
+% hetero-deepwalk: hit@1 0.3889 +- 0.0093  (seeds [0.3981, 0.3889, 0.3796])  MRR 0.5578
+% metapath U-A-U: hit@1 0.3596 +- 0.0335  (seeds [0.338, 0.3426, 0.3981])  MRR 0.5320
+% metapath U-U-A-U: hit@1 0.2994 +- 0.0308  (seeds [0.3148, 0.2639, 0.3194])  MRR 0.4712
+% metapath U-U-U-A-U: hit@1 0.2824 +- 0.0161  (seeds [0.2917, 0.2917, 0.2639])  MRR 0.4666
+% U-A-U rare-artist a=1: hit@1 0.3657 +- 0.0186  (seeds [0.3843, 0.3472, 0.3657])  MRR 0.5447
+
+% ---- inline: aggregate table, best/worst/spread per column
+% lp_val_hit: best metapath U-U-U-A-U 0.6215 | worst metapath U-A-U 0.4201 | spread 0.2014 | noise 0.0038 | ratio 53.03
+% lp_val_mrr: best metapath U-U-U-A-U 0.7428 | worst metapath U-A-U 0.5906 | spread 0.1522 | noise 0.0029 | ratio 52.96
+% lp_test_hit: best deepwalk x22 0.6179 | worst metapath U-A-U 0.4133 | spread 0.2047 | noise 0.0050 | ratio 41.33
+% lp_test_mrr: best metapath U-U-U-A-U 0.7361 | worst metapath U-A-U 0.5849 | spread 0.1513 | noise 0.0032 | ratio 47.32
+% cc_val_micro: best metapath U-U-U-A-U 0.7956 | worst metapath U-A-U 0.6457 | spread 0.1499 | noise 0.0072 | ratio 20.81
+% cc_val_macro: best triadic 0.6833 | worst metapath U-A-U 0.3630 | spread 0.3202 | noise 0.0134 | ratio 23.91
+% cc_test_micro: best metapath U-U-U-A-U 0.7887 | worst metapath U-A-U 0.6489 | spread 0.1399 | noise 0.0038 | ratio 37.10
+% cc_test_macro: best triadic 0.6974 | worst metapath U-A-U 0.3516 | spread 0.3458 | noise 0.0060 | ratio 57.92
+
+% ---- inline: social-step fraction sweep (test hit@1 overall vs cold bucket)
+% social=0.000 metapath U-A-U: overall 0.4133+-0.0059  cold 0.3596+-0.0335
+% social=0.333 metapath U-U-A-U: overall 0.5525+-0.0085  cold 0.2994+-0.0308
+% social=0.500 metapath U-U-U-A-U: overall 0.6163+-0.0045  cold 0.2824+-0.0161
+% social=1.000 deepwalk: overall 0.6009+-0.0013  cold 0.0447+-0.0335
+
+% ---- inline: rare-artist vs plain U-A-U
+% lp_val_hit: plain 0.4201 rare 0.4270 delta +0.0069 (+1.8 noise sd)
+% lp_val_mrr: plain 0.5906 rare 0.5954 delta +0.0049 (+1.7 noise sd)
+% lp_test_hit: plain 0.4133 rare 0.4261 delta +0.0129 (+2.6 noise sd)
+% lp_test_mrr: plain 0.5849 rare 0.5942 delta +0.0094 (+2.9 noise sd)
+% cc_val_micro: plain 0.6457 rare 0.7038 delta +0.0581 (+8.1 noise sd)
+% cc_val_macro: plain 0.3630 rare 0.4245 delta +0.0615 (+4.6 noise sd)
+% cc_test_micro: plain 0.6489 rare 0.6857 delta +0.0368 (+9.8 noise sd)
+% cc_test_macro: plain 0.3516 rare 0.4007 delta +0.0491 (+8.2 noise sd)
+
+% ---- inline: type-blind DeepWalk on H vs metapath U-A-U
+% lp_val_hit: UAU 0.4201 typeblind 0.4648 delta +0.0447
+% lp_val_mrr: UAU 0.5906 typeblind 0.6306 delta +0.0400
+% lp_test_hit: UAU 0.4133 typeblind 0.4534 delta +0.0401
+% lp_test_mrr: UAU 0.5849 typeblind 0.6229 delta +0.0381
+% cc_val_micro: UAU 0.6457 typeblind 0.6898 delta +0.0442
+% cc_val_macro: UAU 0.3630 typeblind 0.4111 delta +0.0481
+% cc_test_micro: UAU 0.6489 typeblind 0.6804 delta +0.0316
+% cc_test_macro: UAU 0.3516 typeblind 0.3794 delta +0.0278
+
+% ---- TABLE 3: measured Skip-Gram corpus (corpus_size.py)
+% deepwalk                 walks   69,580  tokens  2,783,200  mean_len  40.0  vs x22  -54.5%
+% deepwalk x15             walks  104,370  tokens  4,174,800  mean_len  40.0  vs x22  -31.8%
+% deepwalk x22             walks  153,076  tokens  6,123,040  mean_len  40.0  vs x22   +0.0%
+% hetero-deepwalk          walks  154,470  tokens  6,178,800  mean_len  40.0  vs x22   +0.9%
+% metapath U-A-U           walks  152,930  tokens  6,117,200  mean_len  40.0  vs x22   -0.1%
+% metapath U-U-A-U         walks  148,000  tokens  3,593,757  mean_len  24.3  vs x22  -41.3%
+% metapath U-U-U-A-U       walks  148,000  tokens  4,068,117  mean_len  27.5  vs x22  -33.6%
+% U-U-U-A-U vs deepwalk x15: tokens 4,068,117 vs 4,174,800 = -2.6%
+% U-U-U-A-U vs deepwalk x22: tokens 4,068,117 vs 6,123,040 = -33.6%
+
+% ---- inline: THE CONTROLS. U-U-U-A-U vs BOTH controls
+%      x22 = walk-matched (round 1, gave the control ~50% more tokens)
+%      x15 = token-matched (round 2 fix; control still has +2.6% tokens)
+% lp_val_hit: x10 0.6040 x15 0.6110 x22 0.6170 | U-U-U-A-U 0.6215 | vs x15 +0.0105 (+2.8 sd) | vs x22 +0.0045 (+1.2 sd)
+% lp_val_mrr: x10 0.7227 x15 0.7267 x22 0.7298 | U-U-U-A-U 0.7428 | vs x15 +0.0160 (+5.6 sd) | vs x22 +0.0130 (+4.5 sd)
+% lp_test_hit: x10 0.6009 x15 0.6118 x22 0.6179 | U-U-U-A-U 0.6163 | vs x15 +0.0045 (+0.9 sd) | vs x22 -0.0016 (-0.3 sd)
+% lp_test_mrr: x10 0.7207 x15 0.7269 x22 0.7292 | U-U-U-A-U 0.7361 | vs x15 +0.0093 (+2.9 sd) | vs x22 +0.0070 (+2.2 sd)
+% cc_val_micro: x10 0.7641 x15 0.7650 x22 0.7623 | U-U-U-A-U 0.7956 | vs x15 +0.0306 (+4.2 sd) | vs x22 +0.0332 (+4.6 sd)
+% cc_val_macro: x10 0.6639 x15 0.6678 x22 0.6643 | U-U-U-A-U 0.6337 | vs x15 -0.0341 (-2.5 sd) | vs x22 -0.0306 (-2.3 sd)
+% cc_test_micro: x10 0.7629 x15 0.7601 x22 0.7624 | U-U-U-A-U 0.7887 | vs x15 +0.0286 (+7.6 sd) | vs x22 +0.0263 (+7.0 sd)
+% cc_test_macro: x10 0.6833 x15 0.6764 x22 0.6852 | U-U-U-A-U 0.6353 | vs x15 -0.0411 (-6.9 sd) | vs x22 -0.0498 (-8.3 sd)
+% budget alone (x10 -> x15 -> x22), per column:
+%   lp_val_hit: 0.6040 -> 0.6110 (+0.0070) -> 0.6170 (+0.0130 total)
+%   lp_val_mrr: 0.7227 -> 0.7267 (+0.0041) -> 0.7298 (+0.0071 total)
+%   lp_test_hit: 0.6009 -> 0.6118 (+0.0109) -> 0.6179 (+0.0170 total)
+%   lp_test_mrr: 0.7207 -> 0.7269 (+0.0062) -> 0.7292 (+0.0085 total)
+%   cc_val_micro: 0.7641 -> 0.7650 (+0.0009) -> 0.7623 (-0.0018 total)
+%   cc_val_macro: 0.6639 -> 0.6678 (+0.0039) -> 0.6643 (+0.0004 total)
+%   cc_test_micro: 0.7629 -> 0.7601 (-0.0027) -> 0.7624 (-0.0004 total)
+%   cc_test_macro: 0.6833 -> 0.6764 (-0.0069) -> 0.6852 (+0.0018 total)
+
+% ---- inline: COLD bucket, anchored on the measured control (deepwalk x15)
+% (chance would be 1/21 = 0.0476; the social-only baselines sit ABOVE it because the ranker falls back on candidate-only features -- see tie_check.log)
+% cold deepwalk              : 0.0447 +- 0.0335  (seeds [0.0833, 0.0231, 0.0278])  MRR 0.1887
+% cold deepwalk x15          : 0.0803 +- 0.0219  (seeds [0.088, 0.0972, 0.0556])  MRR 0.2210
+% cold deepwalk x22          : 0.0494 +- 0.0271  (seeds [0.0602, 0.0694, 0.0185])  MRR 0.1806
+% cold metapath U-A-U        : 0.3596 +- 0.0335  (seeds [0.338, 0.3426, 0.3981])  MRR 0.5320
+% cold metapath U-U-A-U      : 0.2994 +- 0.0308  (seeds [0.3148, 0.2639, 0.3194])  MRR 0.4712
+% cold metapath U-U-U-A-U    : 0.2824 +- 0.0161  (seeds [0.2917, 0.2917, 0.2639])  MRR 0.4666
+% cold-bucket noise floor (mean sd over those 6): 0.0271
+% cold reference (deepwalk x15) = 0.0803
+% cold metapath U-A-U vs deepwalk x15: ratio 4.48x, gap 0.2793 = 10.3 cold-bucket sd
+% cold metapath U-U-A-U vs deepwalk x15: ratio 3.73x, gap 0.2191 = 8.1 cold-bucket sd
+% cold metapath U-U-U-A-U vs deepwalk x15: ratio 3.52x, gap 0.2022 = 7.5 cold-bucket sd

@@ -1,0 +1,4 @@
+Outlines
+Practice II: 
+Heterogeneous Graph Embedding
+(Optional)

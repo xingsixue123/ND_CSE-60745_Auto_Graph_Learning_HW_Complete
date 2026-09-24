@@ -8,15 +8,8 @@ absolute paths in its runtime facts, so this file does not have to repeat them.
 
 Anything else worth telling the master goes here: a submission format the course
 requires, a preferred library, a question to skip, a deadline. It can stay this
-short -- see examples/specs.md, which is the entire specification the HW1 run was
-given.
+short -- see the examples/ directory for real ones.
 -->
-
-we are working on hw2, instructions here: `/home/xing/project/auto_hw_complete/input/hw2_instruction.md`
-
-
-we have a refference of how er complete hw1: `/home/xing/project/auto_hw_complete/input/hw1_example.md`
-
 ---
 
 ## Rules for workers

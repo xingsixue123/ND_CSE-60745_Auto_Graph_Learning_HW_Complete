@@ -1,0 +1,49 @@
+0.19 in the cold bucket to 0.80 at degree 8–15); effort is better spent on the cold-start population
+than on the sampler.
+2
+Task 4 — Heterogeneous Graph Embedding (optional practice)
+2.1
+Method
+The graph.
+Htrain is the notebook’s add artists(G train), used verbatim: 15,466 nodes (7,624
+users + 7,842 artists) and 19,464 + 3,014,361 = 3,033,825 edges. Every figure in the provided
+statistics file is reproduced exactly (7,451 users like ≥1 artist, 173 like none; artists per user
+median 400, max 944 — matching the task description’s own table).
+The artist layer is 155×
+denser than the social layer, and that fact drives every result below.
+What is reused unchanged.
+This is what makes the comparison in Table 4 legitimate, so I
+state it precisely. train embedding, LinkPredictor and CountryClassifier are the same Python
+objects measured in Task 3: my sampler is a subclass of Task 3’s WalkEmbedding that overrides
+sample walks and nothing else, and Task 3’s module is imported byte-identically (verified by
+sha256). The per-node budget (10 walks of length up to 40) and every Skip-Gram hyper-parameter
+(d=128, window 5, 5 negatives, 5 epochs, workers=1 for bit-exact reproducibility) are unchanged.
+Evaluation is run experiment with Htrain and Nusers+Nartists, slicing Z to [: Nusers]; degree buckets
+always come from the social graph Gtrain. The sampler and the graph are the only things
+that change.
+Schema convention.
+A schema is a symmetric type string whose repeating cycle is schema[:-1]:
+U-A-U gives U A U A . . . , U-U-A-U gives U U A U U A . . . , U-U-U-A-U gives U U U A . . . At each step
+the next node is drawn uniformly from the neighbours of the demanded type. Since U-A-U-U is a
+cyclic rotation of U-U-A-U and yields the same multiset of step types, I run one schema per rotation
+class. The three then form a one-parameter family indexed by the fraction of steps forced to be
+social (0, 1/3, 1/2, with Task 3’s DeepWalk as the 1 endpoint), the axis of Figure 4.
+Start nodes, and dead ends.
+embed graph starts walks from every node of H, artists included.
+I rotate the cycle to the start node’s type rather than discarding artist starts, so an artist begins
+A U A U . . . — the same meta-path read from the other end; artists thus get trained vectors that
+serve as shared context, and are sliced off before evaluation. A walk stops whenever the type the
+schema demands next is absent. At the first step this drops the walk entirely (a user with no
+artist under U-A-U, 173 of them; a socially isolated user under U-U-A-U/U-U-U-A-U, 666), exactly
+as Task 3’s sampler returns [] for an isolated node — so those users keep an all-zero row in both
+tasks and the cold-start comparison stays like-for-like. But it also fires mid-walk, overwhelmingly
+when an A →U step lands on one of the 666 isolated users and the schema then asks for U →U.
+That case is the common one, and it is why walk count and corpus size are different quantities: U-
+A-U emits 152,930 walks from 15,293 starts, all of full length 40, whereas U-U-A-U and U-U-U-A-U
+emit 148,000 from 14,800 starts with mean length only 24.3 and 27.5 (32.2% and 43.7% reach 40).
+Terminating on a dead end is standard metapath2vec behaviour, but Section 2.2 shows its effect
+must be measured, not assumed.
+One idea of my own: rare-artist sampling.
+A uniform U →A step lands on a popular artist
+far more often than a niche one, and shared taste for a top-100 artist says almost nothing about
+9

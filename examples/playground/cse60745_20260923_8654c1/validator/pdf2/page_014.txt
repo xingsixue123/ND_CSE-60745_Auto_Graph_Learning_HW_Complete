@@ -1,0 +1,45 @@
+The meta-path constraint is doing real work.
+A type-blind DeepWalk on H takes a social
+step only 0.72% of the time (over 31,122 sampled steps), because a user has ∼395 artist neighbours
+and ∼5 social ones; it is de facto U-A-U. Yet it beats explicit U-A-U on every column (+0.0401 test
+Hit@1). Those rare social steps are worth a great deal — precisely the metapath2vec argument:
+on a graph this lopsided, leaving the transition rule to the degree distribution discards the sparse,
+informative edge type, and the schema is how you take that choice back. The stronger form is the
+monotone family in Figure 4: as the forced social fraction rises 0 →1/3 →1/2, overall test Hit@1
+goes 0.4133 →0.5525 →0.6163 while the cold bucket falls 0.3596 →0.2994 →0.2824, without
+collapsing to the 0.0803 of a pure social walk — a socially isolated user can never start a U-U-U-A-U
+walk, but the A →U step lets other walks reach them. Truncation shrinks the corpus of exactly the
+higher-social schemas, so it works against the rising trend, which is therefore safe from the budget
+objection.
+Country classification:
+helped on micro-F1, hurt on macro-F1.
+Against the token-
+matched control, U-U-U-A-U gains +0.0286 test micro-F1 (0.7887 vs 0.7601, 7.6 sd) and loses
+−0.0411 test macro-F1 (0.6353 vs 0.6764, 6.9 sd); against the walk-matched control the same two
+gaps are +0.0263 and −0.0498, so neither depends on the control. Both are far outside the noise,
+and the split between them is interpretable: music taste is regional, so artists carry genuine country
+signal and lift the large classes micro-F1 measures — but that signal is coarse, regional rather than
+national, while macro-F1 is dominated by the small countries, which in the social graph are tight,
+well-separated communities that the near-complete artist layer blurs together. Task 3’s triadic walk
+remains the study’s best macro-F1 model (0.6974); no heterogeneous variant comes close.
+Rare-artist sampling works, and confirms the diagnosis.
+Weighting U →A by deg(a)−1
+improves plain U-A-U on all eight columns: +0.0129 test Hit@1 (2.6 sd), +0.0094 test MRR (2.9
+sd), +0.0368 test micro-F1 (9.8 sd) and +0.0491 test macro-F1 (8.2 sd). Since the only change is
+which artist a walk passes through, this is direct evidence that the popular artists specifically inject
+the noise, and that the density problem is partly fixable inside the sampler. It does not rescue
+U-A-U to competitiveness — the schema still lacks the social edges that matter most — but it is
+the largest single improvement I obtained over a baseline schema.
+2.5
+Conclusion
+Heterogeneous structure helped one of the two downstream tasks and one sub-population, and
+hurt elsewhere. It did essentially nothing for aggregate friend recommendation once the corpus
+was matched in tokens; it improved country micro-F1 by a wide margin and degraded macro-F1
+by a comparable one; and it lifted cold-start friend recommendation by 3.5–4.5× over a budget-
+matched baseline, which is the result worth keeping. The recommendation that follows is not a
+single best schema but a split one: a social-graph walk (Task 3’s triadic) for users who have friends,
+and a U-A-U walk — ideally with rare-artist weighting — for the 9% who do not, the crossover
+sitting between degree 0 and 1 (Table 5). The broader lesson: on a graph where one edge type is
+155× denser than the other, the meta-path is not a modelling flourish but the only thing standing
+between the walk and a near-complete graph.
+14

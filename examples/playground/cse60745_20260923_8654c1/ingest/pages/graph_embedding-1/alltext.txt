@@ -1,0 +1,526 @@
+
+===== cell 1 (markdown) =====
+# Task 3 — Graph Embedding Applications
+
+**Dataset.** LastFM Asia social network: 7,624 users from Asian countries, 27,806 mutual-follower edges ([Last.FM Asia](https://snap.stanford.edu/data/feather-lastfm-social.html)).
+
+**Your job.** Learn user node embeddings from random walks, then use it for two
+downstream tasks and find out the contributions of different random walk sampling strategies:
+
+1. **Friend recommendation** — exactly the Practice 1 problem: same 70/15/15 edge split,
+   same queries, same evaluation pipeline. Dataset statistics:
+
+   | split | queries | positives : negatives |
+   |-------|---------|-----------------------|
+   | train | 19,464  | 1 : 5                 |
+   | val   | 4,171   | 1 : 20                |
+   | test  | 4,171   | 1 : 20                |
+
+2. **Country classification** — predict a user's country (18 classes) from the
+   embedding. The users are split **10% train / 10% val / 80% test**, stratified by
+   country.
+
+   | split | users |
+   |-------|-------|
+   | train | 763   |
+   | val   | 763   |
+   | test  | 6,098 |
+
+**What you implement.** Three interfaces for random walk based graph embedding:
+
+| interface | section | what it does |
+|---|---|---|
+| `sample_walks(G, start)` | 3 | given a graph and a start node, return a set of random walks |
+| `train_embedding(walks, n_nodes)` | 3 | turn the walks into an `(n_nodes, d)` node embedding matrix|
+| `LinkPredictor` / `CountryClassifier` | 4 | how the embedding is used for downstream ML model |
+
+You can try to reproduce DeepWalk and node2vec, and then test other random walk based embedding methods, including your own ideas. Please run the cells sequentially in Google Colab, and don't modify other parts of the code unless necessary.
+===== cell 2 (markdown) =====
+## 1. Setup
+
+Dataset download.
+===== cell 3 (code) =====
+import json
+import random
+import time
+import urllib.request
+from collections import defaultdict
+from pathlib import Path
+
+import networkx as nx
+import numpy as np
+import pandas as pd
+
+from sklearn.metrics import f1_score
+
+GITHUB_REPO = "antman9914/CSE60745-Practice"
+BRANCH = "main"
+
+REQUIRED = {
+    "data/task1": ["split_stats.json", "lp_graph_obs.csv",
+                   "lp_train.csv", "lp_val.csv", "lp_test.csv"],
+    "data/task2": ["node_country.csv"],
+    "data/task3": ["hetero_stats.json", "user_artist.csv.gz", "country_split.csv"],
+}
+RANDOM_SEED = 0
+
+for d, names in REQUIRED.items():
+    Path(d).mkdir(parents=True, exist_ok=True)
+    for name in names:
+        if not (Path(d) / name).exists():
+            url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{BRANCH}/{d}/{name}"
+            print(f"downloading {d}/{name} ...")
+            urllib.request.urlretrieve(url, Path(d) / name)
+
+missing = [f"{d}/{n}" for d, ns in REQUIRED.items() for n in ns if not (Path(d) / n).exists()]
+assert not missing, f"could not obtain: {missing}"
+print(f"data ready | networkx {nx.__version__}, pandas {pd.__version__}")
+
+pd.set_option("display.width", 140)
+np.set_printoptions(precision=4, suppress=True)
+===== cell 4 (markdown) =====
+## 2. Data loading
+
+One graph, exactly as in Task 1: `G_train`, the 70% training edges, used for the training
+of both the link predictor and the node classifier.
+
+===== cell 5 (code) =====
+def load_data():
+    """Load the social graph, the link-prediction splits, and the country label."""
+    stats = json.loads(Path("data/task1/split_stats.json").read_text())
+    n_users = stats["n_nodes"]
+
+    splits = {name: pd.read_csv(f"data/task1/lp_{name}.csv") for name in ("train", "val", "test")}
+    train_edges = pd.read_csv("data/task1/lp_graph_obs.csv")[["src", "dst"]]
+
+    G_train = nx.Graph()
+    G_train.add_nodes_from(range(n_users), type="U")
+    G_train.add_edges_from(train_edges.itertuples(index=False, name=None))
+
+    country = (pd.read_csv("data/task2/node_country.csv")
+               .set_index("node_id")["country"].reindex(range(n_users)).to_numpy())
+    split = pd.read_csv("data/task3/country_split.csv").set_index("node_id")["split"]
+    country_split = {name: np.flatnonzero((split == name).to_numpy())
+                     for name in ("train", "val", "test")}
+    return G_train, splits, country, country_split, n_users
+
+
+G_train, splits, country, country_split, N_USERS = load_data()
+train_df, val_df, test_df = splits["train"], splits["val"], splits["test"]
+
+n_iso = sum(1 for _, d in G_train.degree() if d == 0)
+print(f"G_train: {G_train.number_of_edges():,} edges, {n_iso} isolated users")
+for name, df in splits.items():
+    n_q = int(df["label"].sum())
+    print(f"{name:>5}: {n_q:>6} queries x {len(df) // n_q:>2} candidates")
+print(f"country: {len(set(country))} classes; users split "
+      + " / ".join(f"{k} {len(v)}" for k, v in country_split.items()))
+===== cell 6 (code) =====
+# Cached lookups, one entry per distinct graph object. Building these inside a sampler
+# on every call would dominate the running time, so call them once and reuse.
+_LOOKUP_CACHE = {}
+
+
+def adjacency_lookups(G):
+    """(ADJ, DEG) for a graph: ADJ[u] is the set of neighbours of u, DEG[u] its degree."""
+    key = ("adj", id(G))
+    if key not in _LOOKUP_CACHE:
+        adj = {u: set(G.neighbors(u)) for u in G}
+        _LOOKUP_CACHE[key] = (adj, {u: len(adj[u]) for u in G})
+    return _LOOKUP_CACHE[key]
+
+
+def typed_adjacency(G):
+    """(ADJ_T, TYPE) for a graph with a `type` node attribute.
+
+    ADJ_T[u][t] is the list of neighbours of u whose type is t, and TYPE[u] is the type
+    of u. On the social graph every node has type "U", so ADJ_T[u]["U"] is simply the
+    neighbour list of u — lists are cheaper to sample from than the sets above. Task 4
+    adds a second node type.
+    """
+    key = ("typed", id(G))
+    if key not in _LOOKUP_CACHE:
+        ntype = nx.get_node_attributes(G, "type")
+        adj_t = {u: defaultdict(list) for u in G}
+        for u, v in G.edges():
+            adj_t[u][ntype[v]].append(v)
+            adj_t[v][ntype[u]].append(u)
+        _LOOKUP_CACHE[key] = (adj_t, ntype)
+    return _LOOKUP_CACHE[key]
+===== cell 7 (markdown) =====
+## 3. Your implementation — graph embedding
+
+Two methods. `sample_walks` is where random walk sampling strategy is implemented. `train_embedding` updates node embedding matrix.
+===== cell 8 (code) =====
+class WalkEmbedding:
+    """Random-walk node embeddings: walks -> SkipGram -> one vector per node."""
+
+    def __init__(self, seed=RANDOM_SEED, **params):
+        """Keep whatever your strategies need here, so that a strategy is a set of
+        constructor arguments. Which arguments exist, and what they are called, is up
+        to you. `seed` is for whatever randomness your sampler and trainer need."""
+        self.seed = seed
+        self.params = params
+
+    # ==================================================================================
+    # TODO 1 of 3 - sampling.
+    # ==================================================================================
+    def sample_walks(self, G, start):
+        """Return the random walks that begin at `start` node.
+
+        Parameters
+        ----------
+        G : networkx.Graph
+            The graph to walk on. In Task 3 this is a social graph; in Task 4 it also
+            contains a second node type, and every node has a `type` attribute.
+            Use `adjacency_lookups(G)` or `typed_adjacency(G)` for fast neighbour access;
+            both are cached, so calling them on every invocation is free.
+        start : int
+            The start node. The framework calls this method once for every node of G.
+
+        Returns
+        -------
+        list of list of int
+            Zero or more walks, each a list of node ids beginning with `start`. How many
+            walks, how long, and how the next node is chosen are all yours to decide.
+            Returning an empty list is allowed, for example for a node you do not want
+            to start walks from.
+        """
+        raise NotImplementedError("TODO 1: implement sample_walks")
+
+    # ==================================================================================
+    # TODO 2 of 3 - training.
+    # ==================================================================================
+    def train_embedding(self, walks, n_nodes):
+        """Learn node embedding from the walks.
+
+        Parameters
+        ----------
+        walks : list of list of int
+            All walks from all start nodes, concatenated. For the social graph with 10
+            walks of length 40 per node this is roughly 70,000 walks.
+        n_nodes : int
+            Number of rows the returned matrix must have (N_USERS in Task 3; larger in
+            Task 4). Row i is the vector of node i.
+
+        Returns
+        -------
+        numpy.ndarray of shape (n_nodes, d), dtype float
+            d is up to you. Nodes that never appear in any walk still need a row; fill
+            it with zeros.
+
+        Notes
+        -----
+        You can use gensim to implement SkipGram.
+        """
+        raise NotImplementedError("TODO 2: implement train_embedding")
+===== cell 9 (markdown) =====
+## 4. Your implementation — downstream models
+
+`LinkPredictor` receives the embedding matrix and the candidate pairs directly. How a
+pair `(u, v)` is turned into a feature vector from `Z[u]` and `Z[v]` is part of what you
+design inside `fit` and `score`: the node2vec paper compares average, Hadamard
+(element-wise product), absolute difference and squared difference, and nothing stops
+you from concatenating several or adding Task 1 structural features next to them.
+
+`CountryClassifier` is an ordinary node classifier on top of the embedding.
+
+**Keep both of these fixed while you compare sampling strategies in sections 7 and 8.**
+The comparison is only meaningful if the embedding is the one thing that changes.
+===== cell 10 (code) =====
+class LinkPredictor:
+    """Rank candidate friends for a source user from node embeddings."""
+
+    # ==================================================================================
+    # TODO 3 of 3 (a) - pair features, training and inference.
+    # ==================================================================================
+    def fit(self, Z, pairs_train, y_train, pairs_val, y_val):
+        """Train on the training queries, with the validation queries for model selection.
+
+        Parameters
+        ----------
+        Z : numpy.ndarray of shape (N_USERS, d)
+            The user embedding.
+        pairs_train : numpy.ndarray of shape (19464, 6, 2), dtype int
+            Candidate pairs (src, dst) of the training queries, grouped by query: axis 0
+            is a query, axis 1 its 6 candidate user pairs. The positive candidate is ALWAYS at
+            index 0 along axis 1.
+        y_train : numpy.ndarray of shape (19464, 6)
+            1 for the real edge, 0 otherwise; always [1, 0, 0, 0, 0, 0] here.
+        pairs_val : numpy.ndarray of shape (4171, 21, 2), dtype int
+            The validation queries. The positive is at an unknown position; y_val says
+            where.
+        y_val : numpy.ndarray of shape (4171, 21)
+
+        Notes
+        -----
+        Turning a pair into a feature vector is yours to design. `Z[pairs[..., 0]]` and
+        `Z[pairs[..., 1]]` are the (n_queries, n_candidates, d) source and destination
+        vectors.
+        Store the fitted estimator on self so that score() can use it.
+        """
+        raise NotImplementedError("TODO 3a: implement fit")
+
+    def score(self, Z, pairs):
+        """Score candidate pairs.
+
+        Parameters
+        ----------
+        Z : numpy.ndarray of shape (N_USERS, d)
+            The user embedding.
+        pairs : numpy.ndarray of shape (4171, 21, 2), dtype int
+            Candidate pairs grouped by query, positive at an unknown position.
+
+        Returns
+        -------
+        numpy.ndarray of shape (4171, 21)
+            One score per candidate, same layout as `pairs`. A HIGHER score must mean
+            "more likely to be a real edge"; return continuous scores, not 0/1.
+        """
+        raise NotImplementedError("TODO 3a: implement score")
+
+
+class CountryClassifier:
+    """Predict a user's country from their embedding."""
+
+    # ==================================================================================
+    # TODO 3 of 3 (b) - node classification.
+    # ==================================================================================
+    def fit(self, Z_train, y_train, Z_val, y_val):
+        """Z_train : (763, d) embeddings of the training users; y_train : (763,) their
+        country. Z_val, y_val : the same for the 763 validation users."""
+        raise NotImplementedError("TODO 3b: implement fit")
+
+    def predict(self, Z):
+        """Z : (n, d). Return (n,) predicted country ids."""
+        raise NotImplementedError("TODO 3b: implement predict")
+===== cell 11 (markdown) =====
+## 5. Evaluation Toolset
+
+`evaluate_ranking`, `breakdown_by_source_degree`, `to_query_tensor` and
+`flatten_scores` are the link prediction evaluation functions, same as Practice 1. `evaluate_country` fits the
+classifier on the 763 training users, hands it the 763 validation users for model
+selection, and reports Micro- and Macro-F1 on validation and on the 6,098 test users.
+
+`run_experiment` ties everything together and records the result under a name, so that
+several sampling strategies can be compared with `comparison_table()`.
+===== cell 12 (code) =====
+def evaluate_ranking(df, scores, seed=RANDOM_SEED):
+    """Compute Hit@1 and MRR within each query, breaking ties uniformly at random."""
+    rng = np.random.default_rng(seed)
+    d = df[["query_id", "label"]].copy()
+    d["score"] = scores
+    d["tiebreak"] = rng.random(len(d))
+    d = d.sort_values(["query_id", "score", "tiebreak"], ascending=[True, False, True])
+    d["rank"] = d.groupby("query_id").cumcount() + 1
+    pos = d.loc[d["label"] == 1, ["query_id", "rank"]]
+    metrics = {"n_queries": len(pos),
+               "hit@1": float((pos["rank"] == 1).mean()),
+               "MRR": float((1.0 / pos["rank"]).mean())}
+    return metrics, pos.set_index("query_id")["rank"]
+
+
+def breakdown_by_source_degree(df, ranks, degrees, bins=(0, 1, 2, 4, 8, 16, np.inf)):
+    """Split Hit@1 and MRR by how many friends the source user has in the graph."""
+    pos = df[df["label"] == 1].set_index("query_id")
+    d = pd.DataFrame({"rank": ranks})
+    d["src_degree"] = pos.loc[d.index, "src"].map(degrees).to_numpy()
+    d["bucket"] = pd.cut(d["src_degree"], bins=list(bins), right=False)
+    return d.groupby("bucket", observed=True).agg(
+        n_queries=("rank", "size"),
+        hit_at_1=("rank", lambda r: (r == 1).mean()),
+        MRR=("rank", lambda r: (1.0 / r).mean()),
+    ).round(4)
+
+
+def to_query_tensor(df, X, positive_first=False):
+    """Group a flat feature matrix by query: (n_pairs, F) -> (n_queries, n_candidates, F)."""
+    labels = df["label"].to_numpy()
+    n_cand = len(df) // int(labels.sum())
+    n_q = len(df) // n_cand
+    rows = np.arange(len(df)).reshape(n_q, n_cand)
+    lab = labels.reshape(n_q, n_cand)
+    if positive_first:
+        cols = np.argsort(-lab, axis=1, kind="stable")
+        rows = np.take_along_axis(rows, cols, axis=1)
+        lab = np.take_along_axis(lab, cols, axis=1)
+    return X[rows], lab, rows
+
+
+def flatten_scores(scores, rows, n_pairs):
+    """Map (n_queries, n_candidates) scores back to the row order of the split."""
+    flat = np.empty(n_pairs, dtype=float)
+    flat[rows.ravel()] = np.asarray(scores, dtype=float).ravel()
+    return flat
+
+
+def embed_graph(embedder, G, n_nodes):
+    """Run the sampler from every node of G, train, and return the (n_nodes, d) matrix."""
+    t0 = time.perf_counter()
+    walks = []
+    for start in G.nodes():
+        walks.extend(embedder.sample_walks(G, start))
+    assert walks, "sample_walks returned no walks from any node"
+    t1 = time.perf_counter()
+    Z = np.asarray(embedder.train_embedding(walks, n_nodes), dtype=float)
+    assert Z.ndim == 2 and Z.shape[0] == n_nodes, (
+        f"train_embedding must return ({n_nodes}, d), got {Z.shape}")
+    print(f"    {len(walks):,} walks in {t1 - t0:.1f}s, "
+          f"embedding {Z.shape} in {time.perf_counter() - t1:.1f}s")
+    return Z
+
+
+def evaluate_link_prediction(Z, predictor, splits, G):
+    """Task 1 evaluation on an embedding-based predictor. The per-degree breakdown is by
+    number of friends in G."""
+    pairs, labels, rows = {}, {}, {}
+    for name in ("train", "val", "test"):
+        pairs[name], labels[name], rows[name] = to_query_tensor(
+            splits[name], splits[name][["src", "dst"]].to_numpy(),
+            positive_first=(name == "train"))
+
+    predictor.fit(Z, pairs["train"], labels["train"], pairs["val"], labels["val"])
+
+    degrees = dict(G.degree())
+    out = {}
+    for name in ("val", "test"):
+        s = np.asarray(predictor.score(Z, pairs[name]), dtype=float)
+        assert s.shape == pairs[name].shape[:2], (
+            f"score returned {s.shape}, expected {pairs[name].shape[:2]} for {name}")
+        flat = flatten_scores(s, rows[name], len(splits[name]))
+        metrics, ranks = evaluate_ranking(splits[name], flat)
+        out[name] = (metrics, breakdown_by_source_degree(splits[name], ranks, degrees))
+    return out
+
+
+def evaluate_country(Z, y, classifier, node_split):
+    """Node classification on the fixed 10/10/80 split: fit on the training users with
+    the validation users available for model selection, then report Micro- and Macro-F1
+    on validation and on test."""
+    tr, va, te = node_split["train"], node_split["val"], node_split["test"]
+    classifier.fit(Z[tr], y[tr], Z[va], y[va])
+    rows = {}
+    for name, idx in (("val", va), ("test", te)):
+        pred = np.asarray(classifier.predict(Z[idx]))
+        assert pred.shape == (len(idx),), f"predict returned {pred.shape} for {len(idx)} users"
+        rows[name] = {"micro_f1": f1_score(y[idx], pred, average="micro", zero_division=0),
+                      "macro_f1": f1_score(y[idx], pred, average="macro", zero_division=0)}
+    return pd.DataFrame(rows).T.round(4)
+
+
+RESULTS = {}
+
+
+def run_experiment(name, embedder, G, n_nodes, predictor_factory=None, classifier_factory=None):
+    """Embed G, evaluate both downstream tasks, and record the result under `name`.
+
+    G        : the graph to run the sampler on — G_train in Task 3, H_train in Task 4.
+    n_nodes  : number of rows the embedding must have: N_USERS in Task 3, more in
+               Task 4. The embedding is always sliced to the first N_USERS rows downstream.
+    """
+    predictor_factory = predictor_factory or LinkPredictor
+    classifier_factory = classifier_factory or CountryClassifier
+
+    print(f"[{name}]")
+    Z = embed_graph(embedder, G, n_nodes)[:N_USERS]
+
+    # `G_train` (section 2) fixes the degree buckets for every part, artists or not.
+    lp = evaluate_link_prediction(Z, predictor_factory(), splits, G_train)
+    cc = evaluate_country(Z, country, classifier_factory(), country_split)
+
+    v, t = lp["val"][0], lp["test"][0]
+    row = {"lp_val_hit@1": v["hit@1"], "lp_val_MRR": v["MRR"],
+           "lp_test_hit@1": t["hit@1"], "lp_test_MRR": t["MRR"]}
+    for bucket, hit in lp["val"][1]["hit_at_1"].items():
+        row[f"val_hit@1_deg{bucket.left:.0f}+"] = hit
+    row.update({"country_val_microF1": cc.loc["val", "micro_f1"],
+                "country_test_microF1": cc.loc["test", "micro_f1"],
+                "country_test_macroF1": cc.loc["test", "macro_f1"]})
+    RESULTS[name] = {"summary": row, "lp": lp, "country": cc}
+
+    print(f"    link prediction: val hit@1 {v['hit@1']:.4f} MRR {v['MRR']:.4f}   |   "
+          f"test hit@1 {t['hit@1']:.4f} MRR {t['MRR']:.4f}")
+    print(f"    country:         val micro-F1 {cc.loc['val', 'micro_f1']:.4f}   |   "
+          f"test micro-F1 {cc.loc['test', 'micro_f1']:.4f} macro-F1 {cc.loc['test', 'macro_f1']:.4f}")
+    return RESULTS[name]
+
+
+def comparison_table():
+    """One row per recorded experiment."""
+    return pd.DataFrame({k: v["summary"] for k, v in RESULTS.items()}).T.round(4)
+===== cell 13 (markdown) =====
+## 6. Sampling Strategy Comparison
+
+Record every strategy with `run_experiment` under a distinct name and look at
+`comparison_table()`. The question is not only which strategy is best overall but
+which downstream task each one helps, and whether the same embedding is best for
+both.
+===== cell 14 (code) =====
+# run_experiment("deepwalk", WalkEmbedding(...), G_train, N_USERS)
+# run_experiment("node2vec",  WalkEmbedding(...), G_train, N_USERS)
+# ... your own strategies ...
+
+comparison_table()
+
+===== cell 15 (markdown) =====
+# Task 4 — Heterogeneous Graph Embedding
+
+**Dataset.** The same 7,624 users, plus a second kind of node: the **artists** they
+like, taken from the LastFM Asia "features" file and used as graph structure rather than
+as a feature vector.
+
+| Descriptor | Statistics |
+|---|---|
+| artists | 7,842 |
+| user–artist edges | 3,014,361 |
+| artists per user | median 400, max 944 |
+
+The heterogeneous graph `H_train` is `G_train` with the artist nodes and user–artist
+edges added. Artists get ids `N_USERS … N_USERS +
+N_ARTISTS − 1`, so users and artists share one integer id space and one embedding matrix;
+the `type` attribute is `"U"` or `"A"`.
+
+**Your job.** Implement a heterogeneous graph embedding method to learn new user embeddings enriched by heterogeneous graph structures. You can re-implement metapath2vec, following meta-path based graph embedding, or implement your own ideas. You can compare your Task 4 results with your Task 3 results in the same `comparison_table()`.
+
+**Where the code goes.** This task reuses everything from Task 3:
+
+| what | where |
+|---|---|
+| the sampler | `sample_walks` in section 3, extended so that a meta-path can be selected through the constructor; re-run that cell, then run section 8 below |
+| typed neighbour lists | `typed_adjacency(G)` from section 2: `ADJ_T[u]["A"]` are the artists user `u` likes, `ADJ_T[a]["U"]` the users who like artist `a` |
+| embedding training and both downstream models | unchanged from sections 3 and 4 |
+| evaluation | `run_experiment` from section 5, called with `H_train` instead of `G_train` and `N_USERS + N_ARTISTS` instead of `N_USERS` |
+
+Please run data loading cell below before you run experiments for Task 4.
+===== cell 16 (markdown) =====
+## 7. Data loading
+===== cell 17 (code) =====
+hstats = json.loads(Path("data/task3/hetero_stats.json").read_text())
+N_ARTISTS = hstats["n_artists"]
+user_artist = pd.read_csv("data/task3/user_artist.csv.gz")
+
+
+def add_artists(G_social):
+    """Return a copy of a social graph with the artist nodes and user-artist edges added."""
+    H = G_social.copy()
+    H.add_nodes_from(range(N_USERS, N_USERS + N_ARTISTS), type="A")
+    H.add_edges_from(user_artist.itertuples(index=False, name=None))
+    return H
+
+
+H_train = add_artists(G_train)
+
+print(f"user-artist: {N_ARTISTS} artists, {len(user_artist):,} edges, "
+      f"{user_artist['user'].nunique()} of {N_USERS} users like at least one artist")
+print(f"H_train: {H_train.number_of_nodes():,} nodes, {H_train.number_of_edges():,} edges")
+===== cell 18 (markdown) =====
+## 8. Experiments
+
+Use this section to run experiments for Task 4.
+
+===== cell 19 (code) =====
+# run_experiment("metapath_UAU",  WalkEmbedding(...), H_train, N_USERS + N_ARTISTS)
+# run_experiment("metapath_UUAU", WalkEmbedding(...), H_train, N_USERS + N_ARTISTS)
+# ... other schemas ...
+
+comparison_table()

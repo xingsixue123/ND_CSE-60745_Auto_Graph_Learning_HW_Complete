@@ -1,0 +1,4 @@
+Outlines
+Practice I: 
+Graph Embedding Over Homogeneous Structures
+HW2-Part(B): 30 pts

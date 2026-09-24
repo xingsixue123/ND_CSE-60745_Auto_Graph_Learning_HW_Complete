@@ -1,0 +1,105 @@
+Table 3: The six val hit@1 deg* columns that run experiment records, for all seven strategies:
+validation Hit@1 split by source degree, mean over seeds {0, 1, 2}. Best per bucket in bold. Bucket
+sizes are 213, 261, 524, 842, 973, 1358 queries.
+strategy
+0 (cold)
+1
+2–3
+4–7
+8–15
+≥16
+DeepWalk (uniform)
+0.0594
+0.4751
+0.5731
+0.6457
+0.6739
+0.6502
+node2vec p=1, q=0.5
+0.0516
+0.4687
+0.5649
+0.6382
+0.6691
+0.6502
+node2vec p=1, q=2
+0.0626
+0.4674
+0.5731
+0.6394
+0.6714
+0.6529
+node2vec p=q=0.25
+0.0673
+0.4713
+0.5681
+0.6441
+0.6804
+0.6478
+RWR r=0.15
+0.0579
+0.4841
+0.5407
+0.6314
+0.6564
+0.6303
+deg-corrected α=1
+0.0563
+0.4559
+0.5439
+0.6393
+0.6762
+0.6564
+triadic
+0.0501
+0.4879
+0.5681
+0.6461
+0.6752
+0.6581
+0 (cold)
+n = 216
+1
+n = 266
+2-3
+n = 469
+4-7
+n = 842
+8-15
+n = 939
+16+
+n = 1439
+degree of the source user in Gtrain
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+test Hit@1
+random (1/21)
+DeepWalk
+triadic
+RWR r = 0.15
+Figure 2: Test Hit@1 by source degree for the baseline (DeepWalk), the best strategy (triadic) and
+the worst (RWR); error bars are ±1 sd over seeds {0, 1, 2}. The cold-start bucket sits at chance for
+every strategy.
+Control.
+To check that the evaluation path itself carries no signal, I ran the identical pipeline on
+a random Gaussian Z: it gives test Hit@1 0.0671 and MRR 0.2009 (chance is 1/21 = 0.0476 and
+0.1736) and country test micro-F1 0.1340, far below the majority-class rate of 0.2062. The learned
+embeddings are therefore genuinely doing the work.
+1.4
+Analysis
+The same embedding wins both tasks.
+The triadic walk is best in every column of Ta-
+ble 1, and Figure 1 shows it alone in the top-right corner: there is no homophily-versus-structural-
+equivalence trade-off to negotiate on this dataset. That is not an accident of the metrics — both
+downstream tasks on this graph are homophily tasks.
+Friends of a user are found inside their
+community, and country is an extremely assortative label on a social network (people mostly follow
+people in their own country), so an embedding that sharpens community boundaries helps the
+6

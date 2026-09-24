@@ -1,0 +1,14 @@
+user-artist: 7842 artists, 3,014,361 edges, 7451 of 7624 users like at least one artist
+H_train: 15,466 nodes, 3,033,825 edges (built in 2.1s)
+sanity: H_train matches hetero_stats.json
+
+[metapath U-U-U-A-U|seed0]
+    148,000 walks in 3.4s, embedding (15466, 128) in 71.2s
+    link prediction: val hit@1 0.6234 MRR 0.7437   |   test hit@1 0.6145 MRR 0.7358
+    country:         val micro-F1 0.7969   |   test micro-F1 0.7896 macro-F1 0.6383
+    total 81.0s
+
+                          lp_val_hit@1  lp_val_MRR  lp_test_hit@1  lp_test_MRR  val_hit@1_deg0+  val_hit@1_deg1+  val_hit@1_deg2+  val_hit@1_deg4+  val_hit@1_deg8+  val_hit@1_deg16+  country_val_microF1  country_test_microF1  country_test_macroF1
+metapath U-U-U-A-U|seed0        0.6234      0.7437         0.6145       0.7358           0.3286           0.5364           0.5859           0.6378           0.6763            0.6539               0.7969                0.7896                0.6383
+
+partial run: results NOT written

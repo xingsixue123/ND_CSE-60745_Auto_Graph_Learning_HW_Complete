@@ -1,0 +1,92 @@
+0.705
+0.710
+0.715
+0.720
+0.725
+friend recommendation: test MRR
+0.67
+0.68
+0.69
+0.70
+country classification: test macro-F1
+DeepWalk
+n2v q = 0.5
+n2v q = 2
+n2v p = q = 0.25
+RWR r = 0.15
+deg-corr α = 1
+triadic
+Figure 1: Each strategy on both tasks at once; error bars are ±1 sd over the three seeds. There is
+no trade-off frontier — the triadic walk sits alone in the top-right corner.
+Per-source-degree breakdown.
+Table 2 gives breakdown by source degree on the test split
+for the baseline, the best strategy and the worst, with both metrics; Figure 2 plots the Hit@1 half of
+it with seed error bars. Table 3 then gives the validation Hit@1 breakdown for all seven strategies
+— these are literally the six val hit@1 deg* columns that run experiment records, which is why
+they are on the validation split. Note that triadic, which wins every aggregate column of Table 1,
+wins only three of the six degree buckets there: node2vec p=q=0.25 takes the cold and 8–15 buckets
+and q=2 ties the 2–3 bucket. Per-bucket margins are small and the buckets are 3–20× smaller than
+the full split, so individual cells are much noisier than the aggregates; the consistent pattern is the
+one visible in the two highest-degree buckets, not any single cell.
+Table 2: breakdown by source degree, test split, mean over seeds {0, 1, 2}, by number of friends
+the source user has in Gtrain: the baseline, the best strategy and the worst.
+DeepWalk (baseline)
+triadic (best)
+RWR (worst)
+source degree
+n
+Hit@1
+MRR
+Hit@1
+MRR
+Hit@1
+MRR
+0 (cold)
+216
+0.0447
+0.1887
+0.0293
+0.1759
+0.0447
+0.1825
+1
+266
+0.4386
+0.5672
+0.4423
+0.5680
+0.4499
+0.5705
+2–3
+469
+0.5615
+0.6823
+0.5672
+0.6852
+0.5529
+0.6752
+4–7
+842
+0.6675
+0.7709
+0.6710
+0.7732
+0.6524
+0.7616
+8–15
+939
+0.6784
+0.7905
+0.6904
+0.7959
+0.6730
+0.7853
+≥16
+1439
+0.6377
+0.7665
+0.6502
+0.7744
+0.6159
+0.7541
+5

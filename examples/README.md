@@ -1,112 +1,82 @@
-# Worked example — CSE 60745 Fall 2026, Homework 1
+# Worked example — CSE 60745 HW2 Part (B), graph embedding
 
-One complete run of the pipeline, kept as a reference: what went in, what came
-out, and how little had to be said to get there.
-
-The whole input was **a Word document, a data file, and a three-line spec.**
+The first assignment that asks for an experiment rather than an answer. The work is
+to implement random-walk sampling and SkipGram embeddings over the LastFM Asia social
+network, then use the embeddings for friend recommendation and country classification,
+and say what different sampling strategies contribute. It is also the first run whose
+specification lives in a Jupyter notebook rather than a PDF.
 
 ## Where these files originally lived
-
-They were moved here after the run finished, so that `input/`, `output/` and
-`playground/` are empty and ready for the next assignment. Their original locations:
 
 | file, as it is here | where it was during the run |
 |---|---|
 | `specs.md` | `auto_hw_complete/specs.md` |
-| `input/CSE 60745_Fall 2026_HW1.doc` | `auto_hw_complete/input/CSE 60745_Fall 2026_HW1.doc` |
-| `input/graph-1.txt` | `auto_hw_complete/input/graph-1.txt` |
-| `output/cse60745_20260907_d29ddd/` | `auto_hw_complete/output/cse60745_20260907_d29ddd/` |
-| `playground/cse60745_20260907_d29ddd/` | `auto_hw_complete/playground/cse60745_20260907_d29ddd/` |
+| `input/CSE60745-Hands-on_HW2-Part(B)-1.pdf` | `auto_hw_complete/input/…` |
+| `input/graph_embedding-1.ipynb` | `auto_hw_complete/input/…` |
+| `output/cse60745_20260923_8654c1/` | `auto_hw_complete/output/…` |
+| `playground/cse60745_20260923_8654c1/` | `auto_hw_complete/playground/…` |
 
-The playground is the full trajectory rather than the deliverable: every worker's
-scripts and notes, both levels of validator checklist, the ingest renders and
-figure extractions, and the run log. It is kept because how the answers were
-produced is most of the point of the example. Agent session transcripts and the
-private per-agent config directories are excluded by `.gitignore`.
+Excluded from the repository: the 547 MB virtual environment the master built, the
+dataset the notebook's own setup cell downloads, and the pickled result objects. All
+three are reproducible; `downloads.md` records every install and every URL.
 
-## What went in
+## Three things this run needed that earlier ones did not
 
-**`input/CSE 60745_Fall 2026_HW1.doc`** — a legacy Word file, 3 pages, five
-questions worth 100 points. Two things about it matter:
+**A notebook is not a data file.** `.ipynb` was landing in the `data` bucket, so the
+file the specification called "where the real hw guideline and problem definitions
+are" would have reached the master as 600 characters of JSON metadata. `ingest.py`
+now flattens a notebook to its cells in order, markdown as prose and code as code,
+and drops cell outputs deliberately: they are the previous author's results, and an
+agent that reads them may report them instead of running the code itself.
 
-- it is `.doc`, not `.pdf`, so it has to go through LibreOffice before anything
-  can read it;
-- **Q1's graph exists only as an embedded image.** "Create the following
-  undirected graph" is unanswerable from extracted text — the text channel has a
-  blank gap where the figure is. This is why `ingest.py` pulls figures out at
-  native resolution and why `rules.md` R7 requires all three channels.
+**The master needed its own timeout.** It is a coordinator, not a worker: it sits
+blocked inside `fw spawn-worker` for the whole of every problem, so its wall clock is
+the sum of every agent's. Here p1's worker ran 42 minutes and p2's ran 50, and the
+master was killed by the 2-hour worker limit with p2 unvalidated and nothing
+assembled. `master_timeout_seconds` now covers it separately. Nothing was lost:
+`fw resume` cleared p2's stale `running` flag, handed the master back its own session
+with a summary of what was finished, and it carried on from there.
 
-**`input/graph-1.txt`** — 26,377 whitespace-separated undirected edges over
-26,728 nodes, in 4,104 connected components. Used by Q3, Q4 and Q5.
+**The master built a shared environment.** Rather than letting each worker install
+its own, it created one venv with gensim, scipy, scikit-learn, pandas, networkx and
+matplotlib, fetched the dataset exactly as the notebook's setup cell does, and pointed
+both workers at it.
 
-**`specs.md`** — the entire human-written specification, reproduced in full:
+## The defect worth reading
 
-```
-inputdir: `/home/xing/project/auto_hw_complete/input`, contains hw doc and graph data
+`playground/.../validators/p1/checklist.md`, round 1. The validator re-ran the
+experiment rather than reading the worker's numbers, and its first defect is not a
+compliance point:
 
-outputdir: `/home/xing/project/auto_hw_complete/output`
-```
+> Country validation macro-F1 is never reported … The number already exists:
+> `evaluate_country` returns it, and `make_tables.py:31` computes it as `cc_val_macro`
+> and then drops it from `ORDER` at lines 37–38. This is not just compliance — I
+> computed the column and it is the worker's **strongest remaining evidence**: spread
+> 0.0411 against a noise floor of 0.0077, ratio 5.35×, second only to val H@1 …
+> Omitting it throws away the result that best supports the answer's own thesis.
 
-That is all of it. No problem list, no hints about the figure, no instructions
-about which questions belong together. Everything else — that there are five
-questions, that Q2 depends on the graph built in Q1, that Q4(b) needs a figure
-and Q5 does not — the master worked out by reading the assignment.
-
-## What came out
-
-`output/cse60745_20260907_d29ddd/` — the deliverable:
-
-```
-final/
-  main.pdf                 10 pages, cover page + all five questions
-  main.tex preamble.tex    assembled source, recompilable
-  p1.tex p2.tex p3.tex     the three fragments as assembled
-  fig_*.pdf                four vector figures
-p1/ p2/ p3/                each worker's own deliverable, before assembly
-```
-
-`playground/cse60745_20260907_d29ddd/` — how it got there:
-
-```
-ingest/                    the .doc converted to PDF, then per page: a 200 dpi
-                           render, the extracted text, and every embedded figure
-                           at native resolution
-problems.json              the master's decomposition, with its stated reasons
-problems/p1 p2 p3/         each worker's brief, notes, scripts and scratch work
-validators/p1 p2 p3/       each worker validator's checklist and its own re-runs
-validator/                 the master validator's checklist, both rounds
-logs/                      run log, heartbeats, per-agent JSON results
-```
-
-The master cut the assignment into three problems rather than five, on
-dependency rather than numbering:
-
-| id | questions | pts | why grouped this way |
-|---|---|---|---|
-| p1 | Q1 + Q2 | 30 | Q2 modifies the graph Q1 builds. Split, two workers would transcribe the figure independently and could disagree. |
-| p2 | Q3 + Q4 | 40 | Q4 is explicitly "based on the graph created in Q3". |
-| p3 | Q5 | 30 | Q5 also builds on Q3's graph, but inherits only a deterministic edge-list file, so there is nothing to diverge about. Kept separate so one worker did not carry 70 points and seven deliverables. |
-
-To stop p2 and p3 disagreeing about the shared graph, the master pinned the same
-reference counts (26,728 / 26,377 / 4,104) into both briefs.
+It also caught a metric mismatch (a Hit@1 gap divided by an MRR spread, giving 50×
+where the right answer is 32×), a sentence whose own numbers refuted it ("as cheap as
+DeepWalk … 1.9 s versus 0.7 s"), and the observation that the analysis led with
+validation columns that are themselves the model-selection criteria.
 
 ## How the run went
 
 | | |
 |---|---|
-| wall clock | ~80 minutes |
-| cost | $19.95 |
-| p1, p2, p3 | each passed its validator on **round 1** |
-| master validation | round 1 PASS with three minor defects; master fixed all three; round 2 confirmed the fixes and checked the resulting page reflow for regressions |
+| wall clock | about 3 hours 10 minutes, including the 2 hours lost to the timeout |
+| cost | $92.72 |
+| p1 (Task 3, 30 pts) | failed round 1, passed round 2 |
+| p2 (Task 4, optional) | passed on round 3 |
+| master validation | FAIL, FAIL, then PASS |
 
-The Q1 transcription is the part worth looking at. The drawing has vertices 5, 4
-and 8 nearly collinear, with the single edge (5,8) drawn straight across the disc
-of vertex 4 — so it *looks* like two edges (5,4) and (4,8). Read by eye, that
-misreading is very hard to avoid; it inflates three vertex degrees and corrupts
-Q1 and Q2 together. The worker resolved it by measurement rather than by
-looking, confirmed the result is 3-regular (it is the Petersen graph), and then
-**redrew the edge (5,8) with a slight bow** in its own figure so a grader can see
-it passes behind vertex 4 rather than terminating there.
+The most expensive run so far by a wide margin, and the reason is that this one
+actually trains models: p1's worker alone cost $16.81 and produced seven sampling
+strategies across thirteen metrics with a multi-seed repeat and a random control.
+
+No length rule was in force for this run; `specs.md` had been rewritten without R8
+and R9. p1 came out at 87 words per point, against 53 for the whole of the assignment
+that did carry them.
 
 ## Reproducing it
 
@@ -115,6 +85,3 @@ cp examples/specs.md .
 cp examples/input/* input/
 framework/fw run
 ```
-
-The job id is a hash of the input filenames, `specs.md` and the date, so a rerun
-on a different day lands in a different directory and will not overwrite this one.

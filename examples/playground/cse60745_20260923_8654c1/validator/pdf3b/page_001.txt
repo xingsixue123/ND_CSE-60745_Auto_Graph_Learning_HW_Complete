@@ -1,0 +1,56 @@
+CSE 60745 — Graph Learning: Techniques & Applications
+Hands-on HW2 — Part (B): Graph Embedding (30 pts)
+1
+Task 3 — Graph Embedding over Homogeneous Structures
+1.1
+Approach
+All four notebook TODOs are implemented. Every provided helper — data loading, the cached
+adjacency lookups, the whole evaluation toolset of section 5 and run experiment — is used ver-
+batim, with RANDOM SEED = 0. Loading reproduces the published statistics exactly: 7,624 users,
+19,464 observed edges, 666 isolated users, mean degree 5.106, max degree 153, 734 components,
+and 4,171 × 21 validation/test queries.
+sample walks.
+A strategy is nothing but a transition rule; the walk budget is identical for every
+strategy (10 walks of length 40 from each of the 6,958 non-isolated users, giving 69,580 walks in
+every run). The 666 isolated users return [], as the docstring permits, and therefore keep a zero
+embedding row. Five transition rules are compared, giving the seven configurations of Table 1
+(node2vec is run at three (p, q) settings):
+strategy
+transition rule P(x | ·)
+hypothesis being tested
+DeepWalk
+uniform over N(v)
+baseline: unbiased 1st-order walk
+node2vec
+∝1/p, 1, 1/q by distance to t
+q < 1 outward (homophily), q > 1 inward
+(structural equivalence)
+RWR
+uniform, teleport to start w.p. r
+a
+strongly
+personalised
+context
+should
+sharpen pairwise proximity, at the cost of
+global community signal
+deg-corrected
+∝deg(x)−α
+uniform walks over-visit hubs;
+equalis-
+ing visit counts should lift the low-degree
+source buckets
+triadic
+∝1 + |N(v) ∩N(x)|
+preferring triangle-closing steps keeps the
+walk inside a community, i.e. maximal ho-
+mophily
+RWR, deg-corrected and triadic are my own additions. node2vec uses the standard O(1) rejection
+sampler rather than materialising alias tables, which keeps a second-order walk at 1.3 s for the
+whole corpus.
+train embedding.
+Skip-Gram with negative sampling (gensim.Word2Vec, sg=1) over the walk
+corpus. I set sample=0, i.e. no frequent-token subsampling: subsampling would itself down-weight
+hubs and so half-implement the deg-corrected strategy, confounding that comparison. workers=1
+makes every run bit-exactly reproducible (gensim’s multi-threaded training is not deterministic).
+1

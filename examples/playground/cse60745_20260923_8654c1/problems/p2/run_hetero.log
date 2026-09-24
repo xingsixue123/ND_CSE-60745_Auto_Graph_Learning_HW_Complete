@@ -1,0 +1,112 @@
+user-artist: 7842 artists, 3,014,361 edges, 7451 of 7624 users like at least one artist
+H_train: 15,466 nodes, 3,033,825 edges (built in 2.1s)
+sanity: H_train matches hetero_stats.json
+
+[hetero-deepwalk|seed0]
+    154,470 walks in 4.7s, embedding (15466, 128) in 110.8s
+    link prediction: val hit@1 0.4613 MRR 0.6287   |   test hit@1 0.4531 MRR 0.6240
+    country:         val micro-F1 0.6959   |   test micro-F1 0.6792 macro-F1 0.3773
+    total 126.2s
+
+[metapath U-A-U|seed0]
+    152,930 walks in 4.7s, embedding (15466, 128) in 111.0s
+    link prediction: val hit@1 0.4191 MRR 0.5884   |   test hit@1 0.4066 MRR 0.5811
+    country:         val micro-F1 0.6461   |   test micro-F1 0.6486 macro-F1 0.3548
+    total 123.3s
+
+[metapath U-U-A-U|seed0]
+    148,000 walks in 2.0s, embedding (15466, 128) in 65.0s
+    link prediction: val hit@1 0.5629 MRR 0.6977   |   test hit@1 0.5622 MRR 0.6947
+    country:         val micro-F1 0.7523   |   test micro-F1 0.7580 macro-F1 0.5652
+    total 75.6s
+
+[metapath U-U-U-A-U|seed0]
+    148,000 walks in 2.5s, embedding (15466, 128) in 71.8s
+    link prediction: val hit@1 0.6234 MRR 0.7437   |   test hit@1 0.6145 MRR 0.7358
+    country:         val micro-F1 0.7969   |   test micro-F1 0.7896 macro-F1 0.6383
+    total 80.4s
+
+[U-A-U rare-artist a=1|seed0]
+    152,930 walks in 7.7s, embedding (15466, 128) in 113.8s
+    link prediction: val hit@1 0.4277 MRR 0.5990   |   test hit@1 0.4246 MRR 0.5948
+    country:         val micro-F1 0.6959   |   test micro-F1 0.6809 macro-F1 0.3994
+    total 129.1s
+
+[hetero-deepwalk|seed1]
+    154,470 walks in 3.6s, embedding (15466, 128) in 113.7s
+    link prediction: val hit@1 0.4649 MRR 0.6319   |   test hit@1 0.4572 MRR 0.6249
+    country:         val micro-F1 0.6737   |   test micro-F1 0.6794 macro-F1 0.3821
+    total 127.6s
+
+[metapath U-A-U|seed1]
+    152,930 walks in 3.4s, embedding (15466, 128) in 115.4s
+    link prediction: val hit@1 0.4155 MRR 0.5880   |   test hit@1 0.4179 MRR 0.5870
+    country:         val micro-F1 0.6330   |   test micro-F1 0.6443 macro-F1 0.3449
+    total 127.6s
+
+[metapath U-U-A-U|seed1]
+    148,000 walks in 2.4s, embedding (15466, 128) in 63.0s
+    link prediction: val hit@1 0.5699 MRR 0.7030   |   test hit@1 0.5481 MRR 0.6857
+    country:         val micro-F1 0.7720   |   test micro-F1 0.7739 macro-F1 0.5736
+    total 74.6s
+
+[metapath U-U-U-A-U|seed1]
+    148,000 walks in 2.1s, embedding (15466, 128) in 71.5s
+    link prediction: val hit@1 0.6298 MRR 0.7492   |   test hit@1 0.6214 MRR 0.7390
+    country:         val micro-F1 0.8034   |   test micro-F1 0.7860 macro-F1 0.6393
+    total 80.3s
+
+[U-A-U rare-artist a=1|seed1]
+    152,930 walks in 7.6s, embedding (15466, 128) in 118.9s
+    link prediction: val hit@1 0.4222 MRR 0.5907   |   test hit@1 0.4265 MRR 0.5926
+    country:         val micro-F1 0.7064   |   test micro-F1 0.6856 macro-F1 0.4018
+    total 134.1s
+
+[hetero-deepwalk|seed2]
+    154,470 walks in 3.6s, embedding (15466, 128) in 113.9s
+    link prediction: val hit@1 0.4682 MRR 0.6312   |   test hit@1 0.4498 MRR 0.6199
+    country:         val micro-F1 0.6999   |   test micro-F1 0.6827 macro-F1 0.3789
+    total 128.1s
+
+[metapath U-A-U|seed2]
+    152,930 walks in 3.5s, embedding (15466, 128) in 113.2s
+    link prediction: val hit@1 0.4258 MRR 0.5954   |   test hit@1 0.4152 MRR 0.5865
+    country:         val micro-F1 0.6579   |   test micro-F1 0.6537 macro-F1 0.3551
+    total 124.9s
+
+[metapath U-U-A-U|seed2]
+    148,000 walks in 2.4s, embedding (15466, 128) in 65.1s
+    link prediction: val hit@1 0.5656 MRR 0.6974   |   test hit@1 0.5471 MRR 0.6824
+    country:         val micro-F1 0.7628   |   test micro-F1 0.7576 macro-F1 0.5638
+    total 76.3s
+
+[metapath U-U-U-A-U|seed2]
+    148,000 walks in 2.1s, embedding (15466, 128) in 73.4s
+    link prediction: val hit@1 0.6114 MRR 0.7354   |   test hit@1 0.6130 MRR 0.7337
+    country:         val micro-F1 0.7864   |   test micro-F1 0.7906 macro-F1 0.6284
+    total 82.7s
+
+[U-A-U rare-artist a=1|seed2]
+    152,930 walks in 7.5s, embedding (15466, 128) in 119.8s
+    link prediction: val hit@1 0.4311 MRR 0.5966   |   test hit@1 0.4272 MRR 0.5953
+    country:         val micro-F1 0.7090   |   test micro-F1 0.6906 macro-F1 0.4009
+    total 134.0s
+
+                             lp_val_hit@1  lp_val_MRR  lp_test_hit@1  lp_test_MRR  val_hit@1_deg0+  val_hit@1_deg1+  val_hit@1_deg2+  val_hit@1_deg4+  val_hit@1_deg8+  val_hit@1_deg16+  country_val_microF1  country_test_microF1  country_test_macroF1
+hetero-deepwalk|seed0              0.4613      0.6287         0.4531       0.6240           0.4601           0.3908           0.4542           0.5012           0.4676            0.4485               0.6959                0.6792                0.3773
+metapath U-A-U|seed0               0.4191      0.5884         0.4066       0.5811           0.4272           0.4023           0.4256           0.4513           0.4214            0.3969               0.6461                0.6486                0.3548
+metapath U-U-A-U|seed0             0.5629      0.6977         0.5622       0.6947           0.2770           0.4521           0.5706           0.5950           0.6197            0.5655               0.7523                0.7580                0.5652
+metapath U-U-U-A-U|seed0           0.6234      0.7437         0.6145       0.7358           0.3286           0.5364           0.5859           0.6378           0.6763            0.6539               0.7969                0.7896                0.6383
+U-A-U rare-artist a=1|seed0        0.4277      0.5990         0.4246       0.5948           0.4648           0.4176           0.4332           0.4537           0.4378            0.3984               0.6959                0.6809                0.3994
+hetero-deepwalk|seed1              0.4649      0.6319         0.4572       0.6249           0.4319           0.4444           0.4771           0.4667           0.4769            0.4595               0.6737                0.6794                0.3821
+metapath U-A-U|seed1               0.4155      0.5880         0.4179       0.5870           0.4366           0.3755           0.4084           0.4489           0.4224            0.3969               0.6330                0.6443                0.3449
+metapath U-U-A-U|seed1             0.5699      0.7030         0.5481       0.6857           0.3380           0.4713           0.5706           0.5998           0.5940            0.5891               0.7720                0.7739                0.5736
+metapath U-U-U-A-U|seed1           0.6298      0.7492         0.6214       0.7390           0.2676           0.5134           0.5878           0.6698           0.6937            0.6546               0.8034                0.7860                0.6393
+U-A-U rare-artist a=1|seed1        0.4222      0.5907         0.4265       0.5926           0.4460           0.4215           0.4427           0.4418           0.4132            0.4050               0.7064                0.6856                0.4018
+hetero-deepwalk|seed2              0.4682      0.6312         0.4498       0.6199           0.4413           0.4100           0.4752           0.4905           0.4738            0.4632               0.6999                0.6827                0.3789
+metapath U-A-U|seed2               0.4258      0.5954         0.4152       0.5865           0.4742           0.4215           0.4065           0.4632           0.4388            0.3940               0.6579                0.6537                0.3551
+metapath U-U-A-U|seed2             0.5656      0.6974         0.5471       0.6824           0.3380           0.5287           0.5725           0.6033           0.6043            0.5545               0.7628                0.7576                0.5638
+metapath U-U-U-A-U|seed2           0.6114      0.7354         0.6130       0.7337           0.2911           0.5211           0.5802           0.6532           0.6578            0.6318               0.7864                0.7906                0.6284
+U-A-U rare-artist a=1|seed2        0.4311      0.5966         0.4272       0.5953           0.4789           0.4291           0.4408           0.4656           0.4203            0.4065               0.7090                0.6906                0.4009
+
+wrote results_hetero.csv and results_hetero.pkl

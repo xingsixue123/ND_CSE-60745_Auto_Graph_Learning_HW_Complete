@@ -1,0 +1,52 @@
+0
+U-A-U
+1/3
+U-U-A-U
+1/2
+U-U-U-A-U
+1
+DeepWalk on G
+(token-matched)
+fraction of walk steps that are social (U–U), set by the meta-path schema
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+test Hit@1
+all 4,171 test queries
+cold-start users only (social degree 0)
+Figure 4: The same three schemas plus the token-matched DeepWalk, by the fraction of walk steps
+forced to be social. The two populations move in opposite directions; the schema is the knob that
+trades one against the other.
+alone. This is why the controls were worth running: without them the honest answer inverts into
+a false positive.
+Cold-start users: yes, dramatically, and this is not a budget artefact.
+666 users have no
+friend in Gtrain and receive an all-zero row from any purely social walk; 216 test queries have such a
+source. Their test Hit@1 is 0.0803 for the token-matched control, and 0.0447/0.0494 for DeepWalk
+×10/×22 — the extra corpus buys them essentially nothing, because no amount of walking reaches
+a node with no edges. They are not ranked at random, though: with u = 0 the pair features |u−v|
+and ∥u −v∥reduce to |v| and ∥v∥, so the predictor still separates candidates on candidate-only
+features (0 of the 216 queries have fully tied scores; median 20 distinct of 21). That floor is a weak
+popularity prior, not chance. But 647 of those 666 users (97.1%) like at least one artist, with a
+median of 334 artists each, and 209 of the 216 cold test sources (96.8%) are covered. Through the
+artist layer they become reachable, and their Hit@1 rises to 0.2824 under U-U-U-A-U and 0.3596
+under U-A-U — respectively 3.5× and 4.5× the control, gaps of 7.5 and 10.3 times the 0.0271 mean
+seed spread of this bucket (Figure 3). This is the one place where the heterogeneous structure does
+something no amount of social-graph effort can.
+Signal or noise? Both, and density decides which.
+A U-A-U step connects two users who
+share any artist. Sampling 40 users, the median number of others reachable in one such step is
+7,307 of 7,623 — about 96% of the graph — against a median social 2-hop neighbourhood of
+61. Such an edge is therefore almost devoid of information: it is not far from a link to a uniformly
+random user. That explains the whole shape of Table 5. For a user with ≥16 friends the social
+graph already supplies a sharp, small candidate set, and diluting it with a near-complete graph
+costs 0.6504 →0.3785 Hit@1. For a user with 0 friends the alternative is not a sharper signal but
+an all-zero vector ranked on a popularity prior, so even a weak ordering (the layer is near-complete
+but not uniform — how many artists two users share still varies) is worth a great deal. Same edges,
+opposite value, depending entirely on what the user already had.
+13

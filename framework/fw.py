@@ -319,7 +319,12 @@ def _launch_master(job: Path, first: bool, stale=()):
             model=CONFIG["model"], effort=CONFIG["effort"],
             log_path=job / "logs" / "master.json",
             session_id=sid, resume=resume,
-            timeout=CONFIG["agent_timeout_seconds"],
+            # The master is a coordinator, not a worker: it sits blocked inside
+            # `fw spawn-worker` for the whole of every problem, so its wall clock is
+            # the sum of every agent's. One assignment that trains embeddings hit the
+            # 2h worker limit with two problems still to assemble and submit.
+            timeout=CONFIG.get("master_timeout_seconds",
+                               CONFIG["agent_timeout_seconds"]),
             pip_cache=job / ".pipcache",
             pidfile=job / "logs" / "master.pid")
     record_cost(job, data, "master")

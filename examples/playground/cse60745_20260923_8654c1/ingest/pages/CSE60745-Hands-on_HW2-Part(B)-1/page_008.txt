@@ -1,0 +1,24 @@
+Hands-on: Graph Embedding Over Homogeneous Structures
+Recap: Random Walk-Based Graph Embedding
+•
+DeepWalk: Uniform random walk sampling + Skip-gram contextualized embedding
+•
+Node2vec: Biased random walk sampling + Skip-gram contextualized embedding
+•
+Struct2vec: Structural similarity modeling + Multi-layer random walk
+Apply Homogeneous Graph Embeddings to Social Network Analysis
+•
+Two downstream tasks with a single set of user embeddings
+⮚
+Friend recommendation: Given a set of candidate users, real friends should be ranked top.
+⮚
+Multi-label user node classification: Predict the country label of given user. 
+•
+Implement existing graph embedding techniques or design your own embedding 
+methods 
+⮚
+Dataset & Code: https://drive.google.com/file/d/1AtUm_wJboF4t-
+hxON8r01eYzdhPX9Bnt/view?usp=sharing
+⮚
+It is recommended to first re-implement DeepWalk/Node2Vec, and then test your own 
+ideas for random walk sampling strategy and other components.

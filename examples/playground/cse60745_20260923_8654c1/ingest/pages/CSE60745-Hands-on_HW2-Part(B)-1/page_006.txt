@@ -1,0 +1,16 @@
+HW1 Solution
+Part B: Graph Basics
+•
+Graph Measures
+•
+Note: If you use nx.jaccard_coefficient(G) 
+for Jaccard similarity 
+computation, networkx will compute the similarity of all non-edge node pairs.
+nx.eigenvector_centrality(G)
+# Eigenvector Centrality
+nx.katz_centrality(G)
+# Katz Centrality
+nx.average_clustering(G)
+# Average Clustering Coefficient
+nx.jaccard_coefficient(G, G.edges()) 
+# Jaccard similarity over connected node pairs

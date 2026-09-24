@@ -1,0 +1,59 @@
+NBR = self._nbr_lists(G) # "uniform" (DeepWalk) and "rwr"
+restart = self.params.get("restart", 0.0) if strat == "rwr" else 0.0
+walks = []
+for _ in range(R):
+walk = [start]
+while len(walk) < L:
+if restart and rng.random() < restart:
+walk.append(start) # teleport home, then carry on
+else:
+walk.append(rng.choice(NBR[walk[-1]]))
+walks.append(walk)
+return walks
+Listing 1: TODO 1 — sample walks
+def train_embedding(self, walks, n_nodes):
+d = self.params.get("dim", 128)
+model = Word2Vec(sentences=[[str(v) for v in w] for w in walks],
+vector_size=d, window=self.params.get("window", 5),
+sg=1, hs=0, negative=self.params.get("negative", 5),
+epochs=self.params.get("epochs", 5),
+min_count=0, sample=0, seed=self.seed, workers=1)
+Z = np.zeros((n_nodes, d), dtype=float) # nodes never walked keep a zero row
+Z[[int(k) for k in model.wv.index_to_key]] = model.wv.vectors
+return Z
+Listing 2: TODO 2 — train embedding
+def _unit(Z): # row-wise L2 norm; all-zero rows stay zero
+n = np.linalg.norm(Z, axis=1, keepdims=True)
+return Z / np.where(n == 0.0, 1.0, n)
+def _pair_features(Z, pairs): # (n_q, n_cand, 2) -> (n_q*n_cand, 2d+3)
+u, v = Z[pairs[..., 0]].reshape(-1, Z.shape[1]), Z[pairs[..., 1]].reshape(-1, Z.shape[1])
+had, dif = u * v, np.abs(u - v)
+dot = had.sum(1, keepdims=True)
+l2 = np.linalg.norm(u - v, axis=1, keepdims=True)
+cos = dot / np.maximum(np.linalg.norm(u, axis=1, keepdims=True)
+* np.linalg.norm(v, axis=1, keepdims=True), 1e-12)
+return np.hstack([had, dif, cos, dot, l2])
+class LinkPredictor:
+C_GRID = (0.1, 1.0, 10.0)
+def fit(self, Z, pairs_train, y_train, pairs_val, y_val):
+Zn = _unit(np.asarray(Z, dtype=float))
+Xtr = _pair_features(Zn, pairs_train)
+self.scaler = StandardScaler().fit(Xtr)
+Xtr, ytr = self.scaler.transform(Xtr), np.asarray(y_train).ravel()
+Xva = self.scaler.transform(_pair_features(Zn, pairs_val))
+nq, nc = pairs_val.shape[:2]
+pos_val = np.argmax(np.asarray(y_val), axis=1)
+best = (-1.0, None, None)
+for C in self.C_GRID: # model selection on validation MRR
+clf = LogisticRegression(C=C, max_iter=2000, random_state=RANDOM_SEED)
+clf.fit(Xtr, ytr)
+s = clf.decision_function(Xva).reshape(nq, nc)
+rank = 1 + (s > s[np.arange(nq), pos_val][:, None]).sum(1)
+mrr = float(np.mean(1.0 / rank))
+if mrr > best[0]:
+best = (mrr, clf, C)
+self.val_mrr_, self.clf, self.C_ = best
+return self
+def score(self, Z, pairs): # continuous, higher = more likely
+X = self.scaler.transform(_pair_features(_unit(np.asarray(Z, float)), pairs))
+3

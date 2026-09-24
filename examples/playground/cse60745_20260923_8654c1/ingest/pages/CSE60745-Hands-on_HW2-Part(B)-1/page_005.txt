@@ -1,0 +1,23 @@
+HW1 Solution
+Part B: Graph Basics
+•
+Graph Creation
+•
+Graph Essentials
+G = nx.Graph()
+len(G) 
+# Node Number
+G.number_of_nodes() 
+# Node Number
+G.number_of_edges() 
+# Edge Number
+nx.number_connected_components(G) 
+# Connected Component Number
+GCC_list = sorted(nx.connected_components(G), key=len, reverse=True)
+G_sub = G.subgraph(GCC_list[0])
+# Largest Connected Component
+G_sub = G.subgraph(GCC_list[1])
+# Second Largest Connected Component
+# Returns a list, where the k
+- th element indicates the number of nodes with degree k
+degree_hist = nx.degree_histogram(G)

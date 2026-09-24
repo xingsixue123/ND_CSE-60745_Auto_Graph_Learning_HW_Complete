@@ -25,3 +25,20 @@ playground/*.log
 playground/*.pid
 .last_run.pid
 **/.session_id
+
+# Papers an agent downloaded to read: third-party copyrighted material. Each
+# downloads.md records the URL and how the file was verified, so a run reproduces
+# without shipping them. Validators fetch their own copies into directories of their
+# own naming, so match on the filename, not on one directory name.
+**/papers/**
+**/mypapers/**
+**/*papers*/*.pdf
+
+# Environments and datasets an agent built or fetched. A venv for a machine-learning
+# assignment runs to hundreds of megabytes, and the dataset is downloaded by the
+# notebook's own setup cell, so both are reproducible rather than worth storing.
+**/venv/
+**/data/task*/
+*.csv.gz
+*.pkl
+*.npy

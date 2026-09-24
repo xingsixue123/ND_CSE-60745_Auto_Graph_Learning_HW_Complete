@@ -51,7 +51,7 @@ IMAGE = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff"}
 # An assignment is not always a PDF.  A markdown or plain-text assignment has no
 # pages and no figures, so there is nothing to render -- but it is still the
 # assignment, and classifying it as a data file buries it among the real data.
-TEXT_DOC = {".md", ".txt", ".rst", ".org", ".tex"}
+TEXT_DOC = {".md", ".txt", ".rst", ".org", ".tex", ".ipynb"}
 
 # Rendering every page of every input does not scale: a course that ships 300 pages
 # of lecture slides alongside a two-page assignment would spend minutes and ~100 MB
@@ -79,6 +79,25 @@ def to_pdf(src: Path, outdir: Path, profile: Path) -> Path | None:
         print(f"  !! conversion failed for {src.name}: {proc.stdout}{proc.stderr}")
         return None
     return pdf
+
+
+def notebook_to_text(src: Path) -> str:
+    """Flatten a .ipynb to its cells in order: markdown as prose, code as code.
+
+    Outputs are dropped. They are the previous author's results, and an agent that
+    reads them may report them as its own rather than running the code itself.
+    """
+    import json as _json
+    try:
+        nb = _json.loads(src.read_text(errors="replace"))
+    except Exception as exc:
+        return f"(could not parse {src.name} as a notebook: {exc})"
+    out = []
+    for i, cell in enumerate(nb.get("cells", []), start=1):
+        kind = cell.get("cell_type", "?")
+        body = "".join(cell.get("source", []))
+        out.append(f"\n===== cell {i} ({kind}) =====\n{body}")
+    return "".join(out)
 
 
 def to_csv(src: Path, outdir: Path, profile: Path) -> Path | None:
@@ -126,12 +145,20 @@ def ingest(input_dir: Path, outdir: Path,
             rec["kind"] = "text_document"
             pages_dir = outdir / "pages" / src.stem
             pages_dir.mkdir(parents=True, exist_ok=True)
-            text = src.read_text(errors="replace")
+            if suf == ".ipynb":
+                # A notebook is JSON. Dumped raw it reads as metadata, and an
+                # assignment whose specification lives in its markdown cells looks
+                # like a data file. Flatten it to the cells in order instead.
+                text = notebook_to_text(src)
+                rec["n_cells"] = text.count("\n===== cell ")
+            else:
+                text = src.read_text(errors="replace")
             (pages_dir / "alltext.txt").write_text(text)
             rec["pages_dir"] = str(pages_dir)
             rec["n_chars"] = len(text)
             entries.append(rec)
-            print(f"  {src.name}: text document, {len(text)} chars "
+            extra = (f", {rec['n_cells']} cells" if "n_cells" in rec else "")
+            print(f"  {src.name}: text document, {len(text)} chars{extra} "
                   f"(no rendering needed)")
             continue
 

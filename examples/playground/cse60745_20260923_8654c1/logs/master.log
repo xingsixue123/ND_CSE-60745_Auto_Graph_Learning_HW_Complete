@@ -1,0 +1,220 @@
+=== master log, job cse60745_20260923_8654c1 ===
+
+[r0] Read specs.md. User scope: HW2-Part(B) only, starting at rendered page 7 of
+     CSE60745-Hands-on_HW2-Part(B)-1.pdf; ignore the HW1-solution slides (pages 1-6);
+     the real problem definition is in input/graph_embedding-1.ipynb.
+
+[r0] Read the assignment through all three channels (R7):
+     - text: ingest/.../alltext.txt for the PDF, and the notebook's own alltext.txt
+     - page images: page_007..page_011.png
+     - figure files at native resolution: page_008_fig_02.jpeg (toy A..G graph with a
+       numbered walk), page_009_fig_02/03/04.jpeg (feature-extraction pipeline, the
+       "Walk 1..Walk 5" sequence table, embedding heatmap), page_011_fig_02.jpeg
+       (U-A-U meta-path over users U1..U6 and artists A1..A4).
+     Reconciliation: the figures are ILLUSTRATIVE RECAPS only. They carry no data and
+     no parameter values. Cross-check: page 8 text ("DeepWalk: uniform random walk
+     sampling + Skip-gram"; "sample_walks()"/"train_embedding()") matches the diagram
+     on page 9, and page 11's text ("Meta-Path: a sequence template of node/edge
+     types") matches the U-A-U figure. No channel contradicted another. The graded
+     content is entirely in the notebook, as specs.md said.
+
+[r0] Cut: 2 problems.
+     p1 = notebook Task 3 (homogeneous). REQUIRED, this is the 30 pts.
+          Not split further: the notebook explicitly requires LinkPredictor and
+          CountryClassifier to be held fixed while sampling strategies vary, so one
+          agent must own sampler + trainer + both downstream models + every run.
+     p2 = notebook Task 4 (heterogeneous / metapath2vec). Marked "(Optional)" on
+          rendered page 10. Kept separate: different graph (H_train, 3.0M edges),
+          different method family, and it depends on p1 only through code reuse, which
+          the brief pins down by requiring p1's exact train_embedding/LinkPredictor/
+          CountryClassifier to be imported unchanged.
+     uncovered: slide pages 1-6 (HW1 solutions, explicitly excluded by specs.md),
+          page 12 (Thank You), notebook sections 1/2/5 (provided scaffolding).
+
+[r0] Pre-flight done by master so workers do not each repeat it:
+     - probed the notebook's GitHub data source (antman9914/CSE60745-Practice) -> 200 OK
+     - downloaded all 9 data files once to playground/data/ (read-only to workers)
+     - built playground/venv from the py311 conda env and pip-installed gensim 4.4.0 +
+       numpy/scipy/pandas/scikit-learn/networkx/matplotlib; verified Word2Vec(sg=1)
+       trains. py311 itself has everything EXCEPT gensim, hence the venv.
+     - recorded all of it in downloads.md (R3).
+     Machine: 32 cores, ~114 GB RAM free -> Word2Vec(workers=16) is fine.
+
+[r0] Wrote problems.json and problems/p1/problem.md.
+
+[r0] p1 spawned 15:55. Worker r1 -> validator r1 FAIL (5 defects, incl. one major: the
+     val macro-F1 column was computed but not surfaced). Worker r2 -> validator r2 PASS.
+     2 rounds, $31.98 job total. Deliverable: answer.tex + fig_p1_degree.pdf +
+     fig_p1_tradeoff.pdf + preamble.txt. lint_output OK.
+     Quality note: the p1 validator independently re-ran the experiments and traced
+     152 of 156 distinct numbers in the fragment back to the pickles; the other 4 are
+     disclosed derived quantities. I am treating p1's numbers as verified.
+     Headline: 7 strategies (DeepWalk, node2vec x3, RWR, degree-corrected, triadic),
+     3 seeds each. Triadic (P(x) prop. 1+|N(v) cap N(x)|) wins every column:
+     test Hit@1 0.6087 / MRR 0.7248, country test micro-F1 0.7661 / macro-F1 0.6974.
+
+[r0] Master accepted p1's two remaining cosmetic defects as follows:
+     [2.1] FIXED BY ME in output/.../p1/answer.tex: the claim "buckets are 4-16x smaller
+           than the full split" was wrong at both ends; the validator computed the true
+           range as ~3x-20x (4171/n_b = 19.6,16.0,8.0,5.0,4.3,3.1). One-word edit, no
+           number in any table touched, argument direction unchanged. Worth fixing
+           because it is a factual error the master validator would rightly flag.
+     [2.2] NOT FIXED: it is a defect in the worker's own process note (submission.md),
+           which is playground-only and never ships. Nothing in the deliverable is wrong.
+
+[r0] Decision on p2 (Task 4, heterogeneous): RUN IT. It is marked "(Optional)" on
+     rendered page 10, so it is not required for the 30 pts, but it is part of the
+     Part (B) deck the user pointed at, the data is already downloaded, and p1 finished
+     cheaply enough to afford it. Brief written to require reuse of p1's exact
+     train_embedding/LinkPredictor/CountryClassifier so the Task 3 and Task 4 rows land
+     in one comparable table. If p2 escalates or produces nothing trustworthy, the
+     required part is already done and I will ship p1 alone and say so.
+
+[RESUME 17:55] Master was killed by its own 120-min timeout (rc=124) at 17:51, NOT by a
+     worker failure. Re-established state from state.json / run.log / disk:
+       p1: done, PASS, 2 rounds. Deliverable intact (incl. my [2.1] edit).
+       p2: state says "interrupted", BUT run.log shows "p2 worker r1: $12.03" and
+           "p2: worker round 1 rc=0" at 17:50:33 -- the worker round COMPLETED.
+           What never ran is the p2 validator (validators/p2 has only scratch scripts,
+           no checklist.md).
+     So p2's work is complete-but-unaudited, not partial.
+
+[RESUME] Decision: `fw spawn-worker p2 --force`, NOT `respawn-worker`.
+     respawn-worker would discard a finished, good $12 worker round and ~50 min of
+     Skip-Gram training for nothing. I verified p2's output myself before deciding:
+       - run_hetero.log: all 15 runs present (5 configs x seeds 0,1,2), no truncation
+       - answer.tex: complete fragment, p2: namespaced, both figs present
+       - it independently identified and controlled the corpus-size confound
+         (Task 4 walks from 15,466 nodes vs Task 3's 6,958, a 2.2x larger corpus),
+         which is exactly the trap this comparison sets. That is a good sign, not a
+         worker that needs restarting.
+     --force restarts the loop at round 1 with a FRESH worker session, so the worker
+     would not remember finishing. To stop it burning the round redoing the experiments
+     I appended a RESUME NOTE to problems/p2/problem.md telling it to verify, not
+     recompute, and naming every artefact already on disk. Writing the brief is the
+     master's job, so this is the legitimate channel for that instruction.
+
+[RESUME] p2 headline (from its own log, to be confirmed by its validator):
+     U-U-U-A-U is the best hetero schema -- test Hit@1 0.6163, MRR 0.7362, country test
+     micro-F1 0.7887 -- beating p1's best homogeneous country micro-F1 (0.7661).
+     Pure U-A-U is much WORSE than social-only (test MRR 0.589 vs 0.725): the artist
+     layer is 155x denser than the social layer, so an unconstrained U-A-U step is
+     mostly noise. The striking one: at source degree 0 (cold start), val Hit@1 goes
+     from ~0.06 in Task 3 to ~0.46 with artist edges -- which is precisely the
+     cold-start bottleneck p1 concluded no walk strategy could fix. The two fragments
+     therefore tell one coherent story, which is what I grouped them to achieve.
+
+[RESUME] p2 finished: worker r1 $1.76 (the RESUME NOTE worked -- it verified instead of
+     re-running the 50-min experiment suite), validator r1 FAIL, worker r2 $12.27,
+     validator r2 FAIL, worker r3 $5.50, validator r3 PASS. 3 rounds, job total $72.83.
+     Final p2 checklist: "Defects: None. Nothing substantive remains." The p2 validator
+     reproduced all 112 Table 1 cells and all 48 Table 2 cells from the raw pickles
+     through an independent code path and confirmed no configuration was silently re-run.
+
+[RESUME] CROSS-FRAGMENT COHERENCE FIX (master's job, caught at assembly):
+     p2's round-2 defect [2.1] was a false mechanistic claim about the cold-start bucket.
+     Fixing it inside p2 created a CONTRADICTION with p1, which had shipped the same
+     false mechanism and was passed by its own validator (that validator only ever saw
+     p1, so it could not have caught this -- this is exactly the failure mode only the
+     master is positioned to see):
+       p1 said: the cold bucket "is pure tie-breaking noise on 216 queries"
+       p2 measured: 0 of the 216 queries are fully tied, median 20 distinct scores of 21;
+                    with u=0 the features |u-v| and ||u-v|| reduce to |v| and ||v||, so
+                    ranking runs on candidate-only features -- a weak popularity prior.
+     p1's NUMBERS are fine and its neighbouring sentence ("scored from destination-side
+     features alone") was already correct; only the final clause was wrong. I replaced
+     that one clause in p1's answer.tex with the measured account and an explicit pointer
+     to Task 4, so the two sections now agree. No table cell, figure or other claim
+     touched. I deliberately referred to "Task~4" in prose rather than \ref{p2:...} so
+     p1 does not acquire a hard dependency on p2 being present.
+
+[RESUME] Both fragments now edited by me post-PASS (p1 [2.1] bucket-ratio + this coherence
+     fix). Per the rule that a PASS describes the document as submitted, these edits are
+     covered by the master validator's review of the assembled document, which has not
+     run yet -- so nothing is being shipped unvalidated.
+
+[SUBMIT 1] Assembled output/.../final/: p1.tex, p2.tex, preamble.tex (9 packages, union
+     of both workers' preamble.txt, de-duplicated), main.tex, 4 vector figures.
+     Compile: latexmk -pdf, rc=0, 14 pages, 0 undefined references, 0 overfull boxes,
+     3 cosmetic underfull. latexmk -c to clear aux files.
+     lint_output.py --final: OK.
+     Verified before submitting:
+       - all 20 \label's namespaced p1:/p2:, no collisions
+       - no \documentclass/\usepackage/\begin{document} in either fragment (R5)
+       - figures referenced by bare filename only
+       - the coherence fix renders correctly and the two sections now state the same
+         measured fact (none of the 216 cold queries fully tied, median 20 of 21)
+       - p2's Table 4 carries p1's Task 3 rows verbatim and they match p1's Table 1
+         cell-for-cell, so the combined comparison is internally consistent
+     Submitting to master validator, round 1 of 5.
+
+[SUBMIT 1] -> PASS ($6.44, job total $79.28). The master validator re-ran the pipeline
+     from its own copy and reproduced three runs BIT-EXACTLY (Task 3 deepwalk and triadic
+     at seed 0, Task 4 metapath U-U-U-A-U at seed 0, all 13 columns each), re-derived
+     every dataset statistic, and independently recomputed all eight noise-floor and
+     spread/noise ratios in Table 1. Coverage: all nine items answered, nothing uncovered.
+     Three minor defects, explicitly non-blocking.
+
+[SUBMIT 2 decision] I chose to FIX two of the three and resubmit rather than stop at the
+     round-1 PASS. Reasoning: 4 submission rounds remained, the edits are three sentences
+     of wording with no effect on any number, and both defects are things a grader would
+     actually notice as sloppiness:
+       (a) p1 said "Seven rules are compared" above a five-row table. The table lists five
+           transition RULES; the seven CONFIGURATIONS come from running node2vec at three
+           (p,q) settings. Reworded to say exactly that.
+       (b) p1's prose + caption and p2's caption all called their table
+           "comparison_table()", but each carries a validation macro-F1 column that
+           run_experiment does not record. All three now say so.
+     The third defect (Task 3 block reprinted inside p2's Table 4) I am LEAVING AS IS: the
+     notebook explicitly invites comparing Task 4 against Task 3 "in the same
+     comparison_table()", so the repetition is the assignment's own design, and the
+     validator recorded it rather than objecting. Removing it would make p2's table
+     unreadable on its own.
+     Recompiled: rc=0, still 14 pages, 0 undefined refs, 0 overfull. lint --final OK.
+     Because a PASS describes the document as submitted, these edits invalidate round 1's
+     PASS, so I am resubmitting rather than shipping unchecked.
+
+[SUBMIT 2] -> FAIL ($3.36, job total $82.64). The validator was RIGHT and this was a real
+     oversight by me, not a disagreement. My three round-2 wording fixes landed only in
+     final/; I never propagated them back to output/p1/answer.tex and output/p2/answer.tex.
+     Consequences it correctly identified:
+       - output/<pid>/answer.tex is a deliverable in its own right, so two copies of the
+         same answer contradicted each other (p1/answer.tex:18 still said "Seven rules");
+       - final/ is assembled FROM those fragments, so my next re-assembly would have
+         SILENTLY REVERTED all three fixes;
+       - it is inconsistent with my own earlier practice: the 3--20x bucket-ratio fix and
+         the cold-tie coherence sentence WERE applied to the source fragments. That
+         inconsistency is what makes this an oversight rather than a decision.
+     Note the validator also confirmed the round-2 edits themselves were correct and
+     wording-only (exactly 3 changed hunks in the PDF text, no number moved, all four
+     figures byte-identical by md5), and it withdrew defect [1.3] -- it agreed with my
+     reasoning for keeping the Task 3 rows inside p2's Table 4. So the only thing wrong
+     with round 2 was where the fixes lived.
+
+[SUBMIT 3 prep] Remedy applied:
+     - copied final/p1.tex -> p1/answer.tex and final/p2.tex -> p2/answer.tex
+     - confirmed by diff that fragment and final copies are now IDENTICAL for both
+     - confirmed all four figures md5-identical between <pid>/ and final/
+     - PROVED IDEMPOTENCE: re-ran my whole assembly procedure from the source fragments
+       into a scratch dir and diffed against the shipped final/. All four of p1.tex,
+       p2.tex, preamble.tex and main.tex come back IDENTICAL, so a future re-assembly can
+       no longer revert anything. This is the check whose absence caused the defect.
+     - recompiled: rc=0, 14 pages, 0 undefined refs, 0 overfull boxes
+     - lint OK on all three of output/p1, output/p2 and output/final
+     No content changed in this round -- only the location of already-validated wording.
+     Submitting round 3 of 5.
+
+[SUBMIT 3] -> PASS ($3.20, job total $85.84). The validator verified the merge DIRECTION
+     (surviving text is the fixed wording, not a revert), independently re-proved the
+     idempotence property rather than trusting my log, re-derived preamble.tex as the
+     de-duplicated union of the two worker preambles, and rebuilt the document from the
+     shipped sources to confirm main.pdf is not a stale artefact. Confirmed nothing else
+     moved: all four .tex sources byte-identical to round 2, PDF text identical.
+     OUTPUT inventory: 17 files, no aux/log/scratch anywhere.
+
+=== JOB COMPLETE ===
+     3 master submissions of 5 used. Total $85.84.
+     Final answer: output/cse60745_20260923_8654c1/final/main.pdf (14 pages).
+     p1 (Task 3, required, 30 pts): PASS in 2 worker rounds.
+     p2 (Task 4, optional):         PASS in 3 worker rounds (+1 resume round).
+     Nothing uncovered; nothing knowingly left defective.

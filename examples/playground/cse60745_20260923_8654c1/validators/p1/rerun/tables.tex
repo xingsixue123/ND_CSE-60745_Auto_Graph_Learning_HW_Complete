@@ -1,0 +1,47 @@
+% ---- TABLE 1: comparison_table(), mean over seeds {0,1,2}
+DeepWalk (uniform) & 0.6040 & 0.7227 & 0.6009 & 0.7207 & 0.7641 & 0.6639 & 0.7629 & 0.6833 \\
+node2vec $p{=}1,q{=}0.5$ & 0.5995 & 0.7202 & 0.5959 & 0.7184 & 0.7636 & 0.6621 & 0.7621 & 0.6825 \\
+node2vec $p{=}1,q{=}2$ & 0.6027 & 0.7210 & 0.6011 & 0.7196 & 0.7619 & 0.6467 & 0.7607 & 0.6802 \\
+node2vec $p{=}q{=}0.25$ & 0.6039 & 0.7217 & 0.6061 & 0.7228 & 0.7610 & 0.6581 & 0.7628 & 0.6796 \\
+RWR $r{=}0.15$ & 0.5870 & 0.7119 & 0.5889 & 0.7124 & 0.7637 & 0.6521 & 0.7620 & 0.6733 \\
+deg-corrected $\alpha{=}1$ & 0.6003 & 0.7144 & 0.5990 & 0.7121 & 0.7575 & 0.6421 & 0.7607 & 0.6781 \\
+triadic & \textbf{0.6066} & \textbf{0.7247} & \textbf{0.6087} & \textbf{0.7248} & \textbf{0.7645} & \textbf{0.6833} & \textbf{0.7661} & \textbf{0.6974} \\
+
+% ---- TABLE 1b: seed spread (sd over 3 seeds), same columns
+DeepWalk (uniform) & 0.0025 & 0.0016 & 0.0013 & 0.0012 & 0.0092 & 0.0045 & 0.0039 & 0.0038 \\
+node2vec $p{=}1,q{=}0.5$ & 0.0036 & 0.0025 & 0.0045 & 0.0029 & 0.0046 & 0.0065 & 0.0056 & 0.0110 \\
+node2vec $p{=}1,q{=}2$ & 0.0061 & 0.0030 & 0.0047 & 0.0033 & 0.0088 & 0.0156 & 0.0029 & 0.0013 \\
+node2vec $p{=}q{=}0.25$ & 0.0015 & 0.0008 & 0.0045 & 0.0025 & 0.0059 & 0.0032 & 0.0013 & 0.0027 \\
+RWR $r{=}0.15$ & 0.0018 & 0.0020 & 0.0032 & 0.0017 & 0.0040 & 0.0105 & 0.0019 & 0.0086 \\
+deg-corrected $\alpha{=}1$ & 0.0011 & 0.0015 & 0.0105 & 0.0070 & 0.0046 & 0.0054 & 0.0039 & 0.0064 \\
+triadic & 0.0031 & 0.0035 & 0.0049 & 0.0029 & 0.0015 & 0.0081 & 0.0031 & 0.0097 \\
+
+% ---- TABLE 2: per-source-degree breakdown, TEST split, mean over seeds {0,1,2}
+$0$ (cold) & 216 & 0.0447 & 0.1887 & 0.0293 & 0.1759 & 0.0447 & 0.1825 \\
+$1$ & 266 & 0.4386 & 0.5672 & 0.4423 & 0.5680 & 0.4499 & 0.5705 \\
+$2$--$3$ & 469 & 0.5615 & 0.6823 & 0.5672 & 0.6852 & 0.5529 & 0.6752 \\
+$4$--$7$ & 842 & 0.6675 & 0.7709 & 0.6710 & 0.7732 & 0.6524 & 0.7616 \\
+$8$--$15$ & 939 & 0.6784 & 0.7905 & 0.6904 & 0.7959 & 0.6730 & 0.7853 \\
+$\ge 16$ & 1439 & 0.6377 & 0.7665 & 0.6502 & 0.7744 & 0.6159 & 0.7541 \\
+% delta triadic-deepwalk hit@1 per bucket: -0.0154, +0.0038, +0.0057, +0.0036, +0.0121, +0.0125
+
+% ---- TABLE 3: the six val_hit@1_deg* columns of comparison_table(),
+%      all 7 strategies, mean over seeds {0,1,2}
+DeepWalk (uniform) & 0.0594 & 0.4751 & 0.5731 & 0.6457 & 0.6739 & 0.6502 \\
+node2vec $p{=}1,q{=}0.5$ & 0.0516 & 0.4687 & 0.5649 & 0.6382 & 0.6691 & 0.6502 \\
+node2vec $p{=}1,q{=}2$ & 0.0626 & 0.4674 & \textbf{0.5731} & 0.6394 & 0.6714 & 0.6529 \\
+node2vec $p{=}q{=}0.25$ & \textbf{0.0673} & 0.4713 & 0.5681 & 0.6441 & \textbf{0.6804} & 0.6478 \\
+RWR $r{=}0.15$ & 0.0579 & 0.4841 & 0.5407 & 0.6314 & 0.6564 & 0.6303 \\
+deg-corrected $\alpha{=}1$ & 0.0563 & 0.4559 & 0.5439 & 0.6393 & 0.6762 & 0.6564 \\
+triadic & 0.0501 & \textbf{0.4879} & 0.5681 & \textbf{0.6461} & 0.6752 & \textbf{0.6581} \\
+% val n_queries per bucket: 213, 261, 524, 842, 973, 1358
+
+% ---- inline numbers
+% lp_val_hit: best triadic 0.6066 | worst rwr r=0.15 0.5870 | spread 0.0197 | mean within-strategy sd 0.0028 | ratio 6.97
+% lp_val_mrr: best triadic 0.7247 | worst rwr r=0.15 0.7119 | spread 0.0128 | mean within-strategy sd 0.0021 | ratio 6.03
+% lp_test_hit: best triadic 0.6087 | worst rwr r=0.15 0.5889 | spread 0.0198 | mean within-strategy sd 0.0048 | ratio 4.14
+% lp_test_mrr: best triadic 0.7248 | worst degcorr a=1 0.7121 | spread 0.0127 | mean within-strategy sd 0.0031 | ratio 4.17
+% cc_val_micro: best triadic 0.7645 | worst degcorr a=1 0.7575 | spread 0.0070 | mean within-strategy sd 0.0055 | ratio 1.27
+% cc_val_macro: best triadic 0.6833 | worst degcorr a=1 0.6421 | spread 0.0411 | mean within-strategy sd 0.0077 | ratio 5.35
+% cc_test_micro: best triadic 0.7661 | worst degcorr a=1 0.7607 | spread 0.0054 | mean within-strategy sd 0.0032 | ratio 1.69
+% cc_test_macro: best triadic 0.6974 | worst rwr r=0.15 0.6733 | spread 0.0240 | mean within-strategy sd 0.0062 | ratio 3.87

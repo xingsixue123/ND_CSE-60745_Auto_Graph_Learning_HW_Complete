@@ -1,0 +1,29 @@
+G_train: 6958 non-isolated users; 15 walks each = 104,370 walks = 4,174,800 tokens
+target (U-U-U-A-U) = 4,068,117 tokens -> +2.6%
+
+[deepwalk x15|seed0]
+    104,370 walks in 1.0s, embedding (7624, 128) in 62.0s
+    val hit@1 0.6150 MRR 0.7296 | test hit@1 0.6142 MRR 0.7280 | cc test micro 0.7619 macro 0.6756 | cold hit@1 0.0880
+    total 71.9s
+
+[deepwalk x15|seed1]
+    104,370 walks in 0.9s, embedding (7624, 128) in 60.0s
+    val hit@1 0.6063 MRR 0.7234 | test hit@1 0.6066 MRR 0.7240 | cc test micro 0.7625 macro 0.6894 | cold hit@1 0.0972
+    total 70.0s
+
+[deepwalk x15|seed2]
+    104,370 walks in 1.0s, embedding (7624, 128) in 60.5s
+    val hit@1 0.6118 MRR 0.7272 | test hit@1 0.6147 MRR 0.7287 | cc test micro 0.7560 macro 0.6643 | cold hit@1 0.0556
+    total 71.2s
+
+
+DeepWalk x15 token-matched control (3-seed mean):
+  val  hit@1 0.6110  MRR 0.7267
+  test hit@1 0.6118+-0.0046  MRR 0.7269+-0.0025
+  cc val micro 0.7650 macro 0.6678
+  cc test micro 0.7601 macro 0.6764
+  cold bucket hit@1 0.0803+-0.0219
+
+compare U-U-U-A-U: 0.6163 / 0.7361 / 0.7887 / 0.6353 / cold 0.2824
+        walk-matched x22 control: 0.6179 / 0.7292 / 0.7624 / 0.6852 / cold 0.0494
+wrote results_tokens.pkl

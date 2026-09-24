@@ -1,0 +1,25 @@
+G_train: 6958 non-isolated users; 22 walks each = 153,076 walks (Task-4 corpus is 152,930)
+
+[deepwalk x22|seed0]
+    153,076 walks in 1.5s, embedding (7624, 128) in 89.8s
+    val hit@1 0.6200 MRR 0.7321 | test hit@1 0.6222 MRR 0.7316 | cc test micro 0.7652 macro 0.6928 | cold hit@1 0.0602
+    total 99.3s
+
+[deepwalk x22|seed1]
+    153,076 walks in 1.4s, embedding (7624, 128) in 87.8s
+    val hit@1 0.6171 MRR 0.7293 | test hit@1 0.6222 MRR 0.7319 | cc test micro 0.7586 macro 0.6799 | cold hit@1 0.0694
+    total 98.4s
+
+[deepwalk x22|seed2]
+    153,076 walks in 1.4s, embedding (7624, 128) in 88.1s
+    val hit@1 0.6140 MRR 0.7280 | test hit@1 0.6094 MRR 0.7241 | cc test micro 0.7635 macro 0.6828 | cold hit@1 0.0185
+    total 98.2s
+
+
+DeepWalk x22 (3-seed mean):
+  test hit@1 0.6179+-0.0073  test MRR 0.7292+-0.0044
+  cc test micro 0.7624  macro 0.6852
+  cold bucket hit@1 0.0494
+
+compare: DeepWalk x10 0.6009/0.7207/0.7629/0.6833/0.0447 ; U-U-U-A-U 0.6163/0.7361/0.7887/0.6353/0.2824
+wrote results_control.pkl

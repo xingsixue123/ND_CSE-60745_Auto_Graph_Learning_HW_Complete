@@ -1,0 +1,66 @@
+[
+ {
+  "label": "DeepWalk on G, 10 walks/node",
+  "starts": 6958,
+  "walks": 69580,
+  "tokens": 2783200,
+  "mean_len": 40.0,
+  "pct_full": 100.0
+ },
+ {
+  "label": "DeepWalk on G, 15 walks/node",
+  "starts": 6958,
+  "walks": 104370,
+  "tokens": 4174800,
+  "mean_len": 40.0,
+  "pct_full": 100.0
+ },
+ {
+  "label": "DeepWalk on G, 22 walks/node",
+  "starts": 6958,
+  "walks": 153076,
+  "tokens": 6123040,
+  "mean_len": 40.0,
+  "pct_full": 100.0
+ },
+ {
+  "label": "type-blind DeepWalk on H",
+  "starts": 15447,
+  "walks": 154470,
+  "tokens": 6178800,
+  "mean_len": 40.0,
+  "pct_full": 100.0
+ },
+ {
+  "label": "metapath U-A-U",
+  "starts": 15293,
+  "walks": 152930,
+  "tokens": 6117200,
+  "mean_len": 40.0,
+  "pct_full": 100.0
+ },
+ {
+  "label": "metapath U-U-A-U",
+  "starts": 14800,
+  "walks": 148000,
+  "tokens": 3593757,
+  "mean_len": 24.282141891891893,
+  "pct_full": 32.225
+ },
+ {
+  "label": "metapath U-U-U-A-U",
+  "starts": 14800,
+  "walks": 148000,
+  "tokens": 4068117,
+  "mean_len": 27.487277027027027,
+  "pct_full": 43.722972972972975
+ },
+ {
+  "label": "U-A-U rare-artist a=1",
+  "starts": 15293,
+  "walks": 152930,
+  "tokens": 6117200,
+  "mean_len": 40.0,
+  "pct_full": 100.0
+ }
+]

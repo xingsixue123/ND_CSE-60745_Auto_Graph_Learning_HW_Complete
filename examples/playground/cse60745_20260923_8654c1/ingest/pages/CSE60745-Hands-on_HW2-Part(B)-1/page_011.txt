@@ -1,0 +1,22 @@
+Hands-on Practice: Heterogeneous Graph Embedding
+Recap: Heterogeneous Graph Embedding
+•
+Heterogeneous Graph: Graphs with multiple types of nodes and edges.
+•
+Meta-Path: A sequence template of node/edge types with certain semantics.
+•
+Metapath2vec: Meta-path bounded random walk sampling + Skip-gram 
+contextualized embedding
+Heterogeneous Social Network Analysis
+•
+Given new “artist” nodes in LastFM-Asia, enrich user embeddings with 
+heterogeneous  graph structures for the same downstream tasks in Practice I.
+•
+Implement existing graph embedding techniques or design your own 
+embedding methods 
+⮚
+Please follow the instructions for Task 4 in the same notebook.
+⮚
+It is recommended to first re-implement metapath2vec, test different meta-path 
+combinations, and then test your own ideas for random walk sampling strategy and 
+other components.

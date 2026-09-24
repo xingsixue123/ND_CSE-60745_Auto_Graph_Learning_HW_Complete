@@ -1,0 +1,84 @@
+Downstream models (held fixed).
+As the notebook demands, the link predictor and the
+country classifier are the very same code for every row of the comparison table; the embedding is
+the only thing that changes. Both ℓ2-normalise Z row-wise (zero rows stay zero), standardise, and
+fit a logistic regression. A pair (u, v) becomes
+ϕ(u, v) =
+[︁
+zu ⊙zv
+⏞⏟⏟⏞
+Hadamard
+, |zu −zv|
+⏞
+⏟⏟
+⏞
+abs. diff.
+, cos(zu, zv), z⊤
+u zv, ∥zu −zv∥2
+]︁
+∈R2d+3,
+the node2vec paper’s two best binary operators concatenated with three scalar similarities. score
+returns the continuous decision function, so higher always means ”more likely an edge”.
+Fixed hyper-parameters (identical in every run).
+walks per node
+10
+embedding dim. d
+128
+walk length
+40
+Skip-Gram window
+5
+corpus size
+69,580 walks
+negative samples
+5
+seed
+0 (also 1, 2)
+epochs
+5
+LP regulariser
+C ∈{0.1, 1, 10}, chosen by val. MRR
+subsampling
+off (sample=0)
+CC regulariser
+C ∈{0.1, 1, 10, 100}, chosen by val. micro-F1
+solver
+lbfgs
+1.2
+Implementation
+Only the code I wrote is listed; the provided scaffolding is omitted.
+def sample_walks(self, G, start):
+"""‘num_walks‘ walks of length ‘walk_length‘, all beginning at ‘start‘."""
+adj, deg = adjacency_lookups(G)
+if deg[start] == 0: # isolated node -> no walks (allowed)
+return []
+rng, L, R, strat = self._rng, self.walk_length, self.num_walks, self.strategy
+if strat == "node2vec": # 2nd-order, O(1) rejection sampling
+NBR = self._nbr_lists(G) # cached sorted neighbour lists
+p, q = self.params["p"], self.params["q"]
+inv_p, inv_q, wmax = 1/p, 1/q, max(1/p, 1.0, 1/q)
+walks = []
+for _ in range(R):
+walk = [start, rng.choice(NBR[start])] # 1st step unbiased
+while len(walk) < L:
+cur, prev = walk[-1], walk[-2]
+cn, prev_nbrs = NBR[cur], adj[prev]
+while True:
+x = rng.choice(cn)
+w = inv_p if x == prev else (1.0 if x in prev_nbrs else inv_q)
+if rng.random() * wmax < w:
+break
+walk.append(x)
+walks.append(walk)
+return walks
+if strat in ("degcorr", "triadic"): # 1st-order, edge-weighted
+tables = self._weighted_tables(G) # per node: (nbrs, cumulative weights)
+walks = [] # degcorr: w(x) = deg(x)**-alpha
+for _ in range(R): # triadic: w(x) = 1 + |N(cur) & N(x)|
+walk = [start]
+while len(walk) < L:
+nbrs, cum = tables[walk[-1]]
+walk.append(rng.choices(nbrs, cum_weights=cum, k=1)[0])
+walks.append(walk)
+return walks
+2

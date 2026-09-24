@@ -1,0 +1,108 @@
+DeepWalk ×15
+U-A-U
+U-U-A-U
+U-U-U-A-U
+source degree
+n
+H@1
+MRR
+H@1
+MRR
+H@1
+MRR
+H@1
+MRR
+0 (cold)
+216
+0.0803
+0.2210
+0.3596
+0.5320
+0.2994
+0.4712
+0.2824
+0.4666
+1
+266
+0.4361
+0.5642
+0.4098
+0.5702
+0.4273
+0.5924
+0.5063
+0.6338
+2–3
+469
+0.5814
+0.6900
+0.4357
+0.6026
+0.5153
+0.6548
+0.5465
+0.6744
+4–7
+842
+0.6690
+0.7734
+0.4406
+0.6083
+0.6065
+0.7268
+0.6496
+0.7606
+8–15
+939
+0.6887
+0.7940
+0.4441
+0.6092
+0.6145
+0.7371
+0.6894
+0.7932
+≥16
+1439
+0.6504
+0.7739
+0.3785
+0.5601
+0.5536
+0.6931
+0.6423
+0.7641
+Table 5: Test-split link prediction by the source user’s degree in the social graph Gtrain, 3-seed
+means. The reference column is the token-matched control. The cold row and every other row
+point in opposite directions.
+0
+(cold)
+n=216
+1
+n=266
+2–3
+n=469
+4–7
+n=842
+8–15
+n=939
+≥16
+n=1439
+source user's degree in the social graph Gtrain
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+test Hit@1
+DeepWalk on G (token-matched)
+U-A-U  (0% social steps)
+U-U-A-U  (33% social)
+U-U-U-A-U  (50% social)
+Figure 3: Test Hit@1 by social degree of the source user; error bars ±1 sd over three seeds. Adding
+artists is not a uniform gain or loss — it transfers accuracy from well-connected users to cold-start
+ones.
+12

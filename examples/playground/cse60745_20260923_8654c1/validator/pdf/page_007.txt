@@ -1,0 +1,53 @@
+link predictor and the country classifier for the same reason. A dataset where node labels were a
+function of role rather than community (bridges, hubs, peripherals) is where one would expect the
+two tasks to pull apart, and where a q > 1 walk should have paid off.
+Which differences are real.
+Most of them are small, so the noise floor matters — and it
+has to be read off the test columns.
+LinkPredictor.fit selects C on validation MRR and
+CountryClassifier.fit selects C on validation accuracy, so val H@1, val MRR and val micro-F1
+are measured on the very split that chose the model and their large ratios (7.0×, 6.0×, 1.3×) are
+optimistic. I therefore rest the argument on the held-out columns: the between-strategy spread is
+4.1× the within-strategy sd for test Hit@1, 4.2× for test MRR and 3.9× for test macro-F1. Those
+are real effects on data no model-selection decision ever saw.
+But for country micro-F1 the test spread is only 1.7× the noise (0.7607–0.7661): on micro-F1
+the seven strategies are statistically indistinguishable. Anyone reading only the micro-F1
+column would conclude that the sampling strategy does not matter; the macro-F1 columns show
+that it does, and by a wide margin. Test macro-F1 spreads 0.0240 (3.9×), and validation macro-F1
+spreads 0.0411 — 5.4× its noise floor, the second-largest effect anywhere in this study, with triadic
+at 0.6833 against deg-corrected’s 0.6421. Validation macro-F1 deserves a little more trust than the
+other val columns, because C is selected on validation accuracy, not macro-F1 — macro-F1 is not
+the selection objective, merely measured on the selection split — and the unbiased test macro-F1
+column agrees with it on both the winner and the ordering.
+This is exactly the imbalance effect the question points at: the label distribution runs from 1,572
+users in the largest country to 16 in the smallest (only 2 of which land in the 763-user training
+split), so micro-F1 is dominated by a handful of big classes that every embedding already gets
+right, and only macro-F1 is sensitive to what happens in the tail. Choosing a sampling strategy on
+micro-F1 would be choosing on noise.
+node2vec buys nothing here.
+All three (p, q) settings sit within noise of plain DeepWalk (test
+MRR 0.7184, 0.7196, 0.7228 versus 0.7207), and the homophily-leaning setting q=0.5 is if anything
+the worst of the three.
+I read this as a property of the graph rather than of node2vec: with
+mean degree 5.1 and 734 components, a length-40 uniform walk is already confined to a small
+neighbourhood, so re-weighting second-order transitions has little room to change which nodes
+co-occur.
+The second-order machinery costs a doubling of sampling time and returns nothing
+measurable.
+Why triadic works and the other two ideas do not.
+The triadic rule, P(x) ∝1 + |N(v) ∩
+N(x)|, prefers steps that close a triangle.
+It is the only one of my three ideas that adds new
+information — it looks at the graph two hops out, whereas uniform, RWR and degree-corrected
+walks only ever consult the current node’s neighbour list. That extra information is precisely a
+community signal, which is why its largest gains are on country macro-F1: +0.0194 on validation
+(0.6833 vs 0.6639, 2.5 noise-sds) and +0.0141 on test (0.6974 vs 0.6833, 2.3 noise-sds). Macro-F1 is
+the metric that rewards getting the small countries right, and a small country is exactly the kind
+of tight, triangle-dense community that a triangle-closing walk resolves best.
+• RWR was my worst idea (test MRR 0.7124, −0.0083 against DeepWalk). The hypothesis
+— that a personalised context sharpens pairwise proximity — is falsified.
+With a fixed
+length-40 budget, teleporting home 15% of the time spends about six tokens per walk re-
+emitting start and truncates the walk’s effective reach, so the corpus contains fewer distinct
+co-occurrences for the same cost. The breakdown localises the damage precisely: degree 1
+7

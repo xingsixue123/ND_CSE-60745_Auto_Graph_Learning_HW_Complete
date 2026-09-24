@@ -1,0 +1,161 @@
+Rc files read (in order):
+  NONE
+Latexmk: This is Latexmk, John Collins, 9 March 2026. Version 4.88.
+No existing .aux file, so I'll make a simple one, and require run of *latex.
+Latexmk: applying rule 'pdflatex'...
+Rule 'pdflatex':  Reasons for rerun
+Category 'other':
+  Rerun of 'pdflatex' forced or previously required:
+    Reason or flag: 'Initial setup'
+
+------------
+Run number 1 of rule 'pdflatex'
+------------
+------------
+Running 'pdflatex  -interaction=nonstopmode -halt-on-error -recorder  "main.tex"'
+------------
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/size11.clo)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/geometry/geometry.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/keyval.sty) (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/ifvtex.sty (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty))) (./preamble.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amstext.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsgen.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsbsy.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsopn.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amssymb.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amsfonts.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/booktabs/booktabs.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/caption/caption.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/caption/caption3.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/enumitem/enumitem.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/float/float.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/graphicx.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/graphics.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/trig.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-cfg/graphics.cfg) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-def/pdftex.def))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/listings.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/lstpatch.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/lstmisc.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/listings.cfg))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/xcolor/xcolor.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-cfg/color.cfg) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/mathcolor.ltx)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def) (./main.aux)
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+(/home/xing/.TinyTeX/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/home/xing/.TinyTeX/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg))
+
+LaTeX Warning: No \author given.
+
+(./p1.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd)
+Underfull \hbox (badness 2772) in paragraph at lines 27--28
+[]\OT1/cmr/m/n/10 a strongly \OT1/cmr/m/it/10 per-son-alised \OT1/cmr/m/n/10 con-text should
+
+Underfull \hbox (badness 1895) in paragraph at lines 28--29
+[]\OT1/cmr/m/n/10 uniform walks over-visit hubs; equal-is-
+[1{/home/xing/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/lstlang1.sty) [2] [3]
+
+LaTeX Warning: Reference `p1:tab:comparison' on page 4 undefined on input line 222.
+
+
+LaTeX Warning: Reference `p1:tab:valdeg' on page 4 undefined on input line 233.
+
+
+LaTeX Warning: Reference `p1:tab:valdeg' on page 4 undefined on input line 233.
+
+
+Underfull \hbox (badness 1320) in paragraph at lines 233--233
+[]\OT1/cmr/m/n/10.95 Table 1: |The scalar met-rics of \OT1/cmtt/m/n/10.95 comparison[]table()\OT1/cmr/m/n/10.95 , mean over seeds $\OMS/cmsy/m/n/10.95 f\OT1/cmr/m/n/10.95 0\OML/cmm/m/it/10.95 ; \OT1/cmr/m/n/10.95 1\OML/cmm/m/it/10.95 ; \OT1/cmr/m/n/10.95 2\OMS/cmsy/m/n/10.95 g$\OT1/cmr/m/n/10.95 ; its six
+[4]
+
+LaTeX Warning: Reference `p1:tab:degree' on page 5 undefined on input line 266.
+
+
+LaTeX Warning: Reference `p1:fig:degree' on page 5 undefined on input line 268.
+
+
+LaTeX Warning: Reference `p1:tab:valdeg' on page 5 undefined on input line 269.
+
+
+LaTeX Warning: Reference `p1:tab:comparison' on page 5 undefined on input line 272.
+
+[5 <./fig_p1_tradeoff.pdf>]
+
+LaTeX Warning: Reference `p1:tab:comparison' on page 6 undefined on input line 344.
+
+
+LaTeX Warning: Reference `p1:fig:tradeoff' on page 6 undefined on input line 345.
+
+[6 <./fig_p1_degree.pdf>] [7]) (./p2.tex [8]
+
+LaTeX Warning: Reference `p2:tab:main' on page 9 undefined on input line 17.
+
+
+LaTeX Warning: Reference `p2:fig:social' on page 9 undefined on input line 39.
+
+[9]
+
+LaTeX Warning: Reference `p2:tab:main' on page 10 undefined on input line 113.
+
+[10] [11] [12 <./fig_p2_degree.pdf> <./fig_p2_social.pdf>]
+
+LaTeX Warning: Reference `p2:tab:degree' on page 13 undefined on input line 242.
+
+
+LaTeX Warning: Reference `p2:fig:social' on page 13 undefined on input line 258.
+
+[13]
+
+LaTeX Warning: Reference `p2:tab:degree' on page 14 undefined on input line 297.
+
+) [14] (./main.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)</home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmitt10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
+Output written on main.pdf (14 pages, 444146 bytes).
+Transcript written on main.log.
+Latexmk: Getting log file 'main.log'
+Latexmk: Examining 'main.fls'
+Latexmk: Examining 'main.log'
+Latexmk: References changed.
+Latexmk: Log file says output to 'main.pdf'
+Latexmk: applying rule 'pdflatex'...
+Rule 'pdflatex':  Reasons for rerun
+Changed files or newly in use/created:
+  main.aux
+
+------------
+Run number 2 of rule 'pdflatex'
+------------
+------------
+Running 'pdflatex  -interaction=nonstopmode -halt-on-error -recorder  "main.tex"'
+------------
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/base/size11.clo)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/geometry/geometry.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/keyval.sty) (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/ifvtex.sty (/home/xing/.TinyTeX/texmf-dist/tex/generic/iftex/iftex.sty))) (./preamble.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amstext.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsgen.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsbsy.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsmath/amsopn.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amssymb.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/amsfonts.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/booktabs/booktabs.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/caption/caption.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/caption/caption3.sty)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/enumitem/enumitem.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/float/float.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/graphicx.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/graphics.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/trig.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-cfg/graphics.cfg) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-def/pdftex.def))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/listings.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/lstpatch.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/lstmisc.sty) (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/listings.cfg))) (/home/xing/.TinyTeX/texmf-dist/tex/latex/xcolor/xcolor.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics-cfg/color.cfg) (/home/xing/.TinyTeX/texmf-dist/tex/latex/graphics/mathcolor.ltx)) (/home/xing/.TinyTeX/texmf-dist/tex/latex/l3kernel/l3backend-pdftex.def) (./main.aux)
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+(/home/xing/.TinyTeX/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/home/xing/.TinyTeX/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty (/home/xing/.TinyTeX/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg))
+
+LaTeX Warning: No \author given.
+
+(./p1.tex (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsa.fd) (/home/xing/.TinyTeX/texmf-dist/tex/latex/amsfonts/umsb.fd)
+Underfull \hbox (badness 2772) in paragraph at lines 27--28
+[]\OT1/cmr/m/n/10 a strongly \OT1/cmr/m/it/10 per-son-alised \OT1/cmr/m/n/10 con-text should
+
+Underfull \hbox (badness 1895) in paragraph at lines 28--29
+[]\OT1/cmr/m/n/10 uniform walks over-visit hubs; equal-is-
+[1{/home/xing/.TinyTeX/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] (/home/xing/.TinyTeX/texmf-dist/tex/latex/listings/lstlang1.sty) [2] [3]
+Underfull \hbox (badness 1320) in paragraph at lines 233--233
+[]\OT1/cmr/m/n/10.95 Table 1: |The scalar met-rics of \OT1/cmtt/m/n/10.95 comparison[]table()\OT1/cmr/m/n/10.95 , mean over seeds $\OMS/cmsy/m/n/10.95 f\OT1/cmr/m/n/10.95 0\OML/cmm/m/it/10.95 ; \OT1/cmr/m/n/10.95 1\OML/cmm/m/it/10.95 ; \OT1/cmr/m/n/10.95 2\OMS/cmsy/m/n/10.95 g$\OT1/cmr/m/n/10.95 ; its six
+[4] [5 <./fig_p1_tradeoff.pdf>] [6 <./fig_p1_degree.pdf>] [7]) (./p2.tex [8] [9] [10] [11] [12 <./fig_p2_degree.pdf> <./fig_p2_social.pdf>] [13]) [14] (./main.aux) )
+(see the transcript file for additional information)</home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmitt10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmss9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmti9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt9.pfb></home/xing/.TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
+Output written on main.pdf (14 pages, 444095 bytes).
+Transcript written on main.log.
+Latexmk: Getting log file 'main.log'
+Latexmk: Examining 'main.fls'
+Latexmk: Examining 'main.log'
+Latexmk: Log file says output to 'main.pdf'
+Latexmk: All targets (main.pdf) are up-to-date
+

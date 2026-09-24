@@ -1,0 +1,324 @@
+\section{Task 4 --- Heterogeneous Graph Embedding (optional practice)}
+\label{p2:sec:main}
+
+\subsection{Method}
+\label{p2:sec:method}
+
+\paragraph{The graph.}
+$H_{\mathrm{train}}$ is the notebook's \texttt{add\_artists(G\_train)}, used verbatim:
+$15{,}466$ nodes ($7{,}624$ users $+$ $7{,}842$ artists) and
+$19{,}464 + 3{,}014{,}361 = 3{,}033{,}825$ edges.  Every figure in the provided statistics
+file is reproduced exactly ($7{,}451$ users like $\ge1$ artist, $173$ like none; artists per
+user median $400$, max $944$ --- matching the task description's own table).  The artist
+layer is $155\times$ denser than the social layer, and that fact drives every result below.
+
+\paragraph{What is reused unchanged.}
+This is what makes the comparison in Table~\ref{p2:tab:main} legitimate, so I state it
+precisely.  \texttt{train\_embedding}, \texttt{LinkPredictor} and
+\texttt{CountryClassifier} are \emph{the same Python objects} measured in Task~3: my
+sampler is a subclass of Task~3's \texttt{WalkEmbedding} that overrides
+\texttt{sample\_walks} and nothing else, and Task~3's module is imported byte-identically
+(verified by \texttt{sha256}).  The per-node budget ($10$ walks of length \emph{up to} $40$)
+and every Skip-Gram hyper-parameter ($d{=}128$, window $5$, $5$ negatives, $5$ epochs,
+\texttt{workers=1} for bit-exact reproducibility) are unchanged.  Evaluation is
+\texttt{run\_experiment} with $H_{\mathrm{train}}$ and $N_{\mathrm{users}}+N_{\mathrm{artists}}$,
+slicing $Z$ to $[:N_{\mathrm{users}}]$; degree buckets always come from the \emph{social}
+graph $G_{\mathrm{train}}$.  \textbf{The sampler and the graph are the only things that
+change.}
+
+\paragraph{Schema convention.}
+A schema is a symmetric type string whose repeating cycle is \texttt{schema[:-1]}:
+\textsf{U-A-U} gives $\mathsf{U\,A\,U\,A}\dots$, \textsf{U-U-A-U} gives
+$\mathsf{U\,U\,A\,U\,U\,A}\dots$, \textsf{U-U-U-A-U} gives $\mathsf{U\,U\,U\,A}\dots$
+At each step the next node is drawn uniformly from the neighbours of the demanded type.
+Since \textsf{U-A-U-U} is a cyclic rotation of \textsf{U-U-A-U} and yields the same
+multiset of step types, I run one schema per rotation class.  The three then form a
+one-parameter family indexed by the fraction of steps forced to be social ($0$, $1/3$,
+$1/2$, with Task~3's DeepWalk as the $1$ endpoint), the axis of
+Figure~\ref{p2:fig:social}.
+
+\paragraph{Start nodes, and dead ends.}
+\texttt{embed\_graph} starts walks from \emph{every} node of $H$, artists included.  I
+rotate the cycle to the start node's type rather than discarding artist starts, so an artist
+begins $\mathsf{A\,U\,A\,U}\dots$ --- the same meta-path read from the other end; artists
+thus get trained vectors that serve as shared context, and are sliced off before evaluation.
+A walk \emph{stops} whenever the type the schema demands next is absent.  At the \emph{first}
+step this drops the walk entirely (a user with no artist under \textsf{U-A-U}, $173$ of them;
+a socially isolated user under \textsf{U-U-A-U}/\textsf{U-U-U-A-U}, $666$), exactly as
+Task~3's sampler returns \texttt{[]} for an isolated node --- so those users keep an all-zero
+row in \emph{both} tasks and the cold-start comparison stays like-for-like.  But it also
+fires \emph{mid-walk}, overwhelmingly when an $\mathsf{A}\to\mathsf{U}$ step lands on one of
+the $666$ isolated users and the schema then asks for $\mathsf{U}\to\mathsf{U}$.  That case
+is the common one, and it is why walk count and corpus size are different quantities:
+\textsf{U-A-U} emits $152{,}930$ walks from $15{,}293$ starts, \emph{all} of full length
+$40$, whereas \textsf{U-U-A-U} and \textsf{U-U-U-A-U} emit $148{,}000$ from $14{,}800$ starts
+with mean length only $24.3$ and $27.5$ ($32.2\%$ and $43.7\%$ reach $40$).  Terminating on a
+dead end is standard metapath2vec behaviour, but Section~\ref{p2:sec:protocol} shows its
+effect must be measured, not assumed.
+
+\paragraph{One idea of my own: rare-artist sampling.}
+A uniform $\mathsf{U}\to\mathsf{A}$ step lands on a popular artist far more often than a
+niche one, and shared taste for a top-$100$ artist says almost nothing about two users.  I
+therefore add an optional weighting in which a step \emph{into} an artist is drawn
+$\propto \deg(a)^{-\alpha}$ (steps into a user stay uniform).  At $\alpha{=}1$ the median
+popularity of the artist a walk visits falls from $613$ to $204.5$ --- essentially the
+dataset median ($205$), i.e.\ the bias towards hubs is removed.
+
+\lstdefinestyle{p2code}{basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue!60!black}, commentstyle=\color{green!45!black}\itshape,
+  stringstyle=\color{purple!70!black}, language=Python, showstringspaces=false,
+  breaklines=true, frame=single, framesep=3pt, rulecolor=\color{black!30},
+  columns=fullflexible, xleftmargin=2pt}
+
+\begin{lstlisting}[style=p2code,caption={The meta-path sampler. Everything else --- training, link
+predictor, country classifier --- is unchanged from Task 3.},captionpos=b,label=p2:lst:sampler]
+class MetaPathWalkEmbedding(WalkEmbedding):      # Task 3's class, one method overridden
+
+    def __init__(self, schema="UAU", alpha=None, seed=RANDOM_SEED, **params):
+        super().__init__(seed=seed, **params)
+        assert schema[0] == schema[-1]           # schema must be symmetric
+        self.schema, self.cycle, self.alpha = schema, schema[:-1], alpha
+
+    def sample_walks(self, G, start):
+        tables, ntype = self._typed_tables(G)    # node -> {type: (nbrs, cum_weights)}
+        t0 = ntype[start]
+        if t0 not in self.cycle:
+            return []
+        k = self.cycle.index(t0)
+        rot = self.cycle[k:] + self.cycle[:k]    # rotate the cycle to the start's type
+        m, L, rng = len(rot), self.walk_length, self._rng
+
+        walks = []
+        for _ in range(self.num_walks):
+            walk, i = [start], 0
+            while len(walk) < L:
+                entry = tables[walk[-1]].get(rot[(i + 1) % m])
+                if entry is None:                # no neighbour of the required type
+                    break
+                nbrs, cum = entry
+                walk.append(rng.choice(nbrs) if cum is None      # uniform
+                            else rng.choices(nbrs, cum_weights=cum, k=1)[0])  # rare-artist
+                i += 1
+            if len(walk) > 1:
+                walks.append(walk)
+        return walks
+\end{lstlisting}
+
+\noindent
+\texttt{\_typed\_tables} is built once per graph from the notebook's
+\texttt{typed\_adjacency(G)} and cached: per node, the neighbour \emph{list} per type plus
+cumulative $\deg(a)^{-\alpha}$ weights when rare-artist sampling is on.  A step is therefore
+$O(1)$ (or $O(\log d)$ weighted) and the whole corpus takes $2$--$8\,$s, against $60$--$115\,$s
+of Skip-Gram training.
+
+\subsection{Protocol, and the controls the comparison rests on}
+\label{p2:sec:protocol}
+
+Every configuration is run at seeds $\{0,1,2\}$ and all reported numbers are $3$-seed
+means; the ``noise floor'' row of Table~\ref{p2:tab:main} is the mean within-configuration
+standard deviation, which is what licenses calling a gap real.
+
+A confound must be removed first.  Task~3 walks from the $6{,}958$ non-isolated \emph{users};
+Task~4 walks from all $15{,}466$ nodes of $H$, so a naive reading would credit the artist
+structure with what is really just more training data.  The quantity to equalise is
+\emph{not} the walk count but the \textbf{token} count --- Skip-Gram consumes tokens, and by
+the dead-end argument above a meta-path walk is often far shorter than $40$.
+Measured over all start nodes, the $10$-walk schemas emit: \textsf{U-A-U} $152{,}930$ walks
+all of full length, $6{,}117{,}200$ tokens; \textsf{U-U-A-U} $148{,}000$ walks of mean length
+$24.3$, $3{,}593{,}757$ tokens; \textsf{U-U-U-A-U} $148{,}000$ walks of mean length $27.5$,
+$\mathbf{4{,}068{,}117}$ tokens.  The social-graph controls emit full-length walks
+throughout: $\times10$, $2{,}783{,}200$ tokens; $\times15$, $\mathbf{4{,}174{,}800}$;
+$\times22$, $6{,}123{,}040$.
+
+So \textsf{U-A-U} really does match a $22$-walk DeepWalk ($-0.1\%$ tokens), but
+\textsf{U-U-U-A-U} --- the row that carries the conclusion --- emits a third fewer tokens at
+a similar walk count, so matching on walks alone would hand the control $50\%$ more data than
+the schema it is meant to adjudicate.  I therefore report \textbf{two} controls: DeepWalk
+$\times22$ (walk-matched) and DeepWalk $\times15$ (\textbf{token}-matched to
+\textsf{U-U-U-A-U} at $+2.6\%$, so the residual still favours the control).  The
+token-matched one is the fair comparator and is the reference column of
+Table~\ref{p2:tab:degree} and both figures.  Corpus size alone ($\times10\to\times15$) buys
+$+0.0109$ test Hit@1 and $+0.0062$ test MRR, but nothing on country micro-F1 ($-0.0027$).
+
+\subsection{Results}
+\label{p2:sec:results}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\setlength{\tabcolsep}{1.8pt}
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+& \multicolumn{4}{c}{link prediction} & \multicolumn{4}{c}{country classification} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+strategy & val H@1 & val MRR & test H@1 & test MRR & val mi-F1 & val ma-F1 & test mi-F1 & test ma-F1 \\
+\midrule
+\multicolumn{9}{@{}l}{\textit{Task 3 --- social graph $G$, $10$ walks/node}}\\
+DeepWalk (uniform) & 0.6040 & 0.7227 & 0.6009 & 0.7207 & 0.7641 & 0.6639 & 0.7629 & 0.6833 \\
+node2vec $p{=}1,q{=}0.5$ & 0.5995 & 0.7202 & 0.5959 & 0.7184 & 0.7636 & 0.6621 & 0.7621 & 0.6825 \\
+node2vec $p{=}1,q{=}2$ & 0.6027 & 0.7210 & 0.6011 & 0.7196 & 0.7619 & 0.6467 & 0.7607 & 0.6802 \\
+node2vec $p{=}q{=}0.25$ & 0.6039 & 0.7217 & 0.6061 & 0.7228 & 0.7610 & 0.6581 & 0.7628 & 0.6796 \\
+RWR $r{=}0.15$ & 0.5870 & 0.7119 & 0.5889 & 0.7124 & 0.7637 & 0.6521 & 0.7620 & 0.6733 \\
+deg-corrected $\alpha{=}1$ & 0.6003 & 0.7144 & 0.5990 & 0.7121 & 0.7575 & 0.6421 & 0.7607 & 0.6781 \\
+triadic & 0.6066 & 0.7247 & 0.6087 & 0.7248 & 0.7645 & \textbf{0.6833} & 0.7661 & \textbf{0.6974} \\
+\midrule
+\multicolumn{9}{@{}l}{\textit{Budget controls --- social graph $G$, larger walk budget}}\\
+DeepWalk $\times15$, token-matched & 0.6110 & 0.7267 & 0.6118 & 0.7269 & 0.7650 & 0.6678 & 0.7601 & 0.6764 \\
+DeepWalk $\times22$, walk-matched & 0.6170 & 0.7298 & \textbf{0.6179} & 0.7292 & 0.7623 & 0.6643 & 0.7624 & 0.6852 \\
+\midrule
+\multicolumn{9}{@{}l}{\textit{Task 4 --- heterogeneous graph $H$, $10$ walks/node}}\\
+type-blind DeepWalk on $H$ & 0.4648 & 0.6306 & 0.4534 & 0.6229 & 0.6898 & 0.4111 & 0.6804 & 0.3794 \\
+metapath \textsf{U-A-U} & 0.4201 & 0.5906 & 0.4133 & 0.5849 & 0.6457 & 0.3630 & 0.6489 & 0.3516 \\
+metapath \textsf{U-U-A-U} & 0.5661 & 0.6994 & 0.5525 & 0.6876 & 0.7624 & 0.5738 & 0.7632 & 0.5675 \\
+metapath \textsf{U-U-U-A-U} & \textbf{0.6215} & \textbf{0.7428} & 0.6163 & \textbf{0.7361} & \textbf{0.7956} & 0.6337 & \textbf{0.7887} & 0.6353 \\
+\textsf{U-A-U} rare-artist $\alpha{=}1$ & 0.4270 & 0.5954 & 0.4261 & 0.5942 & 0.7038 & 0.4245 & 0.6857 & 0.4007 \\
+\midrule
+\textit{noise floor (mean sd)} & 0.0038 & 0.0029 & 0.0050 & 0.0032 & 0.0072 & 0.0134 & 0.0038 & 0.0060 \\
+\bottomrule
+\end{tabular}
+\caption{The notebook's \texttt{comparison\_table()}, Task~3 and Task~4 together; $3$-seed
+means, Task~3 rows measured in Task~3 and not re-run.  Noise floor $=$ mean
+within-configuration sd over all $14$ rows.  Validation columns are where \texttt{fit}
+selects $C$, hence optimistic; the argument rests on the test columns.}
+\label{p2:tab:main}
+\end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{@{}lrcccccccc@{}}
+\toprule
+& & \multicolumn{2}{c}{DeepWalk $\times15$} & \multicolumn{2}{c}{\textsf{U-A-U}}
+  & \multicolumn{2}{c}{\textsf{U-U-A-U}} & \multicolumn{2}{c}{\textsf{U-U-U-A-U}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+source degree & $n$ & H@1 & MRR & H@1 & MRR & H@1 & MRR & H@1 & MRR \\
+\midrule
+$0$ (cold) & 216 & 0.0803 & 0.2210 & \textbf{0.3596} & \textbf{0.5320} & 0.2994 & 0.4712 & 0.2824 & 0.4666 \\
+$1$ & 266 & 0.4361 & 0.5642 & 0.4098 & 0.5702 & 0.4273 & 0.5924 & \textbf{0.5063} & \textbf{0.6338} \\
+$2$--$3$ & 469 & \textbf{0.5814} & \textbf{0.6900} & 0.4357 & 0.6026 & 0.5153 & 0.6548 & 0.5465 & 0.6744 \\
+$4$--$7$ & 842 & \textbf{0.6690} & \textbf{0.7734} & 0.4406 & 0.6083 & 0.6065 & 0.7268 & 0.6496 & 0.7606 \\
+$8$--$15$ & 939 & 0.6887 & \textbf{0.7940} & 0.4441 & 0.6092 & 0.6145 & 0.7371 & \textbf{0.6894} & 0.7932 \\
+$\ge 16$ & 1439 & \textbf{0.6504} & \textbf{0.7739} & 0.3785 & 0.5601 & 0.5536 & 0.6931 & 0.6423 & 0.7641 \\
+\bottomrule
+\end{tabular}
+\caption{Test-split link prediction by the source user's degree \emph{in the social graph}
+$G_{\mathrm{train}}$, $3$-seed means.  The reference column is the \emph{token}-matched
+control.  The cold row and every other row point in opposite directions.}
+\label{p2:tab:degree}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{fig_p2_degree.pdf}
+\caption{Test Hit@1 by social degree of the source user; error bars $\pm1$ sd over three
+seeds.  Adding artists is not a uniform gain or loss --- it transfers accuracy from
+well-connected users to cold-start ones.}
+\label{p2:fig:degree}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{fig_p2_social.pdf}
+\caption{The same three schemas plus the token-matched DeepWalk, by the fraction of walk
+steps forced to be social.  The two populations move in opposite directions; the schema is
+the knob that trades one against the other.}
+\label{p2:fig:social}
+\end{figure}
+
+\subsection{Analysis}
+\label{p2:sec:analysis}
+
+\paragraph{Aggregate link prediction: no, the artists do not help.}
+Against the \emph{token}-matched control, \textsf{U-U-U-A-U} reaches test Hit@1 $0.6163$
+versus $0.6118$: $+0.0045$, or $+0.9$ noise sd --- nothing.  Against the walk-matched
+control the same comparison is $0.6163$ versus $0.6179$, i.e.\ $-0.0016$ ($-0.3$ sd).  The
+useful observation is that \textbf{the sign of the Hit@1 gap depends on which control you
+pick and its size never reaches one noise sd either way}, which is a null result far more
+robustly than any single control could establish.  Test MRR is the one place a real edge
+survives: $+0.0093$ ($2.9$ sd) against the token-matched control, $+0.0070$ ($2.2$ sd)
+against the walk-matched one --- consistent, but small.  Compared against the
+\emph{unmatched} $10$-walk DeepWalk the schema looks like a clean $+0.0154$ Hit@1 win, and
+roughly two-thirds of that ($+0.0109$) is bought by corpus size alone.  This is why the
+controls were worth running: without them the honest answer inverts into a false positive.
+
+\paragraph{Cold-start users: yes, dramatically, and this is not a budget artefact.}
+$666$ users have no friend in $G_{\mathrm{train}}$ and receive an all-zero row from any
+purely social walk; $216$ test queries have such a source.  Each query ranks $21$
+candidates and the scaffolding breaks ties at random, so an all-zero row scores exactly
+\textbf{chance, $1/21 = 0.0476$} --- and chance is what all three social-only
+configurations measure ($0.0447$, $0.0803$, $0.0494$ at $\times10$, $\times15$,
+$\times22$; none exceeds $1.7\times$ chance and the spread between them is tie-breaking
+noise).  Anchoring to chance rather than to a particular control is the honest move,
+since no walk budget can improve on it: walking never reaches a node with no edges.  But $647$ of those $666$ users ($97.1\%$) like at least one artist, with a median
+of $334$ artists each, and $209$ of the $216$ cold test sources ($96.8\%$) are covered.
+Through the artist layer they become reachable, and their Hit@1 rises to $0.2824$ under
+\textsf{U-U-U-A-U} and $0.3596$ under \textsf{U-A-U} --- respectively $5.9\times$ and
+$7.6\times$ chance, gaps of $8.7$ and $11.5$ times the $0.0271$ mean seed spread of this
+bucket (Figure~\ref{p2:fig:degree}).  This is the one place where the heterogeneous
+structure does something no amount of social-graph effort can.
+
+\paragraph{Signal or noise? Both, and density decides which.}
+A \textsf{U-A-U} step connects two users who share \emph{any} artist.  Sampling $40$ users,
+the median number of others reachable in one such step is $7{,}307$ of $7{,}623$ ---
+\textbf{about $96\%$ of the graph} --- against a median social $2$-hop neighbourhood of
+$61$.  Such an edge is therefore almost devoid of information: it is not far from a link to
+a uniformly random user.  That explains the whole shape of Table~\ref{p2:tab:degree}.  For a
+user with $\ge16$ friends the social graph already supplies a sharp, small candidate set,
+and diluting it with a near-complete graph costs $0.6504 \to 0.3785$ Hit@1.  For a user with
+$0$ friends the alternative is not a sharper signal but an all-zero vector ranked at chance,
+so even a weak ordering (the layer is near-complete but not uniform --- how \emph{many}
+artists two users share still varies) is worth a great deal.  Same edges, opposite value,
+depending entirely on what the user already had.
+
+\paragraph{The meta-path constraint is doing real work.}
+A type-blind DeepWalk on $H$ takes a social step only $0.72\%$ of the time (over $31{,}122$
+sampled steps), because a user has $\sim\!395$ artist neighbours and $\sim\!5$ social ones;
+it is \emph{de facto} \textsf{U-A-U}.  Yet it beats explicit \textsf{U-A-U} on every column
+($+0.0401$ test Hit@1).  Those rare social steps are worth a great deal --- precisely the
+metapath2vec argument: on a graph this lopsided, leaving the transition rule to the degree
+distribution discards the sparse, informative edge type, and the schema is how you take that
+choice back.  The stronger form is the monotone family in Figure~\ref{p2:fig:social}: as the
+forced social fraction rises $0 \to 1/3 \to 1/2$, overall test Hit@1 goes
+$0.4133 \to 0.5525 \to 0.6163$ while the cold bucket falls $0.3596 \to 0.2994 \to 0.2824$,
+without collapsing to the $0.0803$ of a pure social walk --- a socially isolated user can
+never \emph{start} a \textsf{U-U-U-A-U} walk, but the $\mathsf{A}\to\mathsf{U}$ step lets
+other walks reach them.  Truncation shrinks the corpus of exactly the higher-social schemas,
+so it works \emph{against} the rising trend, which is therefore safe from the budget
+objection.
+
+\paragraph{Country classification: helped on micro-F1, hurt on macro-F1.}
+Against the token-matched control, \textsf{U-U-U-A-U} gains $+0.0286$ test micro-F1
+($0.7887$ vs $0.7601$, $7.6$ sd) and loses $-0.0411$ test macro-F1 ($0.6353$ vs $0.6764$,
+$6.9$ sd); against the walk-matched control the same two gaps are $+0.0263$ and $-0.0498$,
+so neither depends on the control.  Both are far outside the noise, and the split between
+them is interpretable:
+music taste is regional, so artists carry genuine country signal and lift the large classes
+micro-F1 measures --- but that signal is coarse, regional rather than national, while
+macro-F1 is dominated by the small countries, which in the social graph are tight,
+well-separated communities that the near-complete artist layer blurs together.  Task~3's
+triadic walk remains the study's best macro-F1 model ($0.6974$); no heterogeneous variant
+comes close.
+
+\paragraph{Rare-artist sampling works, and confirms the diagnosis.}
+Weighting $\mathsf{U}\to\mathsf{A}$ by $\deg(a)^{-1}$ improves plain \textsf{U-A-U} on all
+eight columns: $+0.0129$ test Hit@1 ($2.6$ sd), $+0.0094$ test MRR ($2.9$ sd), $+0.0368$
+test micro-F1 ($9.8$ sd) and $+0.0491$ test macro-F1 ($8.2$ sd).  Since the only change is
+which artist a walk passes through, this is direct evidence that the \emph{popular} artists
+specifically inject the noise, and that the density problem is partly fixable inside the
+sampler.  It does not rescue \textsf{U-A-U} to competitiveness --- the schema still lacks
+the social edges that matter most --- but it is the largest single improvement I obtained
+over a baseline schema.
+
+\subsection{Conclusion}
+\label{p2:sec:conclusion}
+
+Heterogeneous structure helped \emph{one} of the two downstream tasks and one
+sub-population, and hurt elsewhere.  It did essentially nothing for aggregate friend
+recommendation once the corpus was matched \emph{in tokens}; it improved country micro-F1
+by a wide margin and degraded macro-F1 by a comparable one; and it lifted cold-start friend
+recommendation from chance to $6$--$8\times$ chance, which is the result worth keeping.  The
+recommendation that follows is not a single best schema but a split one: a social-graph walk
+(Task~3's triadic) for users who have friends, and a \textsf{U-A-U} walk --- ideally with
+rare-artist weighting --- for the $9\%$ who do not, the crossover sitting between degree $0$
+and $1$ (Table~\ref{p2:tab:degree}).  The broader lesson: on a graph where one edge type is
+$155\times$ denser than the other, the meta-path is not a modelling flourish but the only
+thing standing between the walk and a near-complete graph.

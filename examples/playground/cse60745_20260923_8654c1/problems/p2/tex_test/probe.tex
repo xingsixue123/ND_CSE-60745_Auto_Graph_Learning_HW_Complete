@@ -1,0 +1,16 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\input{../preamble_expanded.tex}
+\lstdefinestyle{p2code}{basicstyle=\ttfamily\footnotesize,keywordstyle=\color{blue!60!black},
+  commentstyle=\color{green!45!black}\itshape,stringstyle=\color{purple!70!black},
+  language=Python,showstringspaces=false,breaklines=true,frame=single,framesep=3pt,
+  rulecolor=\color{black!30},columns=fullflexible,xleftmargin=2pt}
+\begin{document}
+\begin{itemize}[label=$\bullet$]\item enumitem bullet works\end{itemize}
+\begin{lstlisting}[style=p2code]
+class MetaPathWalkEmbedding(WalkEmbedding):
+    def sample_walks(self, G, start):   # cycle = schema[:-1]
+        return []
+\end{lstlisting}
+\textsf{U-A-U} and $\alpha{=}1$ render.
+\end{document}

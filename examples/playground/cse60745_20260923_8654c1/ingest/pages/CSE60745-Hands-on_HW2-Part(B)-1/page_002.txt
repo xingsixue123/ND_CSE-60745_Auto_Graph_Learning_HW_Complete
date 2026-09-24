@@ -1,0 +1,5 @@
+Outlines
+❖HW1 Solution
+❖Practice I: Homogeneous Graph Embedding 
+❖Practice II: Heterogeneous Graph Embedding
+Outline

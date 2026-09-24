@@ -1,0 +1,169 @@
+full-length walks throughout: ×10, 2,783,200 tokens; ×15, 4,174,800; ×22, 6,123,040.
+So U-A-U really does match a 22-walk DeepWalk (−0.1% tokens), but U-U-U-A-U — the row
+that carries the conclusion — emits a third fewer tokens at a similar walk count, so matching on
+walks alone would hand the control 50% more data than the schema it is meant to adjudicate. I
+therefore report two controls: DeepWalk ×22 (walk-matched) and DeepWalk ×15 (token-matched
+to U-U-U-A-U at +2.6%, so the residual still favours the control). The token-matched one is the fair
+comparator and is the reference column of Table 5 and both figures. Corpus size alone (×10 →×15)
+buys +0.0109 test Hit@1 and +0.0062 test MRR, but nothing on country micro-F1 (−0.0027).
+2.3
+Results
+link prediction
+country classification
+strategy
+val H@1 val MRR test H@1 test MRR val mi-F1 val ma-F1 test mi-F1 test ma-F1
+Task 3 — social graph G, 10 walks/node
+DeepWalk (uniform)
+0.6040
+0.7227
+0.6009
+0.7207
+0.7641
+0.6639
+0.7629
+0.6833
+node2vec p=1, q=0.5
+0.5995
+0.7202
+0.5959
+0.7184
+0.7636
+0.6621
+0.7621
+0.6825
+node2vec p=1, q=2
+0.6027
+0.7210
+0.6011
+0.7196
+0.7619
+0.6467
+0.7607
+0.6802
+node2vec p=q=0.25
+0.6039
+0.7217
+0.6061
+0.7228
+0.7610
+0.6581
+0.7628
+0.6796
+RWR r=0.15
+0.5870
+0.7119
+0.5889
+0.7124
+0.7637
+0.6521
+0.7620
+0.6733
+deg-corrected α=1
+0.6003
+0.7144
+0.5990
+0.7121
+0.7575
+0.6421
+0.7607
+0.6781
+triadic
+0.6066
+0.7247
+0.6087
+0.7248
+0.7645
+0.6833
+0.7661
+0.6974
+Budget controls — social graph G, larger walk budget
+DeepWalk ×15, token-matched
+0.6110
+0.7267
+0.6118
+0.7269
+0.7650
+0.6678
+0.7601
+0.6764
+DeepWalk ×22, walk-matched
+0.6170
+0.7298
+0.6179
+0.7292
+0.7623
+0.6643
+0.7624
+0.6852
+Task 4 — heterogeneous graph H, 10 walks/node
+type-blind DeepWalk on H
+0.4648
+0.6306
+0.4534
+0.6229
+0.6898
+0.4111
+0.6804
+0.3794
+metapath U-A-U
+0.4201
+0.5906
+0.4133
+0.5849
+0.6457
+0.3630
+0.6489
+0.3516
+metapath U-U-A-U
+0.5661
+0.6994
+0.5525
+0.6876
+0.7624
+0.5738
+0.7632
+0.5675
+metapath U-U-U-A-U
+0.6215
+0.7428
+0.6163
+0.7361
+0.7956
+0.6337
+0.7887
+0.6353
+U-A-U rare-artist α=1
+0.4270
+0.5954
+0.4261
+0.5942
+0.7038
+0.4245
+0.6857
+0.4007
+noise floor (mean sd)
+0.0038
+0.0029
+0.0050
+0.0032
+0.0072
+0.0134
+0.0038
+0.0060
+Table 4: The notebook’s comparison table(), Task 3 and Task 4 together; 3-seed means, Task 3
+rows measured in Task 3 and not re-run. Noise floor = mean within-configuration sd over all 14
+rows. Validation columns are where fit selects C, hence optimistic; the argument rests on the test
+columns.
+2.4
+Analysis
+Aggregate link prediction: no, the artists do not help.
+Against the token-matched control,
+U-U-U-A-U reaches test Hit@1 0.6163 versus 0.6118: +0.0045, or +0.9 noise sd — nothing. Against
+the walk-matched control the same comparison is 0.6163 versus 0.6179, i.e. −0.0016 (−0.3 sd).
+The useful observation is that the sign of the Hit@1 gap depends on which control you
+pick and its size never reaches one noise sd either way, which is a null result far more
+robustly than any single control could establish. Test MRR is the one place a real edge survives:
++0.0093 (2.9 sd) against the token-matched control, +0.0070 (2.2 sd) against the walk-matched one
+— consistent, but small. Compared against the unmatched 10-walk DeepWalk the schema looks
+like a clean +0.0154 Hit@1 win, and roughly two-thirds of that (+0.0109) is bought by corpus size
+11

@@ -1,0 +1,62 @@
+{
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Task 3 - Graph Embedding over Homogeneous Structures (Practice I)",
+      "points": 30,
+      "rendered_pages": [7, 8, 9],
+      "anchor_text": "HW2-Part(B): 30 pts / Practice I: Graph Embedding Over Homogeneous Structures",
+      "input_files": [
+        "/home/xing/project/auto_hw_complete/input/graph_embedding-1.ipynb",
+        "/home/xing/project/auto_hw_complete/playground/cse60745_20260923_8654c1/data/task1/*",
+        "/home/xing/project/auto_hw_complete/playground/cse60745_20260923_8654c1/data/task2/node_country.csv",
+        "/home/xing/project/auto_hw_complete/playground/cse60745_20260923_8654c1/data/task3/country_split.csv"
+      ],
+      "subparts": [
+        "TODO 1: WalkEmbedding.sample_walks(G, start) - random-walk sampling strategy",
+        "TODO 2: WalkEmbedding.train_embedding(walks, n_nodes) - SkipGram embedding matrix",
+        "TODO 3a: LinkPredictor.fit / .score - friend recommendation (Hit@1, MRR)",
+        "TODO 3b: CountryClassifier.fit / .predict - 18-class country node classification (micro/macro F1)",
+        "Reproduce DeepWalk and node2vec, add at least one own sampling strategy",
+        "comparison_table() across strategies + per-source-degree breakdown + analysis of which strategy helps which downstream task"
+      ],
+      "needs": ["code", "plain", "diagram"],
+      "grouped_with_reason": "The four TODO interfaces and the strategy comparison are one dependent unit. The notebook states explicitly that LinkPredictor and CountryClassifier must be held FIXED while sampling strategies are varied, so the comparison is only meaningful if one agent owns the sampler, the trainer, both downstream models and every run. Splitting the TODOs across workers would produce incomparable numbers."
+    },
+    {
+      "id": "p2",
+      "title": "Task 4 - Heterogeneous Graph Embedding (Practice II, optional)",
+      "points": 0,
+      "rendered_pages": [10, 11],
+      "anchor_text": "Practice II: Heterogeneous Graph Embedding (Optional) / Hands-on Practice: Heterogeneous Graph Embedding",
+      "input_files": [
+        "/home/xing/project/auto_hw_complete/input/graph_embedding-1.ipynb",
+        "/home/xing/project/auto_hw_complete/playground/cse60745_20260923_8654c1/data/task3/user_artist.csv.gz",
+        "/home/xing/project/auto_hw_complete/playground/cse60745_20260923_8654c1/data/task3/hetero_stats.json",
+        "/home/xing/project/auto_hw_complete/playground/cse60745_20260923_8654c1/problems/p1/ (p1's finished code, read-only)"
+      ],
+      "subparts": [
+        "Extend sample_walks with a meta-path-bounded sampler (metapath2vec) over H_train",
+        "Run at least two meta-path schemas (e.g. U-A-U, U-U-A-U)",
+        "Evaluate with the SAME train_embedding, LinkPredictor and CountryClassifier as p1",
+        "Compare Task 4 rows against p1's Task 3 rows in one combined table + analysis"
+      ],
+      "needs": ["code", "plain"],
+      "grouped_with_reason": "Kept separate from p1 because it is marked Optional on rendered page 10 and is a distinct graph (H_train, 3.0M user-artist edges) with a distinct method family (meta-path walks). It depends on p1 only through code reuse, which the brief pins down by requiring p1's exact train_embedding/LinkPredictor/CountryClassifier source to be imported unchanged, so the two sets of numbers stay comparable."
+    }
+  ],
+  "uncovered": [
+    {
+      "what": "Rendered pages 1-6 of the slide deck (title, outline, HW1 Part A/B solutions)",
+      "why": "Recap of the previous assignment's solution, explicitly excluded by specs.md ('hw2 part b starts from page 7 ... ignore prev slides's solutions'). Not part of HW2-Part(B)."
+    },
+    {
+      "what": "Rendered page 12 (Thank You slide)",
+      "why": "No question content."
+    },
+    {
+      "what": "Notebook sections 1, 2 and 5 (setup, load_data, evaluation toolset)",
+      "why": "Provided scaffolding the notebook instructs not to modify; used as-is by the workers, nothing to answer."
+    }
+  ]
+}

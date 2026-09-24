@@ -1,0 +1,29 @@
+Demo: How to apply graph embeddings to downstream tasks
+Hand-Crafted 
+Graph Features 
+Common Neighbors
+Clustering Coefficient
+Graph Laplacian
+…
+ML Model
+Feature 
+Extraction
+Input
+Downstream 
+Applications
+Scoring
+Graph 
+Embedding
+sample_walks()
+Skip-Gram
+train_embedding()
+Dot Product
+Link Prediction
+Scoring
+Classifier
+Node Classification
+Softmax
+Embedding-Based 
+Downstream 
+Prediction for A
+Hands-on: Graph Embedding Over Homogeneous Structures

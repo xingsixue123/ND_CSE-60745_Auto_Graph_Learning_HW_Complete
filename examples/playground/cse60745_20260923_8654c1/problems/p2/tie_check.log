@@ -1,0 +1,18 @@
+training DeepWalk x15 seed 0 (token-matched control) ...
+    104,370 walks in 1.0s, embedding (7624, 128) in 62.1s
+
+cold-source test queries: 216
+source rows all-zero: 216 / 216
+distinct scores per cold query: min 14 median 20 max 21  (21 = all distinct, 1 = all tied)
+queries with ANY tie (<21 distinct): 124 / 216
+queries fully tied (1 distinct):     0 / 216
+score spread max-min: min 2.117 median 3.676 max 5.328
+
+tiebreak vector identical across calls: True (evaluate_ranking is never passed a seed; default = RANDOM_SEED)
+evaluate_ranking deterministic: True
+
+cold bucket: n=216 hit@1 0.0880 MRR 0.2274   (reported x15 seed0 cold hit@1 = 0.0880)
+chance would be 1/21 = 0.0476, chance MRR = 0.1736
+
+if cold really were chance: hit@1 ~ 0.0476 +- 0.0145 (binomial sd, n=216)
+observed 0.0880 = +2.8 binomial sd above chance

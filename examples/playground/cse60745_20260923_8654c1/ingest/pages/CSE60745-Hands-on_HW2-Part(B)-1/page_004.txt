@@ -1,0 +1,19 @@
+HW1 Solution
+Part A: Graph Creation and Modification
+•
+Graph Creation
+•
+Graph modification & Connected Components
+import networkx as nx
+G = nx.Graph()
+# Create Graph
+G.add_edges_from([(0,1),(0,4),…])
+# Add Edges
+nx.draw(G, with_labels=True, font_weight='bold’)  
+# Visualization
+G.remove_node(1)
+# Remove Node
+G.remove_edge((0,4))
+# Remove Edge
+nx.connected_components(G) 
+# List of Connected Components
