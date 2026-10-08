@@ -1,0 +1,741 @@
+
+===== cell 1 (markdown) =====
+# Task 5 — Basics of PyTorch-Geometric
+
+**Dataset.** LastFM Asia social network: 7,624 users and 27,806 mutual-follower edges
+([Last.FM Asia](https://snap.stanford.edu/data/feather-lastfm-social.html)).
+
+The task is friend recommendation. Given a source user, rank candidate users
+by how likely they are to be a friend, and report Hit@1 and MRR within each query. Node features are initialized with Node2Vec embeddings. 
+
+| split | queries | candidates per query |
+|-------|---------|----------------------|
+| train | 19,464  | 6 (1 : 5)            |
+| val   | 4,171   | 21 (1 : 20)          |
+| test  | 4,171   | 21 (1 : 20)          |
+
+Question 4 additionally uses the user–artist graph (7,842 artists, 3,014,361 user–artist
+edges).
+
+**Your job.** Build GNN layers from scratcj using `torch_geometric.nn.MessagePassing`. The point is to help you understand the basic usage of PyTorch-Geometric.
+
+| # | layer | functions you implement |
+|---|-------|--------------------------|
+| demo | GraphSAGE | read the demo |
+| **Q1** | GCN | `__init__`, `reset_parameters`, `forward`, `message` |
+| **Q2** | GAT | `__init__`, `reset_parameters`, `forward`, `message` |
+| **Q3** | GIN | `__init__`, `reset_parameters`, `forward`, `message` |
+| **Q4** | R-GCN | `__init__`, `reset_parameters`, `forward`, `message` |
+| **Q5** | your own layer | `__init__`, `reset_parameters`, `forward`, `message` |
+
+`__init__` only specifies `in_channels` and `out_channels`. Feel free to design the detailed components you need.
+===== cell 2 (markdown) =====
+## 1. Setup
+
+Install PyTorch Geometric and download the data.
+===== cell 3 (code) =====
+# PyG >= 2.3 is a pure-Python wheel: torch-scatter / torch-sparse are NOT needed.
+try:
+    import torch_geometric
+except ImportError:
+    import subprocess, sys
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "torch_geometric"], check=True)
+
+try:
+    import gensim
+except ImportError:
+    import subprocess, sys
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "gensim"], check=True)
+
+import json
+import random
+import time
+import urllib.request
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import (add_self_loops, coalesce, degree,
+                                   remove_self_loops, softmax, to_undirected)
+
+GITHUB_REPO = "antman9914/CSE60745-Practice"
+BRANCH = "main"
+
+REQUIRED = {
+    "data/task1": ["split_stats.json", "lp_graph_obs.csv",
+                   "lp_train.csv", "lp_val.csv", "lp_test.csv"],
+    "data/task3": ["hetero_stats.json", "user_artist.csv.gz"],
+}
+RANDOM_SEED = 0
+
+for d, names in REQUIRED.items():
+    Path(d).mkdir(parents=True, exist_ok=True)
+    for name in names:
+        if not (Path(d) / name).exists():
+            url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{BRANCH}/{d}/{name}"
+            urllib.request.urlretrieve(url, Path(d) / name)
+
+torch.manual_seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
+print("torch", torch.__version__, "| torch_geometric", torch_geometric.__version__)
+===== cell 4 (markdown) =====
+## 2. Data loading
+
+`load_social()` returns the pieces a message-passing layer needs:
+
+- `EI_TRAIN` — the 70% training edges as an `edge_index` of shape `[2, 2E]`, `int64`.
+  Column `k` is the directed edge `edge_index[0, k] -> edge_index[1, k]`; the graph is
+  undirected, so every edge appears in both directions. This is PyG's *edge list* format,
+  sometimes called COO.
+- `EI_TRAINVAL` — the same thing with the validation positives added, for scoring test.
+- `SPLITS` — the three query tables, each with `query_id, src, dst, label`, in the row
+  order the evaluation expects.
+
+The graph carries **no node features**: the ones the Last.FM release ships were stripped
+in Practice 1 and we are not putting them back. A message-passing layer still needs
+*something* to send along its edges, and section 3 is where that comes from.
+===== cell 5 (code) =====
+def load_social():
+    """The two observable graphs and the three query splits."""
+    n = json.loads(Path("data/task1/split_stats.json").read_text())["n_nodes"]
+
+    def as_edge_index(df):
+        e = df[["src", "dst"]].to_numpy().T
+        return coalesce(to_undirected(torch.from_numpy(e).long()), num_nodes=n)
+
+    train_edges = pd.read_csv("data/task1/lp_graph_obs.csv")
+    splits = {s: pd.read_csv(f"data/task1/lp_{s}.csv") for s in ("train", "val", "test")}
+
+    # Test is scored with the validation positives visible as well -- Practice 1's rule.
+    val_pos = splits["val"].query("label == 1")[["src", "dst"]]
+    trainval_edges = pd.concat([train_edges[["src", "dst"]], val_pos], ignore_index=True)
+
+    return dict(num_nodes=n, splits=splits,
+                ei_train=as_edge_index(train_edges),
+                ei_trainval=as_edge_index(trainval_edges))
+
+
+DATA = load_social()
+N_NODES = DATA["num_nodes"]
+EI_TRAIN, EI_TRAINVAL = DATA["ei_train"], DATA["ei_trainval"]
+SPLITS = DATA["splits"]
+
+# Candidate pairs as tensors, in the row order of each split, so that a score vector lines
+# up with the split's dataframe directly.
+PAIRS = {s: torch.from_numpy(df[["src", "dst"]].to_numpy()).long()
+         for s, df in SPLITS.items()}
+LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+          for s, df in SPLITS.items()}
+
+print(f"nodes              {N_NODES}")
+print(f"G_train            {EI_TRAIN.size(1) // 2} undirected edges, "
+      f"{int((degree(EI_TRAIN[1], N_NODES) == 0).sum())} isolated nodes")
+print(f"G_trainval         {EI_TRAINVAL.size(1) // 2} undirected edges, "
+      f"{int((degree(EI_TRAINVAL[1], N_NODES) == 0).sum())} isolated nodes")
+for s in ("train", "val", "test"):
+    df = SPLITS[s]
+    print(f"{s:18} {df['query_id'].nunique():>6} queries, {len(df):>6} candidate pairs "
+          f"({len(df) // df['query_id'].nunique()} per query)")
+===== cell 6 (markdown) =====
+## 3. Input features — a frozen node2vec embedding
+
+The graph has no node features, and a message-passing layer has to send *something* along
+its edges. Practice 2 is where that something comes from: random walks on the social graph,
+fed to SkipGram, one vector per user. Here it is a fixed input rather than the end product
+— the GNN consumes it and learns on top.
+
+Node2vec is implemented by Gensim with `p = 1, q = 0.5`. 
+===== cell 7 (code) =====
+from gensim.models import Word2Vec
+
+N2V_DIM = 64
+
+
+def neighbour_table(edge_index, num_nodes):
+    """CSR-style lookup: neighbours of u are flat[ptr[u]:ptr[u + 1]].
+
+    Rebuilding an adjacency dict inside the walk loop is what makes a naive sampler slow,
+    so this is built once from edge_index and indexed by slicing.
+    """
+    order = torch.argsort(edge_index[1])
+    flat = edge_index[0][order].numpy()
+    tgt = edge_index[1][order].numpy()
+    ptr = np.searchsorted(tgt, np.arange(num_nodes + 1))
+    return flat, ptr
+
+
+def node2vec_features(edge_index, num_nodes, dim=N2V_DIM, p=1.0, q=0.5,
+                      walks_per_node=10, walk_length=20, window=10, epochs=1,
+                      seed=RANDOM_SEED):
+    """node2vec: second-order random walks + SkipGram. Returns (num_nodes, dim).
+
+    Unnormalised transition probability from the current node: 1/p for stepping back to
+    the previous node, 1 for a neighbour of it, 1/q otherwise. At p = q = 1 all neighbours
+    are equally likely, and the branch below takes that shortcut because the second-order
+    bookkeeping then buys nothing.
+    """
+    flat, ptr = neighbour_table(edge_index, num_nodes)
+    nbrs = lambda u: flat[ptr[u]:ptr[u + 1]]
+    uniform = (p == 1.0 and q == 1.0)
+    nbr_sets = None if uniform else [set(nbrs(u).tolist()) for u in range(num_nodes)]
+
+    rng = random.Random(seed)
+    t0 = time.time()
+    walks = []
+    for _ in range(walks_per_node):
+        for start in range(num_nodes):
+            if ptr[start] == ptr[start + 1]:
+                continue                                  # isolated: no walk can leave it
+            walk = [start]
+            for _ in range(walk_length - 1):
+                cur = nbrs(walk[-1])
+                if len(cur) == 0:
+                    break
+                if uniform or len(walk) == 1:
+                    walk.append(int(rng.choice(cur)))
+                else:                                      # the node2vec p / q bias
+                    prev, prev_nbrs = walk[-2], nbr_sets[walk[-2]]
+                    w = [1 / p if x == prev else (1.0 if x in prev_nbrs else 1 / q)
+                         for x in cur]
+                    walk.append(int(rng.choices(list(cur), weights=w, k=1)[0]))
+            walks.append([str(v) for v in walk])
+    t1 = time.time()
+
+    model = Word2Vec(walks, vector_size=dim, window=window, min_count=0, sg=1,
+                     negative=5, workers=4, epochs=epochs, seed=seed)
+    Z = np.zeros((num_nodes, dim), dtype=np.float32)
+    for token in model.wv.index_to_key:
+        Z[int(token)] = model.wv[token]                    # nodes never walked stay zero
+    print(f"  {len(walks):,} walks in {t1 - t0:.1f}s, SkipGram in {time.time() - t1:.1f}s")
+    return torch.from_numpy(Z)
+
+
+X = node2vec_features(EI_TRAIN, N_NODES, p=1.0, q=0.5)
+X.requires_grad_(False)
+
+n_zero = int((X.abs().sum(1) == 0).sum())
+print(f"node2vec features  {tuple(X.shape)}")
+print(f"all-zero rows      {n_zero}  (= the users with no training edge)")
+print(f"mean row norm      {X[X.abs().sum(1) > 0].norm(dim=1).mean():.2f}")
+===== cell 8 (markdown) =====
+## 4. Demo — GraphSAGE
+
+Read this section before proceeding to next section. `MySAGEConv` below is a demo for basic usage of PyTorch-Geometric.
+
+**GraphSAGE with the mean aggregator.** Neighbours are averaged, and the node's own
+vector goes through a separate weight, so a node is never confused with its neighbourhood:
+
+$$h_i' = W_{\text{root}}\, h_i \;+\; W_{\text{nbr}} \cdot \text{mean}_{j \in N(i)}\, h_j$$
+
+**What `MessagePassing` gives you.** You describe one edge; it handles the indexing.
+`self.propagate(edge_index, x=x)` runs three steps:
+
+1. **message** — for every edge `j -> i`, call `message(...)`. Any argument you pass to
+   `propagate` can be requested in `message` with a `_j` suffix for the **source** node
+   or an `_i` suffix for the **target**: ask for `x_j` and you get `x[edge_index[0]]`,
+   a tensor of shape `[E, F]`, already gathered. `message` may also ask for `index`
+   (the target node of each edge), `size_i` (the number of target nodes), and `ptr`.
+2. **aggregate** — reduce the `[E, F]` messages into `[N, F]` by target node, using the
+   `aggr=` given to `super().__init__`: `"add"`, `"mean"`, `"max"`, or a list.
+3. **update** — optional post-processing; we do this in `forward` instead.
+===== cell 9 (code) =====
+class MySAGEConv(MessagePassing):
+    """GraphSAGE, mean aggregator. Complete implementation -- read, do not edit."""
+
+    def __init__(self, in_channels, out_channels):
+        # aggr="mean" is step 2: how the per-edge messages are reduced per target node.
+        super().__init__(aggr="mean")
+        self.lin_nbr = nn.Linear(in_channels, out_channels, bias=False)
+        self.lin_root = nn.Linear(in_channels, out_channels, bias=True)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # super() resets the aggregation module; PyG calls this from its own
+        # reset_parameters.
+        super().reset_parameters()
+        self.lin_nbr.reset_parameters()
+        self.lin_root.reset_parameters()
+
+    def forward(self, x, edge_index):
+        # Call self.propagate() to do indexing and neighborhood aggregation.
+        agg = self.propagate(edge_index, x=x)             # [N, in_channels]
+        return self.lin_nbr(agg) + self.lin_root(x)
+
+    def message(self, x_j):
+        # x_j is x[edge_index[0]], shape [E, in_channels]: the source node of each edge,
+        # gathered for you. Plain mean aggregation needs nothing more.
+        return x_j
+===== cell 10 (markdown) =====
+## 5. The model, the scorer and the training loop
+
+One wrapper serves every layer: the node2vec features go through a stack of `n_layers`
+convolutions, and a candidate pair `(u, v)` is scored by the **dot product** of the two
+resulting vectors. Swapping layers means passing a different class. Please only modify the code in this section if necessary.
+===== cell 11 (code) =====
+def evaluate_ranking(df, scores, seed=RANDOM_SEED):
+    """Hit@1 and MRR within each query, breaking ties uniformly at random.
+
+    Identical to Practice 1, so the numbers here are comparable with the ones you got
+    from structural features and from Practice 2's embeddings. `scores` must be in the
+    row order of `df`.
+    """
+    rng = np.random.default_rng(seed)
+    d = df[["query_id", "label"]].copy()
+    d["score"] = scores
+    d["tiebreak"] = rng.random(len(d))
+    d = d.sort_values(["query_id", "score", "tiebreak"], ascending=[True, False, True])
+    d["rank"] = d.groupby("query_id").cumcount() + 1
+    pos = d.loc[d["label"] == 1, ["query_id", "rank"]]
+    return {"hit@1": float((pos["rank"] == 1).mean()),
+            "MRR": float((1.0 / pos["rank"]).mean())}
+===== cell 12 (code) =====
+class GNNLinkPredictor(nn.Module):
+    """node2vec features -> conv stack -> dot-product score per candidate pair."""
+
+    def __init__(self, conv_cls, in_channels=N2V_DIM, hidden=64, n_layers=2, dropout=0.5):
+        super().__init__()
+        dims = [in_channels] + [hidden] * n_layers
+        self.convs = nn.ModuleList(
+            [conv_cls(dims[i], dims[i + 1]) for i in range(n_layers)])
+        for conv in self.convs:
+            conv.reset_parameters()
+        self.dropout = dropout
+
+    def encode(self, x, edge_index):
+        for i, conv in enumerate(self.convs):
+            x = conv(x, edge_index)
+            if i < len(self.convs) - 1:          # no activation on the last layer: the
+                x = F.relu(x)                    # scores are dot products and must be
+                x = F.dropout(x, p=self.dropout, training=self.training)
+        return x
+
+    @staticmethod
+    def score(z, pairs):
+        return (z[pairs[:, 0]] * z[pairs[:, 1]]).sum(-1)
+
+
+def train_and_eval(name, conv_cls, epochs=200, lr=0.01, weight_decay=5e-4, patience=50,
+                   seed=RANDOM_SEED, **model_kwargs):
+    """Train on the training queries, select on validation MRR, report test."""
+    torch.manual_seed(seed)
+    model = GNNLinkPredictor(conv_cls, **model_kwargs)
+    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+    best, t0 = {"MRR": -1.0, "epoch": 0}, time.time()
+    for epoch in range(1, epochs + 1):
+        model.train()
+        opt.zero_grad()
+        z = model.encode(X, EI_TRAIN)
+        loss = F.binary_cross_entropy_with_logits(
+            model.score(z, PAIRS["train"]), LABELS["train"])
+        loss.backward()
+        opt.step()
+
+        model.eval()
+        with torch.no_grad():
+            val = evaluate_ranking(
+                SPLITS["val"],
+                model.score(model.encode(X, EI_TRAIN), PAIRS["val"]).numpy())
+        if val["MRR"] > best["MRR"]:
+            with torch.no_grad():                # test sees G_trainval, same weights
+                test = evaluate_ranking(
+                    SPLITS["test"],
+                    model.score(model.encode(X, EI_TRAINVAL), PAIRS["test"]).numpy())
+            best = dict(epoch=epoch, **val,
+                        **{f"test_{k}": v for k, v in test.items()})
+        if epoch - best["epoch"] >= patience:
+            break
+
+    best["secs"] = time.time() - t0
+    best["params"] = sum(p.numel() for p in model.parameters())
+    print(f"{name:14} val MRR {best['MRR']:.4f} hit@1 {best['hit@1']:.4f} | "
+          f"test MRR {best['test_MRR']:.4f} hit@1 {best['test_hit@1']:.4f} | "
+          f"epoch {best['epoch']:3d} | {best['secs']:5.1f}s")
+    return best
+
+
+===== cell 13 (markdown) =====
+Run the demo end to end, so that a failure later is yours and not the framework's.
+===== cell 14 (code) =====
+train_and_eval("GraphSAGE", MySAGEConv)
+===== cell 15 (markdown) =====
+---
+
+## Question 1 — GCN
+
+Kipf & Welling's graph convolution, in the form the paper actually propagates:
+
+$$H' = \hat{D}^{-1/2}\hat{A}\hat{D}^{-1/2} H W + b,
+\qquad \hat{A} = A + I, \quad \hat{d}_i = \sum_j \hat{A}_{ij}$$
+
+Per node, that is a weighted sum over the **closed** neighbourhood:
+
+$$h_i' = \sum_{j \in N(i) \cup \{i\}} \frac{1}{\sqrt{\hat{d}_i \hat{d}_j}}\, W h_j \;+\; b$$
+
+**Implement `forward`, `reset_parameters` and `message`.**
+
+*Note*: You can refer to `degree`, `add_self_loops` and `remove_self_loops` functions imported from torch-geometric for your implementation.
+
+
+===== cell 16 (code) =====
+class MyGCNConv(MessagePassing):
+    # TODO Q1: implement GCN layer.
+
+    def __init__(self, in_channels, out_channels):
+        # in_channels:  dimension of the input node features x, i.e. x.shape[1].
+        # out_channels: dimension of the output node representations this layer returns.
+        # aggr:         how MessagePassing combines the messages arriving at a node, one of
+        #               "add", "mean" or "max". Pick the one that matches the GCN formula.
+        super().__init__(aggr=...)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        # Keep the super() call: it resets the aggregation module, and PyG routes
+        # model-wide re-initialisation through here.
+        super().reset_parameters()
+        raise NotImplementedError
+
+    def forward(self, x, edge_index):
+        # Do propagation and updation here. 
+        raise NotImplementedError
+
+    def message(self, x_j):
+        # message` may request any argument you passed to
+        # `propagate`, with _j for the source and _i for the target of each edge.
+        raise NotImplementedError
+===== cell 17 (code) =====
+train_and_eval("GCN", MyGCNConv)
+===== cell 18 (markdown) =====
+---
+
+## Question 2 — GAT
+
+GCN's edge coefficient $1/\sqrt{\hat{d}_i\hat{d}_j}$ is fixed by the graph structure before
+training starts. GAT make it a learned function of the two endpoints'
+features instead:
+
+$$e_{ij} = \text{LeakyReLU}\!\left(\mathbf{a}^\top [W h_i \,\|\, W h_j]\right),
+\qquad \alpha_{ij} = \frac{\exp(e_{ij})}{\sum_{k \in N(i) \cup \{i\}} \exp(e_{ik})},
+\qquad h_i' = \sum_{j} \alpha_{ij} W h_j$$
+
+with $K$ independent heads, concatenated in hidden layers and averaged at the output.
+
+**Implement `forward`, `reset_parameters` and `message`.**
+===== cell 19 (code) =====
+class MyGATConv(MessagePassing):
+    """GAT: alpha_ij = softmax over j of LeakyReLU(a . [W h_i || W h_j])."""
+
+    def __init__(self, in_channels, out_channels):
+        # TODO Q2: implement MyGATConv.
+        #
+        # node_dim: the axis of the tensors passed to propagate that indexes nodes. The
+        #           default, -2, is right for a [N, channels] tensor. For multi-head
+        #           attention, propagate carries a [N, heads, channels] tensor, please set node_dim=0 in that case.
+        super().__init__(aggr=..., node_dim=...)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        raise NotImplementedError
+
+    def forward(self, x, edge_index):
+        # Do propagation and updation here. 
+        raise NotImplementedError
+
+    def message(self, h_j, h_i, index, size_i):
+        # Normalise the attention scores with torch_geometric.utils.softmax (already
+        # imported as `softmax`). 
+        # `index` is the target node of each edge and `size_i` the number of targets.
+        raise NotImplementedError
+===== cell 20 (code) =====
+train_and_eval("GAT", MyGATConv)
+===== cell 21 (markdown) =====
+---
+
+## Question 3 — GIN
+
+GCN and GraphSAGE both average over neighbours, while GIN show that an expressive aggregator
+has to be injective on multisets, and that sum plus an MLP is:
+
+$$h_i' = \text{MLP}\!\left((1 + \epsilon) \cdot h_i + \sum_{j \in N(i)} h_j\right)$$
+
+**Implement `forward`, `reset_parameters` and `message`.**
+
+Note that your MLP will contain a `BatchNorm1d` if you follow the GIN paper.
+
+===== cell 22 (code) =====
+class MyGINConv(MessagePassing):
+    """GIN: out_i = MLP((1 + eps) h_i + sum_{j in N(i)} h_j)."""
+
+    def __init__(self, in_channels, out_channels):
+        # TODO Q3: implement MyGINConv.
+        #
+        # The MLP is yours to design. Whatever eps is, initialise it to 0.
+        super().__init__(aggr=...)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        # nn.Sequential has no reset_parameters; its children do.
+        super().reset_parameters()
+        raise NotImplementedError
+
+    def forward(self, x, edge_index):
+        raise NotImplementedError
+
+    def message(self, x_j):
+        raise NotImplementedError
+===== cell 23 (code) =====
+train_and_eval("GIN", MyGINConv)
+===== cell 24 (markdown) =====
+---
+
+## Question 4 — R-GCN
+
+Every layer so far has treated all edges alike. Combining the social graph with Practice
+2's user–artist graph gives a graph with three relation types:
+
+| relation | from | to | count (directed) |
+|---|---|---|---|
+| `friend` | user | user | 38,928 |
+| `listens` | user | artist | 3,014,361 |
+| `listened_by` | artist | user | 3,014,361 |
+
+The `friend` relation is `G_train`, not the full graph — the same 70% of edges everything
+else here is allowed to see.
+
+**Input features.** Users and artists now share one index space, so the node2vec features
+of section 3 (users only) no longer fit. The second cell below replaces them with a
+metapath2vec embedding of all 15,466 nodes, `X_HETERO`, trained on the `listens` /
+`listened_by` edges along the meta-path `U-A-U`.
+
+R-GCN gives each relation its own weight matrix:
+
+$$h_i' = W_0 h_i + \sum_{r \in R} \sum_{j \in N_r(i)} \frac{1}{c_{i,r}} W_r h_j$$
+
+**Implement `__init__`, `reset_parameters`, `forward` and `message`.**
+===== cell 25 (code) =====
+def load_hetero(friend_edge_index):
+    """The social graph and the user-artist graph as one 3-relation directed graph."""
+    stats = json.loads(Path("data/task3/hetero_stats.json").read_text())
+    n_users, n_artists = stats["n_users"], stats["n_artists"]
+
+    # Artist ids in this file are already offset past the users, so users and artists
+    # share one contiguous index space and one embedding table can cover both.
+    ua = pd.read_csv("data/task3/user_artist.csv.gz")
+    assert ua["artist"].min() >= n_users, "artist ids must not collide with user ids"
+    u = torch.from_numpy(ua["user"].to_numpy()).long()
+    a = torch.from_numpy(ua["artist"].to_numpy()).long()
+
+    friend = friend_edge_index                               # relation 0, user <-> user
+    listens = torch.stack([u, a])                            # relation 1, user  -> artist
+    listened_by = torch.stack([a, u])                         # relation 2, artist -> user
+
+    edge_index = torch.cat([friend, listens, listened_by], dim=1)
+    edge_type = torch.cat([
+        torch.zeros(friend.size(1), dtype=torch.long),
+        torch.ones(listens.size(1), dtype=torch.long),
+        torch.full((listened_by.size(1),), 2, dtype=torch.long),
+    ])
+    return dict(num_nodes=n_users + n_artists, n_users=n_users, n_artists=n_artists,
+                edge_index=edge_index, edge_type=edge_type, num_relations=3)
+
+
+HETERO = load_hetero(EI_TRAIN)                 # for training and validation
+HETERO_TRAINVAL = load_hetero(EI_TRAINVAL)     # for test, as in section 5
+for r, name in enumerate(["friend", "listens", "listened_by"]):
+    print(f"  relation {r} {name:12} {int((HETERO['edge_type'] == r).sum()):>9} edges")
+print(f"  {HETERO['num_nodes']} nodes "
+      f"({HETERO['n_users']} users + {HETERO['n_artists']} artists), "
+      f"{HETERO['edge_index'].size(1)} directed edges")
+===== cell 26 (code) =====
+def metapath2vec_features(hetero, schema="UAU", dim=N2V_DIM, walks_per_node=10,
+                          walk_length=20, window=10, epochs=1, seed=RANDOM_SEED):
+    """metapath2vec: walks that follow a node-type schema, then SkipGram.
+
+    `schema` is a symmetric meta-path over node types "U" (user) and "A" (artist), such as
+    "UAU" or "UUAU"; walks repeat it, so "UAU" gives U-A-U-A-U-... Walks start from every
+    user. SkipGram here is the plain (homogeneous) one, i.e. metapath2vec rather than
+    metapath2vec++. Returns (num_nodes, dim); nodes no walk reaches stay all-zero.
+    """
+    n, n_users = hetero["num_nodes"], hetero["n_users"]
+    ei, et = hetero["edge_index"], hetero["edge_type"]
+
+    # Neighbours of a node, restricted to one target type: (node type, next type) -> table
+    tables = {("U", "U"): neighbour_table(ei[:, et == 0], n),     # friends
+              ("U", "A"): neighbour_table(ei[:, et == 2], n),     # artists a user listens to
+              ("A", "U"): neighbour_table(ei[:, et == 1], n)}     # users who listen to an artist
+    node_type = lambda v: "U" if v < n_users else "A"
+    cycle = schema[:-1]
+    assert schema[0] == schema[-1] == "U", "schema must start and end with a user"
+
+    rng = random.Random(seed)
+    t0 = time.time()
+    walks = []
+    for _ in range(walks_per_node):
+        for start in range(n_users):
+            walk = [start]
+            for k in range(1, walk_length):
+                key = (node_type(walk[-1]), cycle[k % len(cycle)])
+                if key not in tables:
+                    break
+                flat, ptr = tables[key]
+                cur = flat[ptr[walk[-1]]:ptr[walk[-1] + 1]]
+                if len(cur) == 0:
+                    break
+                walk.append(int(rng.choice(cur)))
+            if len(walk) > 1:
+                walks.append([str(v) for v in walk])
+    t1 = time.time()
+
+    model = Word2Vec(walks, vector_size=dim, window=window, min_count=0, sg=1,
+                     negative=5, workers=4, epochs=epochs, seed=seed)
+    Z = np.zeros((n, dim), dtype=np.float32)
+    for token in model.wv.index_to_key:
+        Z[int(token)] = model.wv[token]
+    print(f"  {len(walks):,} walks in {t1 - t0:.1f}s, SkipGram in {time.time() - t1:.1f}s")
+    return torch.from_numpy(Z)
+
+
+X_HETERO = metapath2vec_features(HETERO, schema="UAU")
+X_HETERO.requires_grad_(False)
+
+n_users = HETERO["n_users"]
+print(f"metapath2vec features  {tuple(X_HETERO.shape)}")
+print(f"all-zero users         {int((X_HETERO[:n_users].abs().sum(1) == 0).sum())}")
+print(f"all-zero artists       {int((X_HETERO[n_users:].abs().sum(1) == 0).sum())}")
+===== cell 27 (code) =====
+class MyRGCNConv(MessagePassing):
+    """R-GCN: one weight matrix per relation, plus a self-connection."""
+
+    def __init__(self, in_channels, out_channels, num_relations):
+        # TODO Q4: implement MyRGCNConv.
+        super().__init__(aggr=...)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.num_relations = num_relations
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        raise NotImplementedError
+
+    def forward(self, x, edge_index, edge_type):
+        raise NotImplementedError
+
+    def message(self, x_j):
+        raise NotImplementedError
+===== cell 28 (code) =====
+class RGCNLinkPredictor(nn.Module):
+    """metapath2vec features -> R-GCN stack -> dot-product score per candidate pair."""
+
+    def __init__(self, num_relations, in_channels=N2V_DIM, hidden=64, n_layers=2,
+                 dropout=0.5):
+        super().__init__()
+        dims = [in_channels] + [hidden] * n_layers
+        self.convs = nn.ModuleList(
+            [MyRGCNConv(dims[i], dims[i + 1], num_relations) for i in range(n_layers)])
+        for conv in self.convs:
+            conv.reset_parameters()
+        self.dropout = dropout
+
+    def encode(self, x, edge_index, edge_type):
+        for i, conv in enumerate(self.convs):
+            x = conv(x, edge_index, edge_type)
+            if i < len(self.convs) - 1:
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout, training=self.training)
+        return x
+
+    score = staticmethod(GNNLinkPredictor.score)
+
+
+def train_and_eval_hetero(name, epochs=50, lr=0.01, weight_decay=5e-4, patience=10,
+                          seed=RANDOM_SEED, **model_kwargs):
+    """train_and_eval from section 5, on the heterogeneous graph. Users keep their ids,
+    so the same query pairs are scored; test sees HETERO_TRAINVAL."""
+    torch.manual_seed(seed)
+    model = RGCNLinkPredictor(HETERO["num_relations"], **model_kwargs)
+    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    g, g_tv = HETERO, HETERO_TRAINVAL
+
+    best, t0 = {"MRR": -1.0, "epoch": 0}, time.time()
+    for epoch in range(1, epochs + 1):
+        model.train()
+        opt.zero_grad()
+        z = model.encode(X_HETERO, g["edge_index"], g["edge_type"])
+        loss = F.binary_cross_entropy_with_logits(
+            model.score(z, PAIRS["train"]), LABELS["train"])
+        loss.backward()
+        opt.step()
+
+        model.eval()
+        with torch.no_grad():
+            z = model.encode(X_HETERO, g["edge_index"], g["edge_type"])
+            val = evaluate_ranking(SPLITS["val"], model.score(z, PAIRS["val"]).numpy())
+        if val["MRR"] > best["MRR"]:
+            with torch.no_grad():
+                z = model.encode(X_HETERO, g_tv["edge_index"], g_tv["edge_type"])
+                test = evaluate_ranking(SPLITS["test"],
+                                        model.score(z, PAIRS["test"]).numpy())
+            best = dict(epoch=epoch, **val, **{f"test_{k}": v for k, v in test.items()})
+        if epoch - best["epoch"] >= patience:
+            break
+
+    best["secs"] = time.time() - t0
+    print(f"{name:14} val MRR {best['MRR']:.4f} hit@1 {best['hit@1']:.4f} | "
+          f"test MRR {best['test_MRR']:.4f} hit@1 {best['test_hit@1']:.4f} | "
+          f"epoch {best['epoch']:3d} | {best['secs']:5.1f}s")
+    return best
+
+
+train_and_eval_hetero("R-GCN")
+===== cell 29 (markdown) =====
+---
+
+## Question 5 — Over-smoothing in Deep GNN
+
+Each message-passing layer mixes a node's representation with its neighbours'. Stack enough
+layers and the representations of all nodes drift towards each other — **over-smoothing**.
+With a dot-product scorer, nodes that all look alike cannot be ranked against each other.
+
+The first cell below trains your GCN from Q1 with 2 and with 8 layers on the same task. You will notice significant performance drop. 
+
+**Your job:** design a layer, `MyDeepConv`, that stays useful with an 8-hop receptive
+field (**Not Necessarily 8 Layers!**). Feel free to look
+into the literature on over-smoothing and design your approach.
+===== cell 30 (code) =====
+train_and_eval("GCN, 2 layers", MyGCNConv, n_layers=2)
+train_and_eval("GCN, 8 layers", MyGCNConv, n_layers=8)
+===== cell 31 (code) =====
+class MyDeepConv(MessagePassing):
+    # TODO Q5: design a layer that stays useful with an 8-hop receptive field.
+
+    def __init__(self, in_channels, out_channels):
+        super().__init__(aggr=...)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        raise NotImplementedError
+
+    def forward(self, x, edge_index):
+        raise NotImplementedError
+
+    def message(self, x_j):
+        raise NotImplementedError
+===== cell 32 (code) =====
+# Change n_layers based on your implementation
+train_and_eval("MyDeepConv", MyDeepConv, n_layers=8)

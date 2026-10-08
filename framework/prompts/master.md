@@ -60,6 +60,23 @@ your reading separately if you have one.
 Workers run strictly one at a time. `fw spawn-worker` will refuse to start a new
 problem while an earlier one is unfinished.
 
+**Never detach `fw spawn-worker`.** Not with `&`, not with `nohup`, not with
+`setsid`. The call blocks for as long as the problem takes, and waiting is your job.
+Detaching does not work and does not help:
+
+  - It cannot outlive you. You run inside a sandbox created with `--unshare-pid`, so
+    every process you start is in your PID namespace. When your turn ends that
+    namespace is torn down and the worker dies with it, however it was launched. A
+    run was lost this way: the worker had built a 371 MB virtual environment and had
+    not written a line of the answer.
+  - You are not racing a deadline that detaching would escape. Your own time limit
+    is set separately from a worker's and covers the whole run, precisely because
+    you spend it blocked inside this call.
+
+If a problem is genuinely stuck, the round cap ends it and hands it back to you as
+ESCALATED. That is the mechanism for a worker that will not finish. Ending your turn
+while one is still running is not.
+
 Log your state to `playground/<job>/logs/master.log` as you go — one entry per
 decision, per spawn, per validator verdict. If a worker comes back ESCALATED (its
 validator never passed it within the cap), read the validator's checklist before you

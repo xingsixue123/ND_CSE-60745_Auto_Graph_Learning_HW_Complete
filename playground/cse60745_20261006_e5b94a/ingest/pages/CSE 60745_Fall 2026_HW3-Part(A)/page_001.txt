@@ -1,0 +1,12 @@
+CSE 60745 (Fall 2026)                                                   HW3-Part(A): GNNs Hands-on Practice 
+ 
+University of Notre Dame
+Department of Computer Science and 
+Engineering 
+CSE 60745 
+Graph Learning: Techn & Apps
+Assignment Date:
+ 
+Submission Date:
+ 
+Student Name:

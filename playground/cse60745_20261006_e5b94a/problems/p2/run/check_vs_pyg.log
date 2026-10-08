@@ -1,0 +1,35 @@
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/problems/p2/run/rgcn_run.py:101: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+  relation 0 friend           38928 edges
+  relation 1 listens        3014361 edges
+  relation 2 listened_by    3014361 edges
+  15466 nodes (7624 users + 7842 artists), 6067650 directed edges
+  74,510 walks in 1.2s, SkipGram in 3.0s
+metapath2vec features  (15466, 64)
+all-zero users         173
+all-zero artists       0
+PyG RGCNConv aggr: mean | num_bases: None | root is None: False
+max |mine - PyG RGCNConv| = 4.172e-07   (rel to |out| max 0.488)   allclose: True
+
+-- torch_geometric.nn.RGCNConv through train_and_eval_hetero --
+PyG RGCNConv   val MRR 0.2076 hit@1 0.0623 | test MRR 0.2084 hit@1 0.0626 | epoch   7 |  10.5s
+PYG_RESULT_JSON {"epoch": 7, "hit@1": 0.06233517142172141, "MRR": 0.20763757910761252, "test_hit@1": 0.06257492208103572, "test_MRR": 0.2084379018480525, "secs": 10.454312086105347}
+
+-- MyRGCNConv, five seeds --
+R-GCN seed0    val MRR 0.1977 hit@1 0.0506 | test MRR 0.1951 hit@1 0.0525 | epoch  22 |  22.2s
+R-GCN seed1    val MRR 0.2072 hit@1 0.0662 | test MRR 0.2011 hit@1 0.0628 | epoch  14 |  16.6s
+R-GCN seed2    val MRR 0.1754 hit@1 0.0355 | test MRR 0.1682 hit@1 0.0324 | epoch   8 |  12.2s
+R-GCN seed3    val MRR 0.1951 hit@1 0.0518 | test MRR 0.1815 hit@1 0.0422 | epoch   8 |  12.4s
+R-GCN seed4    val MRR 0.1859 hit@1 0.0448 | test MRR 0.1756 hit@1 0.0398 | epoch  14 |  16.2s
+  MRR          mean 0.1923  sd 0.0108  min 0.1754  max 0.2072
+  hit@1        mean 0.0498  sd 0.0100  min 0.0355  max 0.0662
+  test_MRR     mean 0.1843  sd 0.0122  min 0.1682  max 0.2011
+  test_hit@1   mean 0.0459  sd 0.0106  min 0.0324  max 0.0628
+SEEDS_JSON [{"epoch": 22, "hit@1": 0.05058738911532007, "MRR": 0.19772410190081074, "test_hit@1": 0.05250539438983457, "test_MRR": 0.19513891834939864, "secs": 22.153240203857422}, {"epoch": 14, "hit@1": 0.06617118197075042, "MRR": 0.20719593318302115, "test_hit@1": 0.06281467274035003, "test_MRR": 0.20113927790803282, "secs": 16.553842067718506}, {"epoch": 8, "hit@1": 0.03548309757851834, "MRR": 0.17536573767782476, "test_hit@1": 0.03236633900743227, "test_MRR": 0.16821431638728462, "secs": 12.206900835037231}, {"epoch": 8, "hit@1": 0.05178614241189163, "MRR": 0.1951256767362259, "test_hit@1": 0.04219611603931911, "test_MRR": 0.1815237311680299, "secs": 12.424973964691162}, {"epoch": 14, "hit@1": 0.04483337329177655, "MRR": 0.18592109166563436, "test_hit@1": 0.03979860944617598, "test_MRR": 0.1755930624903271, "secs": 16.21241855621338}]

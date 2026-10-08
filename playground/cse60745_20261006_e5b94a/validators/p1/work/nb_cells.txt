@@ -1,0 +1,296 @@
+========== CELL 2 ==========
+# PyG >= 2.3 is a pure-Python wheel: torch-scatter / torch-sparse are NOT needed.
+try:
+    import torch_geometric
+except ImportError:
+    import subprocess, sys
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "torch_geometric"], check=True)
+
+try:
+    import gensim
+except ImportError:
+    import subprocess, sys
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "gensim"], check=True)
+
+import json
+import random
+import time
+import urllib.request
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn.functional as F
+from torch import nn
+
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import (add_self_loops, coalesce, degree,
+                                   remove_self_loops, softmax, to_undirected)
+
+GITHUB_REPO = "antman9914/CSE60745-Practice"
+BRANCH = "main"
+
+REQUIRED = {
+    "data/task1": ["split_stats.json", "lp_graph_obs.csv",
+                   "lp_train.csv", "lp_val.csv", "lp_test.csv"],
+    "data/task3": ["hetero_stats.json", "user_artist.csv.gz"],
+}
+RANDOM_SEED = 0
+
+for d, names in REQUIRED.items():
+    Path(d).mkdir(parents=True, exist_ok=True)
+    for name in names:
+        if not (Path(d) / name).exists():
+            url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{BRANCH}/{d}/{name}"
+            urllib.request.urlretrieve(url, Path(d) / name)
+
+torch.manual_seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
+print("torch", torch.__version__, "| torch_geometric", torch_geometric.__version__)
+========== CELL 4 ==========
+def load_social():
+    """The two observable graphs and the three query splits."""
+    n = json.loads(Path("data/task1/split_stats.json").read_text())["n_nodes"]
+
+    def as_edge_index(df):
+        e = df[["src", "dst"]].to_numpy().T
+        return coalesce(to_undirected(torch.from_numpy(e).long()), num_nodes=n)
+
+    train_edges = pd.read_csv("data/task1/lp_graph_obs.csv")
+    splits = {s: pd.read_csv(f"data/task1/lp_{s}.csv") for s in ("train", "val", "test")}
+
+    # Test is scored with the validation positives visible as well -- Practice 1's rule.
+    val_pos = splits["val"].query("label == 1")[["src", "dst"]]
+    trainval_edges = pd.concat([train_edges[["src", "dst"]], val_pos], ignore_index=True)
+
+    return dict(num_nodes=n, splits=splits,
+                ei_train=as_edge_index(train_edges),
+                ei_trainval=as_edge_index(trainval_edges))
+
+
+DATA = load_social()
+N_NODES = DATA["num_nodes"]
+EI_TRAIN, EI_TRAINVAL = DATA["ei_train"], DATA["ei_trainval"]
+SPLITS = DATA["splits"]
+
+# Candidate pairs as tensors, in the row order of each split, so that a score vector lines
+# up with the split's dataframe directly.
+PAIRS = {s: torch.from_numpy(df[["src", "dst"]].to_numpy()).long()
+         for s, df in SPLITS.items()}
+LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+          for s, df in SPLITS.items()}
+
+print(f"nodes              {N_NODES}")
+print(f"G_train            {EI_TRAIN.size(1) // 2} undirected edges, "
+      f"{int((degree(EI_TRAIN[1], N_NODES) == 0).sum())} isolated nodes")
+print(f"G_trainval         {EI_TRAINVAL.size(1) // 2} undirected edges, "
+      f"{int((degree(EI_TRAINVAL[1], N_NODES) == 0).sum())} isolated nodes")
+for s in ("train", "val", "test"):
+    df = SPLITS[s]
+    print(f"{s:18} {df['query_id'].nunique():>6} queries, {len(df):>6} candidate pairs "
+          f"({len(df) // df['query_id'].nunique()} per query)")
+========== CELL 6 ==========
+from gensim.models import Word2Vec
+
+N2V_DIM = 64
+
+
+def neighbour_table(edge_index, num_nodes):
+    """CSR-style lookup: neighbours of u are flat[ptr[u]:ptr[u + 1]].
+
+    Rebuilding an adjacency dict inside the walk loop is what makes a naive sampler slow,
+    so this is built once from edge_index and indexed by slicing.
+    """
+    order = torch.argsort(edge_index[1])
+    flat = edge_index[0][order].numpy()
+    tgt = edge_index[1][order].numpy()
+    ptr = np.searchsorted(tgt, np.arange(num_nodes + 1))
+    return flat, ptr
+
+
+def node2vec_features(edge_index, num_nodes, dim=N2V_DIM, p=1.0, q=0.5,
+                      walks_per_node=10, walk_length=20, window=10, epochs=1,
+                      seed=RANDOM_SEED):
+    """node2vec: second-order random walks + SkipGram. Returns (num_nodes, dim).
+
+    Unnormalised transition probability from the current node: 1/p for stepping back to
+    the previous node, 1 for a neighbour of it, 1/q otherwise. At p = q = 1 all neighbours
+    are equally likely, and the branch below takes that shortcut because the second-order
+    bookkeeping then buys nothing.
+    """
+    flat, ptr = neighbour_table(edge_index, num_nodes)
+    nbrs = lambda u: flat[ptr[u]:ptr[u + 1]]
+    uniform = (p == 1.0 and q == 1.0)
+    nbr_sets = None if uniform else [set(nbrs(u).tolist()) for u in range(num_nodes)]
+
+    rng = random.Random(seed)
+    t0 = time.time()
+    walks = []
+    for _ in range(walks_per_node):
+        for start in range(num_nodes):
+            if ptr[start] == ptr[start + 1]:
+                continue                                  # isolated: no walk can leave it
+            walk = [start]
+            for _ in range(walk_length - 1):
+                cur = nbrs(walk[-1])
+                if len(cur) == 0:
+                    break
+                if uniform or len(walk) == 1:
+                    walk.append(int(rng.choice(cur)))
+                else:                                      # the node2vec p / q bias
+                    prev, prev_nbrs = walk[-2], nbr_sets[walk[-2]]
+                    w = [1 / p if x == prev else (1.0 if x in prev_nbrs else 1 / q)
+                         for x in cur]
+                    walk.append(int(rng.choices(list(cur), weights=w, k=1)[0]))
+            walks.append([str(v) for v in walk])
+    t1 = time.time()
+
+    model = Word2Vec(walks, vector_size=dim, window=window, min_count=0, sg=1,
+                     negative=5, workers=4, epochs=epochs, seed=seed)
+    Z = np.zeros((num_nodes, dim), dtype=np.float32)
+    for token in model.wv.index_to_key:
+        Z[int(token)] = model.wv[token]                    # nodes never walked stay zero
+    print(f"  {len(walks):,} walks in {t1 - t0:.1f}s, SkipGram in {time.time() - t1:.1f}s")
+    return torch.from_numpy(Z)
+
+
+X = node2vec_features(EI_TRAIN, N_NODES, p=1.0, q=0.5)
+X.requires_grad_(False)
+
+n_zero = int((X.abs().sum(1) == 0).sum())
+print(f"node2vec features  {tuple(X.shape)}")
+print(f"all-zero rows      {n_zero}  (= the users with no training edge)")
+print(f"mean row norm      {X[X.abs().sum(1) > 0].norm(dim=1).mean():.2f}")
+========== CELL 8 ==========
+class MySAGEConv(MessagePassing):
+    """GraphSAGE, mean aggregator. Complete implementation -- read, do not edit."""
+
+    def __init__(self, in_channels, out_channels):
+        # aggr="mean" is step 2: how the per-edge messages are reduced per target node.
+        super().__init__(aggr="mean")
+        self.lin_nbr = nn.Linear(in_channels, out_channels, bias=False)
+        self.lin_root = nn.Linear(in_channels, out_channels, bias=True)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # super() resets the aggregation module; PyG calls this from its own
+        # reset_parameters.
+        super().reset_parameters()
+        self.lin_nbr.reset_parameters()
+        self.lin_root.reset_parameters()
+
+    def forward(self, x, edge_index):
+        # Call self.propagate() to do indexing and neighborhood aggregation.
+        agg = self.propagate(edge_index, x=x)             # [N, in_channels]
+        return self.lin_nbr(agg) + self.lin_root(x)
+
+    def message(self, x_j):
+        # x_j is x[edge_index[0]], shape [E, in_channels]: the source node of each edge,
+        # gathered for you. Plain mean aggregation needs nothing more.
+        return x_j
+========== CELL 10 ==========
+def evaluate_ranking(df, scores, seed=RANDOM_SEED):
+    """Hit@1 and MRR within each query, breaking ties uniformly at random.
+
+    Identical to Practice 1, so the numbers here are comparable with the ones you got
+    from structural features and from Practice 2's embeddings. `scores` must be in the
+    row order of `df`.
+    """
+    rng = np.random.default_rng(seed)
+    d = df[["query_id", "label"]].copy()
+    d["score"] = scores
+    d["tiebreak"] = rng.random(len(d))
+    d = d.sort_values(["query_id", "score", "tiebreak"], ascending=[True, False, True])
+    d["rank"] = d.groupby("query_id").cumcount() + 1
+    pos = d.loc[d["label"] == 1, ["query_id", "rank"]]
+    return {"hit@1": float((pos["rank"] == 1).mean()),
+            "MRR": float((1.0 / pos["rank"]).mean())}
+========== CELL 11 ==========
+class GNNLinkPredictor(nn.Module):
+    """node2vec features -> conv stack -> dot-product score per candidate pair."""
+
+    def __init__(self, conv_cls, in_channels=N2V_DIM, hidden=64, n_layers=2, dropout=0.5):
+        super().__init__()
+        dims = [in_channels] + [hidden] * n_layers
+        self.convs = nn.ModuleList(
+            [conv_cls(dims[i], dims[i + 1]) for i in range(n_layers)])
+        for conv in self.convs:
+            conv.reset_parameters()
+        self.dropout = dropout
+
+    def encode(self, x, edge_index):
+        for i, conv in enumerate(self.convs):
+            x = conv(x, edge_index)
+            if i < len(self.convs) - 1:          # no activation on the last layer: the
+                x = F.relu(x)                    # scores are dot products and must be
+                x = F.dropout(x, p=self.dropout, training=self.training)
+        return x
+
+    @staticmethod
+    def score(z, pairs):
+        return (z[pairs[:, 0]] * z[pairs[:, 1]]).sum(-1)
+
+
+def train_and_eval(name, conv_cls, epochs=200, lr=0.01, weight_decay=5e-4, patience=50,
+                   seed=RANDOM_SEED, **model_kwargs):
+    """Train on the training queries, select on validation MRR, report test."""
+    torch.manual_seed(seed)
+    model = GNNLinkPredictor(conv_cls, **model_kwargs)
+    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+    best, t0 = {"MRR": -1.0, "epoch": 0}, time.time()
+    for epoch in range(1, epochs + 1):
+        model.train()
+        opt.zero_grad()
+        z = model.encode(X, EI_TRAIN)
+        loss = F.binary_cross_entropy_with_logits(
+            model.score(z, PAIRS["train"]), LABELS["train"])
+        loss.backward()
+        opt.step()
+
+        model.eval()
+        with torch.no_grad():
+            val = evaluate_ranking(
+                SPLITS["val"],
+                model.score(model.encode(X, EI_TRAIN), PAIRS["val"]).numpy())
+        if val["MRR"] > best["MRR"]:
+            with torch.no_grad():                # test sees G_trainval, same weights
+                test = evaluate_ranking(
+                    SPLITS["test"],
+                    model.score(model.encode(X, EI_TRAINVAL), PAIRS["test"]).numpy())
+            best = dict(epoch=epoch, **val,
+                        **{f"test_{k}": v for k, v in test.items()})
+        if epoch - best["epoch"] >= patience:
+            break
+
+    best["secs"] = time.time() - t0
+    best["params"] = sum(p.numel() for p in model.parameters())
+    print(f"{name:14} val MRR {best['MRR']:.4f} hit@1 {best['hit@1']:.4f} | "
+          f"test MRR {best['test_MRR']:.4f} hit@1 {best['test_hit@1']:.4f} | "
+          f"epoch {best['epoch']:3d} | {best['secs']:5.1f}s")
+    return best
+
+
+========== CELL 30 ==========
+class MyDeepConv(MessagePassing):
+    # TODO Q5: design a layer that stays useful with an 8-hop receptive field.
+
+    def __init__(self, in_channels, out_channels):
+        super().__init__(aggr=...)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        raise NotImplementedError
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        raise NotImplementedError
+
+    def forward(self, x, edge_index):
+        raise NotImplementedError
+
+    def message(self, x_j):
+        raise NotImplementedError
+========== CELL 31 ==========
+# Change n_layers based on your implementation
+train_and_eval("MyDeepConv", MyDeepConv, n_layers=8)

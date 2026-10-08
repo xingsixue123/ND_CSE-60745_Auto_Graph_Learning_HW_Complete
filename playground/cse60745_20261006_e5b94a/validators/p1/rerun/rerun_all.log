@@ -1,0 +1,32 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/validators/p1/rerun/common.py:83: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+node2vec features  loaded from cache x_node2vec.pt
+node2vec features  (7624, 64)
+all-zero rows      666  (= the users with no training edge)
+mean row norm      3.14
+=== main table ===
+GraphSAGE      val MRR 0.6243 hit@1 0.4682 | test MRR 0.6281 hit@1 0.4666 | epoch   3 |   3.0s
+GCN, 2 layers  val MRR 0.7263 hit@1 0.6085 | test MRR 0.7379 hit@1 0.6253 | epoch  69 |   7.2s
+GAT            val MRR 0.6210 hit@1 0.4479 | test MRR 0.6365 hit@1 0.4678 | epoch   3 |   4.6s
+GIN            val MRR 0.4433 hit@1 0.2870 | test MRR 0.4417 hit@1 0.2793 | epoch   4 |   3.1s
+GCN, 8 layers  val MRR 0.3754 hit@1 0.2208 | test MRR 0.3919 hit@1 0.2318 | epoch  14 |   7.9s
+MyDeepConv     val MRR 0.7374 hit@1 0.6260 | test MRR 0.7510 hit@1 0.6461 | epoch 132 |  15.3s
+
+=== depth sweep: receptive field 2 / 4 / 6 / 8 ===
+GCN hops=2     val MRR 0.7263 hit@1 0.6085 | test MRR 0.7379 hit@1 0.6253 | epoch  69 |   7.1s
+GCN hops=4     val MRR 0.5098 hit@1 0.3404 | test MRR 0.5259 hit@1 0.3584 | epoch   3 |   4.1s
+GCN hops=6     val MRR 0.3944 hit@1 0.2350 | test MRR 0.4134 hit@1 0.2479 | epoch   5 |   5.6s
+GCN hops=8     val MRR 0.3754 hit@1 0.2208 | test MRR 0.3919 hit@1 0.2318 | epoch  14 |   7.9s
+Deep hops=2    val MRR 0.7365 hit@1 0.6281 | test MRR 0.7493 hit@1 0.6471 | epoch 134 |  11.4s
+Deep hops=4    val MRR 0.7365 hit@1 0.6253 | test MRR 0.7488 hit@1 0.6447 | epoch 162 |  13.7s
+Deep hops=6    val MRR 0.7366 hit@1 0.6255 | test MRR 0.7497 hit@1 0.6444 | epoch 134 |  13.6s
+Deep hops=8    val MRR 0.7374 hit@1 0.6260 | test MRR 0.7496 hit@1 0.6425 | epoch 134 |  15.1s
+
+wrote logs/results.json

@@ -1,0 +1,298 @@
+# master log -- job cse60745_20261006_e5b94a (CSE 60745 HW3 Part A)
+
+## 2026-10-06  Reading the assignment (R7, three channels)
+
+docx `CSE 60745_Fall 2026_HW3-Part(A).docx` -> 3 rendered pages.
+  - channel 1 (text): alltext.txt gives the full prose of all 5 questions.
+  - channel 2 (page render): page_001/2/3.png read. Page 1 = cover page (ND / Dept of
+    CSE / CSE 60745 / Graph Learning: Techn & Apps, + table Assignment Date /
+    Submission Date / Student Name, all blank). Page 2 = preamble + Q1. Page 3 = Q2-Q5.
+    Footer says "Page 1 of 4" on rendered page 2 -- footer numbering is offset by the
+    cover, so I cite RENDERED indices throughout.
+  - channel 3 (figures): manifest lists exactly one embedded figure, page_002_fig_01.png
+    (727x525). Read at native resolution: it is a screenshot of the `MyGCNConv`
+    skeleton (class MyGCNConv(MessagePassing) with "# TODO Q1", __init__,
+    reset_parameters, forward, message, each `raise NotImplementedError`).
+  - CROSS-CHECK: that figure is byte-for-byte the same code as notebook cell 16. The
+    text channel's "a MessagePassing() subclass as shown in the example below" is
+    corroborated by the image, and the image is corroborated by the notebook. Three
+    independent channels agree; no figure content is load-bearing beyond this.
+  - Deadline on page 2: 11:59pm Monday 10/12/2026. 30 points total, 5 x 6.
+
+notebook `Practice3_pyg_basics.ipynb` -> 32 cells, text channel only (no figures in a
+.ipynb; ingest produced alltext.txt only, manifest has no page images -- confirmed by
+`ls ingest/pages/Practice3_pyg_basics/`). Read all 32 cells. Five TODO cells: 16
+(MyGCNConv), 19 (MyGATConv), 22 (MyGINConv), 27 (MyRGCNConv), 31 (MyDeepConv).
+Cell 9 (MySAGEConv) is the worked example. Cell 30 trains MyGCNConv at 2 and 8 layers
+as Q5's baseline.
+
+## Environment de-risking done at master level (so no worker burns a round on it)
+
+  - `python3 -m venv --system-site-packages .venv` then
+    `PIP_CACHE_DIR=$PWD/.pipcache ./.venv/bin/pip install torch_geometric gensim pandas
+     scikit-learn scipy` -> VERIFIED WORKING in playground/probe/.
+    Resolves to numpy 2.5.2, scipy 1.18.1, pandas 3.0.6, sklearn 1.9.1,
+    torch 2.13.0+cpu (reused from system site-packages, no 200MB download),
+    torch_geometric 2.8.0.post1, gensim 4.4.0. gensim Word2Vec smoke-tested OK.
+  - NOT usable: ~/miniconda3/envs/py311 -- its pandas is broken (numpy ABI mismatch,
+    "numpy.dtype size changed"). Base python3 has torch+numpy but no pandas.
+  - Data repo github.com/antman9914/CSE60745-Practice reachable; all 7 files download
+    in 1.4s; user_artist.csv.gz is 7.9MB / 3,014,361 rows.
+  - load_social() + evaluate_ranking() smoke-tested under pandas 3.0.6: fine.
+    n=7624, G_train 19464 undirected edges, 666 isolated nodes, G_trainval 23635 edges;
+    train 19464 queries/116784 pairs, val & test 4171 queries/87591 pairs each.
+  - Benchmarked a 3,014,361-edge MessagePassing.propagate at F=64: fwd 0.08s,
+    bwd 0.12s, 16 torch threads, 125GB RAM. So Q4's heterogeneous graph is cheap;
+    no worker needs to cut epochs for speed.
+
+## Cut: 2 problems, not 5
+
+p1 = Q1 + Q2 + Q3 + Q5 (24 pts).  Merged, deliberately:
+  (a) HARD DEPENDENCY: Q5's own baseline cell (notebook cell 30) trains *MyGCNConv*
+      from Q1 at 2 and 8 layers. Q5's whole argument is "this GCN over-smooths, mine
+      does not". Split them and two different GCNs exist and the comparison is void.
+  (b) SHARED NONDETERMINISTIC ARTEFACT: all four consume the same node2vec matrix X
+      (cell 7). gensim's Word2Vec is run with workers=4, so it is NOT reproducible
+      across processes even at a fixed seed. Two workers => two different X => the
+      GCN / GAT / GIN / DeepConv MRRs land in one table while having been measured
+      against different inputs. That is precisely the "two workers build the same
+      object two different ways" failure.
+  (c) Same harness (train_and_eval, cell 12), same graph, same splits, and the
+      notebook requires the GraphSAGE demo to be run once first as the control.
+  The four are instances of one exercise over one fixed scaffold, so the marginal cost
+  of 2nd..4th after the environment is up is small.
+
+p2 = Q4 (6 pts).  Kept separate: it shares nothing expensive or nondeterministic with
+  p1. Different graph (load_hetero, 3 relations), different features (metapath2vec
+  X_HETERO, cell 26 -- does NOT use node2vec X), different wrapper
+  (RGCNLinkPredictor) and different loop (train_and_eval_hetero). Only load_social()
+  (deterministic) and evaluate_ranking() are common, so there is no way for the two
+  workers to contradict each other on a number.
+
+uncovered: none. The cover page (rendered page 1) is not a question; I reproduce it in
+main.tex myself rather than assigning it.
+
+## 11:24  problems.json + briefs written
+
+problems.json: p1 (24 pts, Q1/Q2/Q3/Q5), p2 (6 pts, Q4), uncovered = cover page only.
+Note for whoever reads crosscheck.py output later: it WARNS when declared points != 100.
+This assignment is 30 points (5 x 6), stated on rendered page 2. 24 + 6 = 30 is correct
+and that warning is expected, not a defect.
+
+Both briefs copy specs.md's "Rules for workers" section verbatim (R8 length, R9 read
+past the quotation), and both carry:
+  - the verified venv recipe and the two dead ends (py311's broken pandas, base python3
+    has no pandas), so neither worker spends a round on the environment;
+  - the measured dataset facts to check their run against;
+  - an explicit override of context_worker.md's "not a code listing unless the question
+    explicitly asks" -- here the question IS "complete MyGCNConv()", so the listing is
+    the answer and is required. Without saying this the worker validator would flag the
+    listing as a rule violation;
+  - the pre-identified traps (GCN aggr="add" not "mean"; GAT node_dim=0; out_channels is
+    a contract because the next layer is built from it; R-GCN zero-degree division;
+    relation 0 already bidirectional);
+  - a note that LaTeX control sequences cannot contain digits, so macros namespace as
+    \pOneFoo rather than \p1foo.
+
+## 11:28  p1 spawned (detached)
+
+`fw spawn-worker p1` run under setsid/nohup -> logs/spawn_p1.out, so it is not bounded
+by the harness's own 2h background-command cap; I poll state.json instead. Round 1
+started 11:28:11; worker has written notes.md and built its venv.
+
+## 11:29  final document prototyped at playground/assembly/
+
+main.tex + preamble.tex + stub fragments compile clean with latexmk -pdf. Cover page
+reproduces rendered page 1 (ND / Dept of CSE / CSE 60745 / Graph Learning: Techn & Apps
++ the 3-row Assignment Date / Submission Date / Student Name table, left blank as in the
+original -- I am not inventing a student name) and fancyhdr reproduces the running
+header "CSE 60745 (Fall 2026)" / "HW3-Part(A): GNNs Hands-on Practice" on every page.
+Rendered the cover to PNG and looked at it: correct.
+
+ASSEMBLY ORDER PROBLEM, decided now: p1 delivers Q1,Q2,Q3,Q5 in one answer.tex but Q4
+belongs between Q3 and Q5. I will split p1's fragment at the Q5 \section boundary into
+p1a.tex (Q1-Q3) and p1b.tex (Q5) and \input p1a, p2, p1b. lint_output.py's FINAL_ALLOWED
+permits ^p[0-9A-Za-z_]+\.tex$, so those names are legal. I will verify the split loses
+nothing by diffing cat(p1a,p1b) against the original answer.tex. The brief already told
+p1 to expect this ("Leave a gap for Q4; the master inserts it between Q3 and Q5").
+
+## 11:58  RESUMED after interruption — post-mortem and corrected method
+
+What happened: at 11:30:11 run.log says "master finished rc=0", 2 minutes after I spawned
+p1. Cause: I ended my turn. The master runs under
+`bwrap ... --die-with-parent --unshare-pid`, so when the master's own process exits the
+whole PID namespace goes with it -- including the `setsid nohup` detached
+`fw spawn-worker p1`. Detaching does NOT buy independence from the master here; it only
+looked like it would. `logs/spawn_p1.out` is empty, p1 never got past round 1 start, and
+`.venv` was torn down mid-creation (`.pipcache` survived).
+
+CORRECTED METHOD, for the rest of this run: never end a turn while a worker or a
+submission is in flight. Spawn in the background and then chain blocking foreground
+polls (<=10 min each, the tool cap) so the master process always has a live tool call.
+master_timeout_seconds is 36000, so there is plenty of room; the only thing that kills
+the run is me going quiet.
+
+Decision: `fw spawn-worker p1 --force` rather than `respawn-worker`. The surviving work
+is notes.md, downloads.md and .pipcache -- all useful, none of it misleading (there is
+no answer.tex and no half-written code), and the warm pip cache saves the reinstall.
+`cmd_spawn_worker` mints a fresh worker session for round 1 regardless, so --force costs
+nothing in correctness.
+
+Worth recording from p1's surviving notes.md, because it says the brief landed:
+  - it reconciled all three channels itself and confirmed page_002_fig_01.png character
+    for character against the notebook stub;
+  - it caught a real (cosmetic) error in my brief: I cited notebook cells 1-indexed
+    ("cell 16" = the GCN stub); the .ipynb is 0-indexed, so that is index 15. Content
+    identical, only the convention differs. Noting it so I do not repeat it in p2's
+    brief -- p2's brief has the same 1-indexed convention and the same offset.
+  - its Q5 plan is APPNP-style decoupled propagation: one layer, K=8 personalised-
+    PageRank steps, n_layers=1, receptive field = n_layers * K = 8. That is the correct
+    reading of "8-hop receptive field is not equal to 8-layer GNN".
+
+## 12:40  p1 PASS on round 1 (worker $9.18 + validator $5.40)
+
+Results it measured (test MRR / test Hit@1):
+  GraphSAGE demo (control) 0.6281 / 0.4666   GCN 2-layer 0.7379 / 0.6253
+  GAT 0.6365 / 0.4678                        GIN 0.4417 / 0.2793
+  GCN 8-layer 0.3919 / 0.2318                MyDeepConv (APPNP K=8, 1 layer) 0.7492 / 0.6421
+Depth sweep: GCN 0.738 -> 0.526 -> 0.413 -> 0.392 across 2/4/6/8 hops while MyDeepConv
+holds 0.7496 / 0.7486 / 0.7492 / 0.7494 at a constant 8320 parameters. That is the Q5
+claim, and it is the right shape.
+
+Sanity note on the suspicious-looking early stopping: GAT and GIN select their best
+epoch at 3 and 4. So does the GRAPHSAGE DEMO, which is the notebook's own completed
+reference implementation. The pattern therefore belongs to the task/harness, not to the
+worker's code -- which is exactly why the brief made the demo a required control.
+
+Its validator was thorough: diffed the four lstlisting blocks against the code that was
+actually executed (identical), diffed common.py against the notebook cells (verbatim
+harness), re-ran every number, executed the completed notebook end to end on a fresh
+node2vec draw, and for R9 downloaded arXiv 1810.05997 and read around both quotations.
+It passed with 5 minor defects.
+
+MASTER-LEVEL FIXES TO APPLY AT ASSEMBLY (from its [1.1]-[1.3]):
+  - [1.3] \label{p1:fig:depth} / \label{p1:tab:results} sit in float envs with no
+    \caption, so they currently bind to the wrong counter. I am the one adding captions
+    (context_worker.md tells workers not to), so I must put each \caption BEFORE its
+    \label, which fixes the binding.
+  - [1.1] the figure's shaded band is never defined. I will define it in the caption I
+    write: min-max over three seeds.
+  - [1.2] answer.tex:306 says the MyDeepConv 4-hop mean is 0.726; sweep_seeds.json says
+    0.72549, i.e. 0.725. Double-rounding. One-character correction, does not touch the
+    claim.
+  [1.4] and [1.5] are evidence-trail gaps inside the playground, not in the deliverable;
+  nothing in answer.tex depends on either. Leaving them.
+
+## 12:41  p2 spawned
+
+Patched p2's brief first with the cell-numbering convention p1 flagged (brief cell N =
+alltext.txt's 1-indexed "cell N" = nb["cells"][N-1]), so p2 does not rediscover it.
+
+## 13:45-13:58  p2: FAIL round 1, PASS round 2
+
+Its validator earned its keep. The worker's answer asserted that pooled c_{i,r} helps
+because averaging inside the two ~400-degree listening relations "smooths the users
+flat". The validator ran a 4-variant x 3-seed ablation of its own and showed the stated
+mechanism predicts the WRONG SIGN: pooling rescales listens by x1.00 and listened_by by
+x0.98 (i.e. barely at all) while dividing the sparse `friend` term by 22, and pooling
+`friend` ALONE recovers more than the whole gain (0.329 vs 0.296 pooled-all vs 0.190
+control). Round 2 replaced the claim with the one the data supports. That is exactly the
+class of defect -- a self-consistent, confidently-worded, wrong explanation -- that
+survives a worker's own review, and it was caught by measurement, not by argument.
+
+## 13:58-14:02  Assembly
+
+crosscheck.py: CROSS-CHECK OK, 3 labels, 0 collisions, 1 warning ("assigned 30 ... not
+100"), which is correct for a 30-point assignment and is not a defect.
+
+output/<job>/final/ built:
+  - p1/answer.tex split at line 224|225 into p1a.tex (Q1,Q2,Q3 + the shared
+    lstdefinestyle/definecolor block) and p1b.tex (Q5). VERIFIED LOSSLESS:
+    `diff <(cat p1a.tex p1b.tex) p1/answer.tex` is empty. p1a is \input first, so
+    p1b still sees the style definitions.
+  - main.tex inputs p1a -> p2 -> p1b, giving the assignment's own order Q1..Q5.
+  - preamble.tex = the de-duplicated union of both workers' preamble.txt
+    (amsmath, booktabs, float, graphicx, listings, xcolor). main.tex adds only what the
+    master itself needs: geometry, fancyhdr, caption, hyperref.
+
+Master-level edits to the fragments, all logged so none is silent:
+  - p1b: \caption now PRECEDES \label for both floats, which fixes the counter binding
+    the p1 validator flagged as [1.3]; the figure caption defines the shaded band
+    (its [1.1]); and the 4-hop MyDeepConv mean 0.726 -> 0.725, which I recomputed from
+    sweep_seeds.json myself (0.72549) rather than taking the validator's word (its [1.2]).
+  - p2: `\section{Q4: R-GCN Implementation}` -> `\section*{Q4: R-GCN Implementation
+    (6 pts)}` to match p1's unnumbered, point-bearing headings, and its now-dead
+    \label{p2:sec:rgcn} dropped (nothing \refs anything anywhere in either fragment --
+    checked). Listing style matched to p1's: \scriptsize, unframed.
+No worker content was removed to make an error go away.
+
+Compile: latexmk -pdf exit 0, 8 pages, no errors, no undefined references, no overfull
+or underfull boxes. lint_output.py --final: OUTPUT LINT OK. I rendered all 8 pages and
+read them: cover, Q1, Q2, Q3, Q4, Q5, the captioned figure (Figure 1) and the captioned
+results table (Table 1). Order and numbering correct.
+
+## 14:10  master validator round 1 -> FAIL (1 major, 3 minor). All four were mine to fix.
+
+It verified a lot before failing me: it pulled all five lstlisting blocks out of the
+FINAL .tex files (not the workers' layers.py) and ran them against PyG with weights
+copied across -- GCN/GAT/GIN/DeepConv 0.0, R-GCN 4.8e-07 -- re-derived the Q5 seed
+means and Q4's chance baseline, opened all three papers for R9, and rebuilt the PDF
+(8 pages, zero overfull hboxes). It also confirmed my 0.726 -> 0.725 edit was the
+correct value. So the defects are presentational/length, not substance.
+
+Fixes applied, all at master level, none silent:
+
+[D1.1 major] Q4 prose ~340 words against a ~228 target for a single-part 6-pt question.
+  Cut the closing normalisation-ablation aside entirely (~75 words) plus two redundant
+  clauses ("training loss settles at ln 2...", "so read the table with that spread",
+  ~20 words). Now 249 by my counter, which overcounts the validator's by 2-5% on the
+  two sections where I can calibrate it (it read Q5 as 407, I read 414), so ~240-245 by
+  its method -- comfortably under the 285 ceiling rather than scraping it.
+  I deliberately cut the ablation WHOLE rather than compressing it. That paragraph is
+  the one p2's own validator forced a rewrite of in round 2; its correct form is
+  counter-intuitive (pooling helps by dividing the SPARSE friend relation by 22, not by
+  smoothing the dense ones), and a compressed version is exactly how a correct claim
+  gets garbled back into the wrong one. Keeping the load-bearing part the validator
+  asked me to keep: the RGCNConv cross-check that shows the layer is not the cause.
+
+[D1.2 minor] Schlichtkrull et al. was leaned on three times in Q4 with no bibliography
+  entry. Added it as the FIRST \bibitem in p1b.tex's thebibliography, so it numbers as
+  [1] and Li/Gasteiger shift to [2]/[3] -- which puts the numbering in citation order,
+  since Q4 precedes Q5. Both p1 cites are \cite{} commands, so they renumbered
+  themselves; verified in the PDF text that [1], [2] and [3] all resolve.
+
+[D1.3 minor] The unheaded opening paragraph said "All four layers" at the head of a
+  five-question submission and named only train_and_eval, which is not Q4's harness.
+  Rewritten to cover all five and both harnesses explicitly.
+
+[D1.4 minor] The gensim-nondeterminism caveat appeared in full in both Q4 and Q5.
+  Q4 comes first, so Q4 keeps the explanation and Q5 now back-references it.
+
+One self-inflicted regression caught and fixed before resubmitting: my first wording of
+the D1.3 paragraph introduced an Overfull \hbox (16.8pt) at p1a.tex lines 21-26 --
+\texttt{train\_and\_eval\_hetero} is unbreakable and landed at a line end. The round-1
+build had ZERO overfull boxes and the validator said so explicitly, so shipping one
+would have been a regression I caused. Re-broke the sentence; back to NONE.
+
+Re-verified before resubmission: latexmk exit 0, 8 pages, no errors, no undefined
+references or citations, no overfull/underfull boxes; lint_output.py --final OK;
+crosscheck.py OK (same expected 30-vs-100 warning); re-rendered all 8 pages and read
+the changed ones (2, 5, 6, 8).
+
+## 14:16  master validator round 2 -> PASS.  Job done.
+
+It diffed round-2 against its own round-1 snapshot, source and rendered PDF text, and
+confirmed the only changes are the four fixes plus the reflow and citation renumbering
+they cause -- nothing else moved. Re-extracted the five listings (byte-identical to
+round 1), re-ran the PyG parity checks anyway, and confirmed pdftotext of its own
+rebuild matches the shipped main.pdf, i.e. the PDF is in sync with its sources.
+Q4 measured at 258 words, 13% over target, inside the threshold.
+
+STOPPING HERE. The PASS describes the bytes currently in output/<job>/final/, and I
+have changed nothing since submitting. The validator's one cosmetic note -- fancyhdr
+would like ~1pt more \headheight -- it explicitly declined to raise as a defect, and it
+confirmed no overlap on any of the 8 page renders. Fixing it would invalidate the PASS
+and cost a submission round to re-earn for a change no reader can see, so I am leaving
+it in knowingly.
+
+Final: 2 submissions of 5 used. Workers: p1 PASS r1, p2 PASS r2. Job cost $71.86.

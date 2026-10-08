@@ -1,0 +1,75 @@
+{
+  "input_dir": "/home/xing/project/auto_hw_complete/input",
+  "entries": [
+    {
+      "source": "/home/xing/project/auto_hw_complete/input/CSE 60745_Fall 2026_HW3-Part(A).docx",
+      "name": "CSE 60745_Fall 2026_HW3-Part(A).docx",
+      "relative_path": "CSE 60745_Fall 2026_HW3-Part(A).docx",
+      "role": "assignment",
+      "kind": "document",
+      "bytes": 3567219,
+      "converted_pdf": "/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/ingest/pdf/CSE 60745_Fall 2026_HW3-Part(A).pdf",
+      "rendered": true,
+      "pages": [
+        {
+          "rendered_page": 1,
+          "png": "page_001.png",
+          "txt": "page_001.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 277,
+          "n_images": 2,
+          "n_vector_drawings": 8,
+          "figures": []
+        },
+        {
+          "rendered_page": 2,
+          "png": "page_002.png",
+          "txt": "page_002.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 1269,
+          "n_images": 2,
+          "n_vector_drawings": 3,
+          "figures": [
+            {
+              "file": "page_002_fig_01.png",
+              "width": 727,
+              "height": 525,
+              "bbox_on_page": [
+                56.7,
+                255.8,
+                519.6,
+                589.7
+              ]
+            }
+          ]
+        },
+        {
+          "rendered_page": 3,
+          "png": "page_003.png",
+          "txt": "page_003.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 889,
+          "n_images": 2,
+          "n_vector_drawings": 1,
+          "figures": []
+        }
+      ],
+      "pages_dir": "/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/ingest/pages/CSE 60745_Fall 2026_HW3-Part(A)",
+      "n_pages": 3
+    },
+    {
+      "source": "/home/xing/project/auto_hw_complete/input/Practice3_pyg_basics.ipynb",
+      "name": "Practice3_pyg_basics.ipynb",
+      "relative_path": "Practice3_pyg_basics.ipynb",
+      "role": "assignment",
+      "kind": "text_document",
+      "bytes": 41047,
+      "n_cells": 32,
+      "pages_dir": "/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/ingest/pages/Practice3_pyg_basics",
+      "n_chars": 31626
+    }
+  ]
+}

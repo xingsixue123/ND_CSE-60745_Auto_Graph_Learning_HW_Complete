@@ -1,0 +1,47 @@
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/problems/p2/run/rgcn_run.py:101: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+  relation 0 friend           38928 edges
+  relation 1 listens        3014361 edges
+  relation 2 listened_by    3014361 edges
+  15466 nodes (7624 users + 7842 artists), 6067650 directed edges
+  74,510 walks in 1.3s, SkipGram in 3.0s
+metapath2vec features  (15466, 64)
+all-zero users         173
+all-zero artists       0
+control: |variant A - delivered layer| max = 0.000e+00  (must be ~0)
+
+rescaling applied by pooling, |N_r(i)| / c_i :
+  relation 0 friend       mean 0.0451  median 0.0097  (= down-weighting by 22.1x)  over 6958 nodes
+  relation 1 listens      mean 1.0000  median 1.0000  (= down-weighting by 1.0x)  over 7842 nodes
+  relation 2 listened_by  mean 0.9785  median 0.9919  (= down-weighting by 1.0x)  over 7451 nodes
+A per-relation val MRR 0.1918 hit@1 0.0518 | test MRR 0.1824 hit@1 0.0463 | epoch  10 |  12.8s
+A per-relation val MRR 0.1755 hit@1 0.0381 | test MRR 0.1668 hit@1 0.0324 | epoch   9 |  12.4s
+A per-relation val MRR 0.1754 hit@1 0.0398 | test MRR 0.1719 hit@1 0.0376 | epoch   4 |   9.3s
+  -> A per-relation (delivered)   val MRR mean 0.1809  test MRR mean 0.1737
+B pooled every val MRR 0.3236 hit@1 0.1570 | test MRR 0.3227 hit@1 0.1472 | epoch   4 |   9.1s
+B pooled every val MRR 0.3054 hit@1 0.1458 | test MRR 0.3128 hit@1 0.1527 | epoch   5 |  10.1s
+B pooled every val MRR 0.2870 hit@1 0.1170 | test MRR 0.2933 hit@1 0.1182 | epoch   9 |  12.8s
+  -> B pooled everywhere          val MRR mean 0.3053  test MRR mean 0.3096
+C friend poole val MRR 0.3153 hit@1 0.1496 | test MRR 0.3198 hit@1 0.1472 | epoch   1 |   6.9s
+C friend poole val MRR 0.3330 hit@1 0.1719 | test MRR 0.3324 hit@1 0.1661 | epoch   1 |   6.9s
+C friend poole val MRR 0.3276 hit@1 0.1745 | test MRR 0.3400 hit@1 0.1844 | epoch   2 |   7.7s
+  -> C friend pooled only         val MRR mean 0.3253  test MRR mean 0.3307
+D listening po val MRR 0.2081 hit@1 0.0628 | test MRR 0.2153 hit@1 0.0700 | epoch   6 |  10.7s
+D listening po val MRR 0.2828 hit@1 0.1091 | test MRR 0.2834 hit@1 0.1038 | epoch  11 |  13.7s
+D listening po val MRR 0.2487 hit@1 0.0738 | test MRR 0.2542 hit@1 0.0760 | epoch  20 |  20.1s
+  -> D listening pooled only      val MRR mean 0.2465  test MRR mean 0.2509
+
+SUMMARY  (3 seeds each, same frozen harness)
+variant                          val MRR  test MRR
+A per-relation (delivered)        0.1809    0.1737
+B pooled everywhere               0.3053    0.3096
+C friend pooled only              0.3253    0.3307
+D listening pooled only           0.2465    0.2509
+ABLATION_JSON {"A per-relation (delivered)": [{"epoch": 10, "hit@1": 0.05178614241189163, "MRR": 0.1918409999157075, "test_hit@1": 0.04627187724766243, "test_MRR": 0.1823938448761419, "secs": 12.788730382919312}, {"epoch": 9, "hit@1": 0.03812035483097578, "MRR": 0.1754829364940886, "test_hit@1": 0.03236633900743227, "test_MRR": 0.16683583204661034, "secs": 12.367135524749756}, {"epoch": 4, "hit@1": 0.03979860944617598, "MRR": 0.17535340276615358, "test_hit@1": 0.03764085351234716, "test_MRR": 0.171867712364809, "secs": 9.315572500228882}], "B pooled everywhere": [{"epoch": 4, "hit@1": 0.15703668185087508, "MRR": 0.3235563451826155, "test_hit@1": 0.14720690481898827, "test_MRR": 0.32269824610489695, "secs": 9.113142013549805}, {"epoch": 5, "hit@1": 0.14576840086310236, "MRR": 0.3053569105387443, "test_hit@1": 0.15272116998321744, "test_MRR": 0.31281922254071276, "secs": 10.128087997436523}, {"epoch": 9, "hit@1": 0.1169983217453848, "MRR": 0.2869689671760564, "test_hit@1": 0.11819707504195637, "test_MRR": 0.29333351572206134, "secs": 12.761330366134644}], "C friend pooled only": [{"epoch": 1, "hit@1": 0.14960441141213138, "MRR": 0.31527917597251004, "test_hit@1": 0.14720690481898827, "test_MRR": 0.3197680810707752, "secs": 6.904584646224976}, {"epoch": 1, "hit@1": 0.1719012227283625, "MRR": 0.3329905153522709, "test_hit@1": 0.166147206904819, "test_MRR": 0.33241879624970005, "secs": 6.9063897132873535}, {"epoch": 2, "hit@1": 0.17453847998081995, "MRR": 0.32759624445348073, "test_hit@1": 0.1843682570127068, "test_MRR": 0.339996699828249, "secs": 7.721291542053223}], "D listening pooled only": [{"epoch": 6, "hit@1": 0.06281467274035003, "MRR": 0.20809980135605324, "test_hit@1": 0.07000719251977942, "test_MRR": 0.21527312555591444, "secs": 10.73858380317688}, {"epoch": 11, "hit@1": 0.10908654998801247, "MRR": 0.28275911834560374, "test_hit@1": 0.10381203548309757, "test_MRR": 0.2833679948746348, "secs": 13.741063833236694}, {"epoch": 20, "hit@1": 0.07384320306880844, "MRR": 0.24867678981572977, "test_hit@1": 0.07600095900263726, "test_MRR": 0.25419550980183403, "secs": 20.057780981063843}]}

@@ -10,6 +10,33 @@ Anything else worth telling the master goes here: a submission format the course
 requires, a preferred library, a question to skip, a deadline. It can stay this
 short -- see the examples/ directory for real ones.
 -->
+
+We are working on **HW3 Part (A): GNNs Hands-on Practice**, 30 points, five
+questions worth 6 points each.
+
+**The authoritative question list is the Word file**,
+`input/CSE 60745_Fall 2026_HW3-Part(A).docx`. All three of its pages are this
+assignment: page 1 is the cover, pages 2-3 are Q1 through Q5. It states
+requirements the notebook does not, for example that Q2 should use
+`torch_geometric.utils.softmax`, that Q4 wants the basic version of R-GCN, and
+that in Q5 an 8-hop receptive field is not the same thing as an 8-layer GNN.
+
+**The scaffolding to complete is the notebook**, `input/Practice3_pyg_basics.ipynb`.
+Five cells are marked TODO and are the whole of the work: `MyGCNConv`,
+`MyGATConv`, `MyGINConv`, `MyRGCNConv` and `MyDeepConv`. `MySAGEConv` earlier in
+the notebook is a completed example of exactly the same pattern, so read it before
+writing any of the five. The notebook also says to run the GraphSAGE demo end to
+end first, "so that a failure later is yours and not the framework's" -- do that.
+
+The assignment says to use Google Colab. Ignore that and run locally. Build a venv
+and install `torch_geometric`, `gensim`, `pandas`, `scikit-learn` and `scipy`;
+`torch` is already present. PyG 2.3 and later is a pure-Python wheel, so
+`torch-scatter` and `torch-sparse` are not needed, as the notebook's own setup cell
+notes.
+
+Q5 asks you to look into the literature on over-smoothing before implementing. Cite
+what you actually use, and follow R9 below when you do.
+
 ---
 
 ## Rules for workers

@@ -1,0 +1,15 @@
+2
+4
+6
+8
+Receptive field (hops)
+0.4
+0.5
+0.6
+0.7
+0.8
+Test MRR
+0.397
+0.725
+MyGCNConv: 1 hop per layer
+MyDeepConv: K hops, 1 layer

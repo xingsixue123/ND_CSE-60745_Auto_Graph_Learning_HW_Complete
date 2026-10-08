@@ -1,0 +1,226 @@
+% ---- problem p1: HW3-Part(A) Q1, Q2, Q3, Q5 -------------------------------
+\definecolor{p1kw}{HTML}{0033B3}
+\definecolor{p1str}{HTML}{067D17}
+\definecolor{p1cmt}{HTML}{8C8C8C}
+
+\lstdefinestyle{p1pystyle}{%
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{p1kw}\bfseries,
+  stringstyle=\color{p1str},
+  commentstyle=\color{p1cmt}\itshape,
+  showstringspaces=false,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  xleftmargin=1em,
+  aboveskip=0.8em, belowskip=0.6em,
+  morekeywords={self},
+}
+
+Every layer below is a \texttt{MessagePassing} subclass, run at the notebook's default
+seed with the notebook's own harness, unmodified. Q1--Q3 and Q5 use
+\texttt{train\_and\_eval} on the social graph; Q4 uses
+\texttt{train\_and\_eval\_hetero} on the three-relation graph. The one sanctioned
+change is \texttt{n\_layers} in the Q5 cell, which that cell instructs us to set.
+Every number reported is a measured run, not an estimate.
+
+% =========================================================== Q1
+\section*{Q1: GCN Implementation (6 pts)}
+
+\begin{lstlisting}[style=p1pystyle]
+class MyGCNConv(MessagePassing):
+    """GCN: h_i' = sum_{j in N(i) u {i}} (d_i d_j)^{-1/2} W h_j + b."""
+
+    def __init__(self, in_channels, out_channels):
+        # "add": the 1/sqrt(d_i d_j) coefficient is the normaliser, so the reduction
+        # must be a plain sum -- "mean" would divide by the degree a second time.
+        super().__init__(aggr="add")
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.lin = nn.Linear(in_channels, out_channels, bias=False)
+        self.bias = nn.Parameter(torch.empty(out_channels))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        self.lin.reset_parameters()
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x, edge_index):
+        # Closed neighbourhood A_hat = A + I. Removing first makes d_hat correct even
+        # if edge_index already carries self-loops.
+        edge_index, _ = remove_self_loops(edge_index)
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+
+        src, dst = edge_index[0], edge_index[1]            # message src -> dst
+        deg_inv_sqrt = degree(dst, x.size(0), dtype=x.dtype).pow(-0.5)
+        norm = deg_inv_sqrt[src] * deg_inv_sqrt[dst]       # [E]; d_hat >= 1 after loops
+
+        out = self.propagate(edge_index, x=self.lin(x), norm=norm)
+        return out + self.bias
+
+    def message(self, x_j, norm):
+        return norm.view(-1, 1) * x_j
+\end{lstlisting}
+
+\noindent
+The aggregation is \texttt{"add"}: $1/\sqrt{\hat d_i \hat d_j}$ is itself the
+normaliser, so \texttt{"mean"} would divide by the degree twice. The closed
+neighbourhood is built with \texttt{remove\_self\_loops} before
+\texttt{add\_self\_loops}, which makes \texttt{forward} idempotent in the loops
+already present in \texttt{edge\_index} and guarantees each node contributes exactly
+one self term. \texttt{degree} is taken on \texttt{edge\_index[1]}, the message
+targets, which is $\hat d_i$; because self-loops are added first, $\hat d_i \ge 1$ and
+the 666 users with no training edge give no division by zero. $W$ is applied before
+\texttt{propagate} rather than inside \texttt{message}, which transforms $N$ rows
+instead of $E$ for the same result, since \texttt{norm} is a scalar per edge. The bias
+is added after aggregation, matching the $+\,b$ outside the sum. Against PyG's own
+\texttt{GCNConv} with the weights copied across, the two agree to $0$ in floating point.
+
+\medskip\noindent
+\textbf{Measured:} val MRR $0.7263$, val Hit@1 $0.6085$; test MRR $0.7379$,
+test Hit@1 $0.6253$.
+
+% =========================================================== Q2
+\section*{Q2: GAT Implementation (6 pts)}
+
+\begin{lstlisting}[style=p1pystyle]
+class MyGATConv(MessagePassing):
+    """GAT: alpha_ij = softmax over j of LeakyReLU(a . [W h_i || W h_j])."""
+
+    def __init__(self, in_channels, out_channels, heads=8, concat=True,
+                 negative_slope=0.2):
+        # node_dim=0: propagate carries [N, heads, channels], so the node axis is 0,
+        # not the default -2 (which would be the head axis here).
+        super().__init__(aggr="add", node_dim=0)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        # Concatenated heads must together be out_channels wide, since the next layer
+        # is built with in_channels = out_channels.
+        if concat and out_channels % heads != 0:
+            heads = 1
+        self.heads = heads
+        self.concat = concat
+        self.head_channels = out_channels // heads if concat else out_channels
+        self.negative_slope = negative_slope
+
+        self.lin = nn.Linear(in_channels, heads * self.head_channels, bias=False)
+        # a = [a_dst || a_src], split so the edge score is a sum of two node terms.
+        self.att_src = nn.Parameter(torch.empty(1, heads, self.head_channels))
+        self.att_dst = nn.Parameter(torch.empty(1, heads, self.head_channels))
+        self.bias = nn.Parameter(torch.empty(out_channels))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        self.lin.reset_parameters()
+        nn.init.xavier_uniform_(self.att_src)
+        nn.init.xavier_uniform_(self.att_dst)
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x, edge_index):
+        n = x.size(0)
+        # The softmax denominator runs over N(i) u {i}, as in the GAT paper.
+        edge_index, _ = remove_self_loops(edge_index)
+        edge_index, _ = add_self_loops(edge_index, num_nodes=n)
+
+        h = self.lin(x).view(n, self.heads, self.head_channels)
+        out = self.propagate(edge_index, h=h)              # [N, heads, head_channels]
+        out = out.flatten(1) if self.concat else out.mean(dim=1)
+        return out + self.bias
+
+    def message(self, h_j, h_i, index, size_i):
+        # a^T [W h_i || W h_j] = a_dst . W h_i + a_src . W h_j.
+        e = (h_i * self.att_dst).sum(-1) + (h_j * self.att_src).sum(-1)   # [E, heads]
+        alpha = softmax(F.leaky_relu(e, self.negative_slope), index, num_nodes=size_i)
+        return h_j * alpha.unsqueeze(-1)
+\end{lstlisting}
+
+\noindent
+\texttt{node\_dim=0} is required because \texttt{propagate} carries an
+$[N, \text{heads}, C]$ tensor; the default $-2$ would index the head axis and scatter
+silently into the wrong rows. The attention vector is stored as its two halves, so
+$\mathbf{a}^\top[Wh_i \| Wh_j]$ becomes $\mathbf{a}_{\text{dst}}\!\cdot\!Wh_i +
+\mathbf{a}_{\text{src}}\!\cdot\!Wh_j$ and the concatenation is never materialised over
+$E$ edges. Self-loops are added before propagating so the softmax denominator runs over
+$N(i)\cup\{i\}$, and \texttt{aggr="add"} is correct because $\alpha_{ij}$ already sums
+to one per target.
+
+On the concatenate-or-average instruction: a layer cannot tell from inside whether it
+is the output layer, and the two differ in per-head width, not just in the reduction
+--- concatenation needs $C/K$ features per head, averaging needs $C$. Since
+\texttt{out\_channels} is a contract fixed by the next layer, I made the choice a
+constructor default: $K=8$ heads of width $\texttt{out\_channels}/K$, concatenated.
+\texttt{concat=False} gives the averaging variant with full-width heads. The harness
+constructs every layer as \texttt{conv\_cls(in, out)}, so every layer here
+concatenates. With weights copied across, the layer matches PyG's \texttt{GATConv} to
+$0$ in floating point.
+
+\medskip\noindent
+\textbf{Measured:} val MRR $0.6210$, val Hit@1 $0.4479$; test MRR $0.6365$,
+test Hit@1 $0.4678$.
+
+% =========================================================== Q3
+\section*{Q3: GIN Implementation (6 pts)}
+
+\begin{lstlisting}[style=p1pystyle]
+class MyGINConv(MessagePassing):
+    """GIN: h_i' = MLP((1 + eps) h_i + sum_{j in N(i)} h_j)."""
+
+    def __init__(self, in_channels, out_channels):
+        super().__init__(aggr="add")           # sum is the injective multiset aggregator
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.eps = nn.Parameter(torch.empty(1))
+        self.mlp = nn.Sequential(
+            nn.Linear(in_channels, out_channels),
+            nn.BatchNorm1d(out_channels),
+            nn.ReLU(),
+            nn.Linear(out_channels, out_channels),
+        )
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        for layer in self.mlp:                 # nn.Sequential has no reset_parameters
+            if hasattr(layer, "reset_parameters"):
+                layer.reset_parameters()
+        nn.init.zeros_(self.eps)
+
+    def forward(self, x, edge_index):
+        # Open neighbourhood: (1 + eps) h_i is already the self term, so a self-loop
+        # would count the node twice.
+        edge_index, _ = remove_self_loops(edge_index)
+        agg = self.propagate(edge_index, x=x)
+        return self.mlp((1 + self.eps) * x + agg)
+
+    def message(self, x_j):
+        return x_j
+\end{lstlisting}
+
+\noindent
+The aggregation is \texttt{"add"} because GIN's expressiveness argument rests on the
+aggregator being injective on multisets; mean and max discard multiplicity and would
+give up exactly the property the layer exists to have. Unlike Q1 this is the
+\emph{open} neighbourhood: $(1+\epsilon)h_i$ is already the self term, so
+\texttt{remove\_self\_loops} prevents a node being counted twice (the training graph
+carries no self-loops, so this is defensive). $\epsilon$ is a learnable scalar
+initialised to zero, and \texttt{reset\_parameters} walks the \texttt{Sequential}'s
+children because the container has no \texttt{reset\_parameters} of its own. The MLP
+is \texttt{Linear}--\texttt{BatchNorm1d}--\texttt{ReLU}--\texttt{Linear}, as in the GIN
+paper; the harness runs full-batch, so the batch statistics are taken over all 7{,}624
+nodes at once, including the 666 all-zero rows, and evaluation uses the running
+estimates.
+
+GIN is the weakest layer on this task, and the unnormalised sum is the likely reason:
+at initialisation its embedding norm tracks degree far more tightly than GCN's
+(log--log correlation $0.87$ against $0.63$; the top degree decile carries
+$22.9\times$ the norm of the bottom decile, against $2.1\times$ for GCN). A
+dot-product scorer reads that magnitude as relevance, so high-degree users are ranked
+first regardless of the query.
+
+\medskip\noindent
+\textbf{Measured:} val MRR $0.4433$, val Hit@1 $0.2870$; test MRR $0.4417$,
+test Hit@1 $0.2793$.
+

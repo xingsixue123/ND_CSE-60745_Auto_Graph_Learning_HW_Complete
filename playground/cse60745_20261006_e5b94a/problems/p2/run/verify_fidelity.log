@@ -1,0 +1,11 @@
+cell  3:  49 lines  -> byte-identical, contiguous
+cell  5:  41 lines  -> byte-identical, contiguous
+cell  7:  62 kept lines  (9 cut at `X = node2vec_features(`)  -> exact prefix, only the declared cut
+cell 11:  16 lines  -> byte-identical, contiguous
+cell 12:  63 lines  -> byte-identical, contiguous
+cell 25:  33 lines  -> byte-identical, contiguous
+cell 26:  55 lines  -> byte-identical, contiguous
+cell 28:  61 kept lines  (3 cut at `train_and_eval_hetero("R-GCN")`)  -> exact prefix, only the declared cut
+cell 27:  43 lines  -> my answer, present contiguously: True
+
+FROZEN HARNESS REPRODUCED VERBATIM AND CONTIGUOUSLY

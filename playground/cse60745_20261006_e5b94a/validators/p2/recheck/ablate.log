@@ -1,0 +1,37 @@
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/validators/p2/recheck/rgcn_run.py:101: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+  relation 0 friend           38928 edges
+  relation 1 listens        3014361 edges
+  relation 2 listened_by    3014361 edges
+  15466 nodes (7624 users + 7842 artists), 6067650 directed edges
+  74,510 walks in 1.2s, SkipGram in 3.5s
+metapath2vec features  (15466, 64)
+all-zero users         173
+all-zero artists       0
+A per-relation   val MRR 0.1693 hit@1 0.0367 | test MRR 0.1547 hit@1 0.0273 | epoch   2 |   7.7s
+A per-relation   val MRR 0.2191 hit@1 0.0702 | test MRR 0.2130 hit@1 0.0674 | epoch   8 |  11.7s
+A per-relation   val MRR 0.1801 hit@1 0.0424 | test MRR 0.1690 hit@1 0.0333 | epoch   4 |   9.1s
+  >> A per-relation   val MRR mean 0.1895  [0.1693, 0.2191, 0.1801]
+
+B pooled-all     val MRR 0.3192 hit@1 0.1554 | test MRR 0.3227 hit@1 0.1546 | epoch  10 |  13.0s
+B pooled-all     val MRR 0.2843 hit@1 0.1031 | test MRR 0.2890 hit@1 0.1038 | epoch  10 |  12.8s
+B pooled-all     val MRR 0.2835 hit@1 0.1115 | test MRR 0.2867 hit@1 0.1072 | epoch   9 |  13.0s
+  >> B pooled-all     val MRR mean 0.2957  [0.3192, 0.2843, 0.2835]
+
+C friend-pooled  val MRR 0.3222 hit@1 0.1496 | test MRR 0.3234 hit@1 0.1479 | epoch   1 |   6.9s
+C friend-pooled  val MRR 0.3386 hit@1 0.1741 | test MRR 0.3409 hit@1 0.1697 | epoch   2 |   7.7s
+C friend-pooled  val MRR 0.3273 hit@1 0.1743 | test MRR 0.3398 hit@1 0.1853 | epoch   2 |   7.7s
+  >> C friend-pooled  val MRR mean 0.3294  [0.3222, 0.3386, 0.3273]
+
+D listen-pooled  val MRR 0.2023 hit@1 0.0547 | test MRR 0.2122 hit@1 0.0527 | epoch  20 |  19.8s
+D listen-pooled  val MRR 0.2894 hit@1 0.1084 | test MRR 0.2939 hit@1 0.1122 | epoch   6 |  10.9s
+D listen-pooled  val MRR 0.2249 hit@1 0.0810 | test MRR 0.2352 hit@1 0.0937 | epoch  13 |  15.4s
+  >> D listen-pooled  val MRR mean 0.2388  [0.2023, 0.2894, 0.2249]
+

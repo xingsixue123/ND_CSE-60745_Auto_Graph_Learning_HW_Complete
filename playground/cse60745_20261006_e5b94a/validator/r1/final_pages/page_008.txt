@@ -1,0 +1,64 @@
+CSE 60745 (Fall 2026)
+HW3-Part(A): GNNs Hands-on Practice
+Layer
+Layers
+Hops
+Val MRR
+Val Hit@1
+Test MRR
+Test Hit@1
+GraphSAGE (demo, control)
+2
+2
+0.6243
+0.4682
+0.6281
+0.4666
+GCN (Q1)
+2
+2
+0.7263
+0.6085
+0.7379
+0.6253
+GAT (Q2)
+2
+2
+0.6210
+0.4479
+0.6365
+0.4678
+GIN (Q3)
+2
+2
+0.4433
+0.2870
+0.4417
+0.2793
+GCN, 8 layers
+8
+8
+0.3754
+0.2208
+0.3919
+0.2318
+MyDeepConv (Q5)
+1
+8
+0.7376
+0.6262
+0.7492
+0.6421
+Table 1: All six models on the same graph, the same splits and the unmodified train and eval harness at
+its default seed. Hops is the receptive field; Layers the number of stacked convolutions.
+One caveat: node2vec is rebuilt by gensim.models.Word2Vec with workers=4, which is not de-
+terministic, so absolute scores shift between feature draws. All six rows share one cached feature
+matrix and the harness seed, and the ordering is stable across three seeds and two independent
+feature draws.
+References
+[1] Qimai Li, Zhichao Han, Xiao-Ming Wu. Deeper Insights into Graph Convolutional Networks
+for Semi-Supervised Learning. AAAI, 2018.
+[2] Johannes Gasteiger (Klicpera), Aleksandar Bojchevski, Stephan G¨unnemann.
+Predict then
+Propagate: Graph Neural Networks meet Personalized PageRank. ICLR, 2019.
+Page 8 of 8

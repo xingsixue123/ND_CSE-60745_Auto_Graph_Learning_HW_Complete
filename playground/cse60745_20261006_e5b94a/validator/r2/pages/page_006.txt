@@ -1,0 +1,58 @@
+CSE 60745 (Fall 2026)
+HW3-Part(A): GNNs Hands-on Practice
+MRR
+Hit@1
+validation
+0.2291
+0.0782
+test
+0.2229
+0.0714
+Random tie-breaking over 21 candidates already scores MRR 0.174, so the model barely beats
+chance. Cell 26’s features come from gensim’s Word2Vec at workers=4, not reproducible across
+processes; over five runs validation MRR was 0.190 ± 0.020 and test MRR 0.182 ± 0.023. The
+layer is not the cause: torch geometric.nn.RGCNConv in the same harness scores 0.208, and my
+forward matches it to 4 × 10−7 on all 6,067,650 edges.
+Q5: Mitigate Over-Smoothing in Deep GNNs (6 pts)
+class MyDeepConv(MessagePassing):
+"""APPNP-style decoupled propagation: transform once, then K personalised-PageRank
+steps. One layer reaches K hops, so K=8 gives an 8-hop receptive field at n_layers=1.
+"""
+def __init__(self, in_channels, out_channels, K=8, alpha=0.3):
+super().__init__(aggr="add")
+self.in_channels = in_channels
+self.out_channels = out_channels
+self.K = K
+# propagation steps = hops: K=8 at n_layers=1 is 8 hops
+self.alpha = alpha
+# teleport probability, chosen on validation MRR
+self.lin1 = nn.Linear(in_channels, out_channels)
+self.lin2 = nn.Linear(out_channels, out_channels)
+self.reset_parameters()
+def reset_parameters(self):
+super().reset_parameters()
+self.lin1.reset_parameters()
+self.lin2.reset_parameters()
+def forward(self, x, edge_index):
+edge_index, _ = remove_self_loops(edge_index)
+edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+src, dst = edge_index[0], edge_index[1]
+deg_inv_sqrt = degree(dst, x.size(0), dtype=x.dtype).pow(-0.5)
+norm = deg_inv_sqrt[src] * deg_inv_sqrt[dst]
+# Prediction first: all the parameters live here, none in the propagation,
+# so the hop count K is free of parameters and cannot overfit with depth.
+h = self.lin2(F.relu(self.lin1(x)))
+# Z <- (1 - alpha) A_hat Z + alpha H, K times: personalised PageRank with
+# restart to H, so the node’s own features are re-injected at every hop.
+z = h
+for _ in range(self.K):
+z = (1 - self.alpha) * self.propagate(edge_index, x=z, norm=norm) \
++ self.alpha * h
+return z
+def message(self, x_j, norm):
+return norm.view(-1, 1) * x_j
+Why stacking fails, and what this does instead.
+Li, Han and Wu [2] identify the GCN
+propagation ˆD−1/2 ˆA ˆD−1/2 as a form of Laplacian smoothing and prove (their Theorem 1) that
+repeating it drives every vertex in a connected component to the same features, proportional to the
+Page 6 of 8

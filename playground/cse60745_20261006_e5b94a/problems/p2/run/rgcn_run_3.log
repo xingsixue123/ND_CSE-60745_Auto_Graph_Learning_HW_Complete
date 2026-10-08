@@ -1,0 +1,19 @@
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/problems/p2/run/rgcn_run.py:101: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+  relation 0 friend           38928 edges
+  relation 1 listens        3014361 edges
+  relation 2 listened_by    3014361 edges
+  15466 nodes (7624 users + 7842 artists), 6067650 directed edges
+  74,510 walks in 1.3s, SkipGram in 3.2s
+metapath2vec features  (15466, 64)
+all-zero users         173
+all-zero artists       0
+R-GCN          val MRR 0.1824 hit@1 0.0472 | test MRR 0.1712 hit@1 0.0391 | epoch  16 |  18.3s
+RESULT_JSON {"epoch": 16, "hit@1": 0.04723087988491968, "MRR": 0.1823704803669294, "test_hit@1": 0.03907935746823304, "test_MRR": 0.1712105408515291, "secs": 18.2721848487854}

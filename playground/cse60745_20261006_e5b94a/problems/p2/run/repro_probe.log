@@ -1,0 +1,10 @@
+--- workers=4, PYTHONHASHSEED unset (= the notebook as written) ---
+PYTHONHASHSEED=<unset> workers=4 X_HETERO sha256[:16]=f244038ca4ff9ce2
+PYTHONHASHSEED=<unset> workers=4 X_HETERO sha256[:16]=cfd9cf897eecb69f
+--- workers=4, PYTHONHASHSEED=0 ---
+PYTHONHASHSEED=0 workers=4 X_HETERO sha256[:16]=08627ac548d8ec09
+PYTHONHASHSEED=0 workers=4 X_HETERO sha256[:16]=7adcc2e9b5e518ab
+--- workers=1, PYTHONHASHSEED=0 ---
+PYTHONHASHSEED=0 workers=1 X_HETERO sha256[:16]=e06c9be2e2af494b
+PYTHONHASHSEED=0 workers=1 X_HETERO sha256[:16]=e06c9be2e2af494b
+(produced by:  for i in 1 2; do [PYTHONHASHSEED=0] ../.venv/bin/python repro_probe.py <workers>; done)

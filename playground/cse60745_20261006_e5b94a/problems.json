@@ -1,0 +1,51 @@
+{
+  "assignment": "CSE 60745 (Fall 2026) HW3-Part(A): GNNs Hands-on Practice -- 30 points, Q1-Q5 at 6 points each",
+  "source_documents": {
+    "questions": "input/CSE 60745_Fall 2026_HW3-Part(A).docx (3 rendered pages; p1 cover, p2 preamble+Q1, p3 Q2-Q5)",
+    "scaffolding": "input/Practice3_pyg_basics.ipynb (32 cells; TODOs in cells 16, 19, 22, 27, 31)"
+  },
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Q1 GCN, Q2 GAT, Q3 GIN, Q5 deep 8-hop layer (LastFM-Asia social graph)",
+      "points": 24,
+      "rendered_pages": [2, 3],
+      "anchor_text": "Q1: GCN Implementation (6 pts)",
+      "input_files": [
+        "input/Practice3_pyg_basics.ipynb",
+        "input/CSE 60745_Fall 2026_HW3-Part(A).docx"
+      ],
+      "subparts": [
+        "Q1 (6 pts): complete MyGCNConv -- __init__, reset_parameters, forward, message; symmetric-normalised GCN with self-loops",
+        "Q2 (6 pts): complete MyGATConv in multi-head fashion, using torch_geometric.utils.softmax",
+        "Q3 (6 pts): complete MyGINConv -- sum aggregation, (1+eps) self term, own MLP, eps initialised to 0",
+        "Q5 (6 pts): complete MyDeepConv -- an 8-hop receptive field that does not over-smooth; 8 hops need not mean 8 layers; cite the over-smoothing literature actually used"
+      ],
+      "needs": ["code", "plain", "diagram"],
+      "grouped_with_reason": "Q5's baseline cell (notebook cell 30) trains MyGCNConv from Q1 at 2 and 8 layers, so Q5 cannot be stated without Q1's exact layer -- a hard dependency. All four also consume the same node2vec feature matrix X (cell 7), which gensim computes with workers=4 and is therefore NOT reproducible across processes even at a fixed seed; two workers would report GCN/GAT/GIN/DeepConv MRRs measured against different inputs and present them in one table. They further share one graph, one split, one train_and_eval harness (cell 12) and one GraphSAGE control (cell 14).",
+      "figure_required": "fig_p1_depth.pdf -- test MRR vs receptive-field depth, MyGCNConv against MyDeepConv, supporting the Q5 claim"
+    },
+    {
+      "id": "p2",
+      "title": "Q4 R-GCN on the 3-relation friend / listens / listened_by graph",
+      "points": 6,
+      "rendered_pages": [3],
+      "anchor_text": "Q4: R-GCN Implementation (6 pts)",
+      "input_files": [
+        "input/Practice3_pyg_basics.ipynb",
+        "input/CSE 60745_Fall 2026_HW3-Part(A).docx"
+      ],
+      "subparts": [
+        "Q4 (6 pts): complete MyRGCNConv -- __init__, reset_parameters, forward(x, edge_index, edge_type), message; the BASIC R-GCN (one weight matrix per relation plus a self-connection, 1/c_{i,r} normalisation), not the basis- or block-decomposed variant"
+      ],
+      "needs": ["code", "plain"],
+      "grouped_with_reason": "Kept separate from p1: it shares nothing expensive or nondeterministic with it. Different graph (load_hetero, 3 relations, 6.07M directed edges), different input features (metapath2vec X_HETERO from cell 26, which does not use the node2vec X), different wrapper (RGCNLinkPredictor, cell 28) and different training loop (train_and_eval_hetero). The only shared code is the deterministic load_social() and evaluate_ranking(), so the two workers cannot contradict each other on a number."
+    }
+  ],
+  "uncovered": [
+    {
+      "item": "Cover page (rendered page 1 of the docx)",
+      "why": "Not a question. The assignment requires the submission to include the cover page; the master reproduces it in final/main.tex rather than assigning it to a worker."
+    }
+  ]
+}

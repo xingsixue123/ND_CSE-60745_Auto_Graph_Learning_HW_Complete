@@ -1,0 +1,6 @@
+# Downloads / installs — MASTER agent playground (rule R3)
+
+- probe venv (python3 -m venv --system-site-packages) | `python3 -m venv --system-site-packages playground/cse60745_20261006_e5b94a/probe/.venv` | `playground/cse60745_20261006_e5b94a/probe/.venv` | de-risk the worker install recipe once at master level instead of twice at worker level
+- torch_geometric 2.8.0.post1, gensim 4.4.0, pandas 3.0.6, scikit-learn 1.9.1, scipy 1.18.1 (+ deps) | `PIP_CACHE_DIR=$PWD/.pipcache ./.venv/bin/pip install torch_geometric gensim pandas scikit-learn scipy` | `playground/cse60745_20261006_e5b94a/probe/.venv` | verify the recipe resolves and imports before handing it to both workers
+- pip cache | created by `PIP_CACHE_DIR=$PWD/.pipcache` | `playground/cse60745_20261006_e5b94a/probe/.pipcache` | `~/.cache/pip` is read-only in the sandbox
+- assignment data, 7 files from github.com/antman9914/CSE60745-Practice@main (data/task1/*.csv, split_stats.json; data/task3/hetero_stats.json, user_artist.csv.gz) | `urllib.request.urlretrieve` from the notebook's own setup cell | `playground/cse60745_20261006_e5b94a/probe/data/` | confirm the notebook's download URLs are live and the loaders work under pandas 3.0.6

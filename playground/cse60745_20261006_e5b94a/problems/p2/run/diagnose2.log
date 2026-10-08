@@ -1,0 +1,42 @@
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/problems/p2/run/rgcn_run.py:101: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  LABELS = {s: torch.from_numpy(df["label"].to_numpy()).float()
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+  relation 0 friend           38928 edges
+  relation 1 listens        3014361 edges
+  relation 2 listened_by    3014361 edges
+  15466 nodes (7624 users + 7842 artists), 6067650 directed edges
+  74,510 walks in 1.2s, SkipGram in 3.0s
+metapath2vec features  (15466, 64)
+all-zero users         173
+all-zero artists       0
+torch threads: 16
+
+-- (a) two identical seed-0 runs, default threading --
+run A          val MRR 0.1933 hit@1 0.0482 | test MRR 0.1947 hit@1 0.0549 | epoch  21 |  21.1s
+run B          val MRR 0.1932 hit@1 0.0480 | test MRR 0.1947 hit@1 0.0549 | epoch  21 |  22.2s
+   identical: False
+
+-- (b) the same, with torch.set_num_threads(1) --
+1-thread A     val MRR 0.1933 hit@1 0.0482 | test MRR 0.1947 hit@1 0.0549 | epoch  21 |  69.8s
+1-thread B     val MRR 0.1933 hit@1 0.0482 | test MRR 0.1947 hit@1 0.0549 | epoch  21 |  72.2s
+   identical: True
+
+-- (c) paper's link-prediction normalisation c_i = sum_r |N_i^r| --
+c_i seed0      val MRR 0.2821 hit@1 0.1096 | test MRR 0.2809 hit@1 0.1053 | epoch   5 |  12.9s
+c_i seed1      val MRR 0.2853 hit@1 0.1251 | test MRR 0.2945 hit@1 0.1299 | epoch  17 |  21.5s
+c_i seed2      val MRR 0.2919 hit@1 0.1146 | test MRR 0.2953 hit@1 0.1120 | epoch   9 |  15.5s
+   val MRR mean 0.2864 | test MRR mean 0.2902
+
+-- (d) score spread, my layer, seed 0, after 22 epochs (the harness's horizon) --
+/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/problems/p2/run/diagnose2.py:80: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:822.)
+  print(f"   final train loss {float(loss):.5f}   ln2 = {torch.log(torch.tensor(2.0)).item():.5f}")
+   final train loss 0.69310   ln2 = 0.69315
+   val score   mean +1.546e-03  sd 1.933e-03  max|.| 4.632e-02
+   embedding   mean row norm 1.562e-01

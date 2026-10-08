@@ -1,0 +1,41 @@
+CSE 60745 (Fall 2026)
+HW3-Part(A): GNNs Hands-on Practice
+square root of its degree. Their own remedy keeps the GCN shallow and adds labels — co-training
+with a random-walk model, and self-training — so it does not make deep propagation safe, which is
+what this question needs. I implement instead the fix of Gasteiger, Bojchevski and G¨unnemann [3]:
+separate the prediction from the propagation. Theirs is personalised PageRank, Z ←(1 −α) ˆAZ +
+αH, re-injecting the node’s own transformed features at every step with teleport probability α. An
+ordinary k-step propagation instead converges to a limit that is “independent of the random walk’s
+starting (root) node” and so “unsuitable for describing the root node’s neighborhood”; the teleport
+term is what keeps the operator anchored to the root.
+Why this is 8 hops, and why n layers=1.
+One call to propagate moves information one hop,
+so a stack of L layers each propagating K times has a receptive field of L×K hops. This layer runs
+K = 8 steps inside a single forward, so 1 × 8 = 8 hops, and the Q5 cell is run with n layers=1.
+Because the propagation holds no weights, that depth is free: the model has 8,320 parameters,
+identical to the 2-layer GCN and a quarter of the 8-layer GCN’s 33,280. α = 0.3 was chosen on
+validation MRR alone and sits on a plateau (val MRR 0.733–0.737 for α ∈[0.25, 0.5], falling to
+0.699 at α = 0.2); the original paper uses α = 0.1 with K = 10.
+2
+4
+6
+8
+Receptive field (hops)
+0.4
+0.5
+0.6
+0.7
+0.8
+Test MRR
+0.397
+0.725
+MyGCNConv: 1 hop per layer
+MyDeepConv: K hops, 1 layer
+Figure 1: Test MRR against receptive-field depth. Each line is the mean over three node2vec draws; the
+shaded band is the min–max over those same three seeds.
+Stacking MyGCNConv to reach 8 hops costs 45% of its test MRR (0.724 →0.397, mean over three
+seeds), while MyDeepConv is flat to within noise over the same range (0.725, 0.725, 0.726, 0.725 at
+2, 4, 6, 8 hops). The gain is robustness to depth, not a better score: at 8 hops MyDeepConv scores
+0.725 against the 8-layer GCN’s 0.397, but only matches the 2-layer GCN, whose three-seed mean
+of 0.724 is indistinguishable from it.
+Page 7 of 8

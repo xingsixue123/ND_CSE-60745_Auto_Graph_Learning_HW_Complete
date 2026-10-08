@@ -1,0 +1,31 @@
+{
+  "job": "cse60745_20261006_e5b94a",
+  "created": "2026-10-06 11:13:56",
+  "playground": "/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a",
+  "output": "/home/xing/project/auto_hw_complete/output/cse60745_20261006_e5b94a",
+  "problems": {
+    "p1": {
+      "status": "done",
+      "rounds": 1,
+      "started": "2026-10-06 11:59:16",
+      "finished": "2026-10-06 12:40:04"
+    },
+    "p2": {
+      "status": "done",
+      "rounds": 2,
+      "started": "2026-10-06 12:40:20",
+      "finished": "2026-10-06 13:57:42"
+    }
+  },
+  "problem_order": [
+    "p1",
+    "p2"
+  ],
+  "master_rounds": 2,
+  "status": "master_finished",
+  "documents": [
+    "CSE 60745_Fall 2026_HW3-Part(A).docx"
+  ],
+  "master_session": "7e841483-6b5d-4e38-a1c4-afab67774ece",
+  "cost_usd": 83.781
+}

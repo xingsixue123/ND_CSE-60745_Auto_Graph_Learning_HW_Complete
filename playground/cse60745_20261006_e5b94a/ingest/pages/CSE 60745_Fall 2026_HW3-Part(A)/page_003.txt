@@ -1,0 +1,16 @@
+CSE 60745 (Fall 2026)                                                   HW3-Part(A): GNNs Hands-on Practice 
+Page 2 of 4
+Q2: GAT Implementation (6 pts)
+Complete MyGATConv() in multi-head fashion. Use ` torch_geometric.utils.softmax` for softmax 
+computation.
+Q3: GIN Implementation (6 pts)
+Complete MyGINConv(). Feel free to design your own MLP architecture.
+Q4: R-GCN Implementation (6 pts)
+Complete MyRGCNConv(). Please implement the basic version of R-GCN. Edge type labels are 
+provided in `edge_type`.
+Q5: Mitigate Over-Smoothing in Deep GNNs (6 pts)
+Stacking too many GNN layers will make all node embeddings drift towards each other and cause 
+over-smoothing problem. Please look into the literature on over-smoothing and implement 
+MyDeepConv() to design a GNN model that stays useful with an 8-hop receptive field. Note that 8-
+hop receptive field is not equal to 8-layer GNN. 
+ 

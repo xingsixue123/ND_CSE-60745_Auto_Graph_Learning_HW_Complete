@@ -1,0 +1,52 @@
+{
+  "source": "/home/xing/project/auto_hw_complete/playground/cse60745_20261006_e5b94a/ingest/pdf/CSE 60745_Fall 2026_HW3-Part(A).pdf",
+  "dpi": 200,
+  "n_pages": 3,
+  "pages": [
+    {
+      "rendered_page": 1,
+      "png": "page_001.png",
+      "txt": "page_001.txt",
+      "width": 1654,
+      "height": 2339,
+      "n_chars": 277,
+      "n_images": 2,
+      "n_vector_drawings": 8,
+      "figures": []
+    },
+    {
+      "rendered_page": 2,
+      "png": "page_002.png",
+      "txt": "page_002.txt",
+      "width": 1654,
+      "height": 2339,
+      "n_chars": 1269,
+      "n_images": 2,
+      "n_vector_drawings": 3,
+      "figures": [
+        {
+          "file": "page_002_fig_01.png",
+          "width": 727,
+          "height": 525,
+          "bbox_on_page": [
+            56.7,
+            255.8,
+            519.6,
+            589.7
+          ]
+        }
+      ]
+    },
+    {
+      "rendered_page": 3,
+      "png": "page_003.png",
+      "txt": "page_003.txt",
+      "width": 1654,
+      "height": 2339,
+      "n_chars": 889,
+      "n_images": 2,
+      "n_vector_drawings": 1,
+      "figures": []
+    }
+  ]
+}

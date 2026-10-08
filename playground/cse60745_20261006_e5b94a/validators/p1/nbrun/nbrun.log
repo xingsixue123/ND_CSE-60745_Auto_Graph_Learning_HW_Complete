@@ -1,0 +1,54 @@
+
+----- cell[2] -----
+torch 2.13.0+cpu | torch_geometric 2.8.0.post1
+
+----- cell[4] -----
+cell[4]:30: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+nodes              7624
+G_train            19464 undirected edges, 666 isolated nodes
+G_trainval         23635 undirected edges, 312 isolated nodes
+train               19464 queries, 116784 candidate pairs (6 per query)
+val                  4171 queries,  87591 candidate pairs (21 per query)
+test                 4171 queries,  87591 candidate pairs (21 per query)
+
+----- cell[6] -----
+  69,580 walks in 6.1s, SkipGram in 2.6s
+node2vec features  (7624, 64)
+all-zero rows      666  (= the users with no training edge)
+mean row norm      3.14
+
+----- cell[8] -----
+
+----- cell[10] -----
+
+----- cell[11] -----
+
+----- cell[13] -----
+GraphSAGE      val MRR 0.6305 hit@1 0.4769 | test MRR 0.6331 hit@1 0.4733 | epoch   3 |   3.1s
+
+----- cell[15] -----
+
+----- cell[16] -----
+GCN            val MRR 0.7282 hit@1 0.6121 | test MRR 0.7400 hit@1 0.6289 | epoch  71 |   7.3s
+
+----- cell[18] -----
+
+----- cell[19] -----
+GAT            val MRR 0.6247 hit@1 0.4541 | test MRR 0.6365 hit@1 0.4709 | epoch   3 |   4.6s
+
+----- cell[21] -----
+
+----- cell[22] -----
+GIN            val MRR 0.4466 hit@1 0.2896 | test MRR 0.4448 hit@1 0.2836 | epoch   4 |   3.2s
+
+----- cell[29] -----
+GCN, 2 layers  val MRR 0.7282 hit@1 0.6121 | test MRR 0.7400 hit@1 0.6289 | epoch  71 |   7.2s
+GCN, 8 layers  val MRR 0.3752 hit@1 0.2208 | test MRR 0.3916 hit@1 0.2318 | epoch  14 |   7.8s
+
+----- cell[30] -----
+
+----- cell[31] -----
+MyDeepConv     val MRR 0.7389 hit@1 0.6291 | test MRR 0.7515 hit@1 0.6464 | epoch 166 |  16.5s
+
+NOTEBOOK RAN TO COMPLETION (Q4 cells 23-27 skipped)
+exit=0
