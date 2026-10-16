@@ -4,5 +4,6 @@
   "max_worker_rounds": 5,
   "max_master_rounds": 5,
   "agent_timeout_seconds": 7200,
-  "heartbeat_seconds": 600
+  "heartbeat_seconds": 600,
+  "master_timeout_seconds": 36000
 }

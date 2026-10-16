@@ -60,6 +60,41 @@ your reading separately if you have one.
 Workers run strictly one at a time. `fw spawn-worker` will refuse to start a new
 problem while an earlier one is unfinished.
 
+**Never detach `fw spawn-worker`.** Not with `&`, not with `nohup`, not with
+`setsid`. The call blocks for as long as the problem takes, and waiting is your job.
+Detaching does not work and does not help:
+
+  - It cannot outlive you. You run inside a sandbox created with `--unshare-pid`, so
+    every process you start is in your PID namespace. When your turn ends that
+    namespace is torn down and the worker dies with it, however it was launched. A
+    run was lost this way: the worker had built a 371 MB virtual environment and had
+    not written a line of the answer.
+  - You are not racing a deadline that detaching would escape. Your own time limit
+    is set separately from a worker's and covers the whole run, precisely because
+    you spend it blocked inside this call.
+
+If a problem is genuinely stuck, the round cap ends it and hands it back to you as
+ESCALATED. That is the mechanism for a worker that will not finish. Ending your turn
+while one is still running is not.
+
+**Nothing re-invokes you. There is no watcher.** Your own Bash tool has a foreground
+time cap and will move a long `fw spawn-worker` into a tracked background task on its
+own. That is fine, and it does survive across your turns *inside this session* — but
+it tells you nothing about what happens when the session ends. When you stop
+producing turns, your process exits, the sandbox namespace is destroyed, and every
+background task in it dies, tracked or not. No supervisor notices, no event wakes you,
+and the run is over with whatever is on disk at that moment.
+
+A run was lost exactly here. The master had one problem passed and the next one's
+validator running, and wrote: "Ending this turn — the armed watcher will re-invoke me
+the moment p2 converges, and the background processes survive across turns." There was
+no watcher. Four of five problems were never completed.
+
+So: you are finished only when every problem is `done`, the document is assembled and
+compiled, and your master validator has returned PASS on the document you submitted.
+Until then, if you have nothing else to do, block — poll the job state in an
+until-loop and keep waiting. Waiting is the job.
+
 Log your state to `playground/<job>/logs/master.log` as you go — one entry per
 decision, per spawn, per validator verdict. If a worker comes back ESCALATED (its
 validator never passed it within the cap), read the validator's checklist before you
