@@ -1,0 +1,50 @@
+exception is dispatched and leaves ordinary loads and stores untouched, so it is not an MMU.
+On a CPU that hard-wires its vectors at 0 the assumption cannot be met: the vectors keep the
+low addresses and the program has to be relocated when it is loaded. Only the reset vector
+cannot be moved in principle, and it is served from boot ROM.
+The boundary.
+No MMU also means no permission check per access, so nothing above stops
+the application from storing into the OS. I therefore allow one fence (limit) register holding F:
+in user mode the CPU traps any address that is not below F. A comparison adds nothing to
+the address, so this is still not translation; a base register, added to every address, is where an
+MMU begins.
+Ex. 3.2
+(10 pts) — one giant fast memory and the hierarchy
+No. The hierarchy would survive, because the premise of the question fails: a device’s access
+time is set by its material and its size, and at terabyte scale it is size that dominates.
+Every read must physically cross the array: the address propagates through the decoder
+to a word line, and the data returns along a bit line through a sense amplifier. That time is
+bounded below by the time needed to cross the array, whose linear dimension grows as
+√
+C in
+the capacity C. Take the densest cell in production, a 6T SRAM bit at 0.021 µm2; the faster
+high-performance variant is larger at 0.025 µm2, so this keeps the bound conservative. One
+terabyte is 8 × 1012 cells covering 1.68 × 105 mm2, about 2.4 whole 300 mm wafers and some
+0.41 m on a side. Crossing that and returning takes at least 2.7 ns in vacuum, eleven clock cycles
+at 4 GHz, before a single transistor switches; real on-chip wires are several times slower than c.
+A terabyte of the fastest material is thus nowhere near as fast as a kilobyte of it.
+The penalty is already visible within one technology. L1, L2 and L3 on a modern CPU
+are all SRAM, on the same die at the same process node, yet they answer in roughly 4, 14
+and 40 cycles. Only capacity differs: longer word and bit lines carry more RC delay, deeper
+decoders add stages, and larger bit-line capacitance makes sense amplifiers resolve more slowly.
+So the hierarchy is not an artifact of mixing cheap slow memory with expensive fast memory.
+It reappears with the material held fixed.
+Power says the same thing. The fastest cells are the leakiest, six transistors per bit with
+static current in each and no idle state as cheap as a DRAM capacitor’s. A terabyte of them
+could not be powered or cooled as one block, and spreading it out to cool it pays the propagation
+delay back again.
+The right use of such a device would therefore be to put a small fast array in front of it to
+absorb the references that locality makes predictable: to build the hierarchy inside it. Cost per
+bit would stop being the motive; the device’s own size–speed trade-off would supply one.
+Ex. 3.3
+(5 pts) — servicing a fault when every frame is in use
+No frame is free, so the page cannot be read in until the OS takes one away. The fault handler
+must:
+1. Choose a victim frame, using a replacement policy (Ex. 3.8).
+2. Clean the victim if it is dirty. Test its modified bit M. If M = 1 the frame no longer
+matches its copy on disk and must be written to the swap area first; if M = 0 that copy
+is still valid and the frame can be taken at once.
+3. Break the old mapping. Mark the victim’s page-table entry not-present in its owner’s
+page table and invalidate the matching TLB entry, or a stale translation will keep reaching
+a frame that now holds a different page.
+2

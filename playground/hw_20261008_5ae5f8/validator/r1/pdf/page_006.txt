@@ -1,0 +1,52 @@
+trades that traffic against wasted memory, and since a page evicted just before re-reference costs
+two traverse times to return, he recommends a τ comparable to the traverse time T, τ ≈2T
+being the value that holds the resulting drop in page residency to 50%.
+Only ω is needed in practice, and look-ahead is rejected because a working set changes
+radically whenever its process blocks for interaction. Each page-table entry carries K use bits
+shifted once per sampling interval σ = τ/K; their logical OR is 1 exactly for the pages of
+W(t, Kσ), and a checker process in the running list evicts the rest.
+Memory management
+then folds into scheduling: memory demand is min(ω/M, 1), processor demand follows from a
+hyperexponential model of CPU time between interactions, and a balance policy admits jobs so
+total demand matches the equipment, memory balanced first, since over-committing it produces
+thrashing.
+Critique.
+The quantitative core sits in tension with the qualitative one. The traffic estimates
+at equations (8)–(11) assume successive interreference intervals are independent and identically
+distributed, whereas the prediction property, which is what makes a working set worth keeping,
+asserts the opposite, that “references to the same page tend to cluster in time”. Denning does
+call these quantities estimates, but they rest on an assumption the rest of the paper denies, and
+they are the model’s only quantitative ground.
+That matters because the paper offers nothing else. Its conclusion ranks the four policies
+outright, “Random brings on the highest page traffic, working set the lowest”, and asserts
+that the working set’s extra cost “is more than offset by its accuracy”. No experiment here
+tests the ranking.
+Denning does lean on measurement elsewhere, invoking Fine et al. and
+Varian and Coffman in Section 2, but the ranking itself rests on one sentence of the conclusion
+citing Oppenheimer and Weizer’s simulation of the RCA Spectra 70/46: a citation, not a
+demonstration.
+He also notes that with l processes on N processors, page tables are sampled every lσ/N
+seconds rather than every σ, and his appendix scales the hardware timer to match; the software
+scheme gets no such correction, so its effective τ stretches with load, in the overload regime the
+model exists to handle.
+2. Machine-independent virtual memory in Mach (paper 3-6)
+R. Rashid, A. Tevanian, M. Young, D. Golub, R. Baron, D. Black, W. Bolosky and
+J. Chew, “Machine-Independent Virtual Memory Management for Paged Uniprocessor and
+Multiprocessor Architectures”, Proc. 2nd Int. Conf. on Architectural Support for Programming
+Languages and Operating Systems (ASPLOS II), Palo Alto, CA, October 1987, pp. 31–39.
+Summary.
+Instruction sets had stopped obstructing portability; memory-management units
+had not. The authors observe that Berkeley derivatives on non-VAX hardware internally sim-
+ulate the VAX mapping architecture, promoting one vendor’s MMU into a portability speci-
+fication. Mach’s answer is to hold every fact about virtual memory in machine-independent
+structures and confine machine dependence to one module, pmap.c. Four structures carry the
+design: a resident page table treating physical memory as a cache over memory objects; an
+address map of entries mapping virtual ranges onto byte ranges of a memory object, with their
+protection and inheritance; the memory object, a file-like repository of backing store; and the
+pmap, the hardware map.
+The decisive move is that the pmap holds only a cache of translations.
+Mappings may
+be discarded at any moment and rebuilt lazily at fault time from the machine-independent
+structures; only kernel mappings must be complete. That is what keeps the machine-dependent
+module to roughly 6K bytes on a VAX, “about the size of a device driver”, while the portable
+6

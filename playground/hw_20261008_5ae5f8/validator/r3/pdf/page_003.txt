@@ -1,0 +1,47 @@
+4. Read the wanted page from disk into the freed frame. The faulting process blocks for
+the duration and the CPU goes to another process.
+5. Install the new mapping: frame number into the faulting entry, present bit set, R and
+M cleared, protection bits set.
+6. Back up and restart the faulting instruction (Ex. 3.7).
+Steps 2 and 4 are each a disk access, so a fault that must clean its victim costs about twice
+one that need not; systems therefore keep a pool of pre-cleaned free frames (Ex. 3.6) to move
+the write-back off the fault path.
+Ex. 3.4
+(5 pts) — why NFU over LRU
+Cost, and often availability. Exact LRU has to know the order of every reference, and a reference
+that hits a valid page-table entry is resolved by the MMU without the OS ever seeing it. True
+LRU must therefore be built in hardware: a counter or clock value written into the entry on
+every access, with a scan of all frames at eviction time to find the minimum; or a list moved-
+to-front on every access; or an n × n matrix of bits updated per reference. Such specialised
+hardware is rare, so on most machines exact LRU is unavailable at any price, and where it exists
+it taxes every memory access.
+NFU, as defined in Ex. 3.8, needs only the reference bit that essentially every MMU already
+maintains for free. Its work happens once per clock tick — add R to the page’s counter, clear
+R — which is O(frames) per tick instead of O(1) per reference, and it is ordinary software that
+ports to any MMU with an R bit.
+What is given up: NFU ranks pages by how often they were used over their whole lifetime
+rather than how recently, and cannot order two references in the same tick. It is the right choice
+when LRU’s hardware is missing or its per-reference cost unaffordable.
+Ex. 3.5
+(5 pts) — why NFU with aging over NFU or LRU
+Over plain NFU. NFU’s counter is a lifetime total that is never reduced, so the algorithm
+never forgets. A page referenced heavily during start-up keeps a large count permanently and
+is protected long after it has gone cold, while a page that has only just become busy has
+a small count and is evicted in its place.
+Pages that were all once busy accumulate large,
+indistinguishable counts with no basis for choosing between them.
+Aging keeps the per-tick sampling but changes the arithmetic: each tick the counter is shifted
+right one bit and R is inserted at the high-order end. A reference’s contribution therefore halves
+every tick, so the counter is dominated by recent history and the position of its highest set bit
+says how long ago the page was last touched. The smallest counter is now approximately the
+least recently used page: recency rather than lifetime frequency.
+Over LRU. The cost argument of Ex. 3.4 is unchanged: a reference bit, one shift and one
+OR per page per tick, all in software.
+What it still cannot do. The counter has finite width, typically 8 bits, so pages untouched
+for more than 8 ticks all read zero and cannot be separated, and two references within one tick
+look like one. Aging approximates LRU; it does not implement it.
+Ex. 3.6
+(5 pts) — what the two-handed clock is for
+Its purpose is to separate clearing reference bits from evicting pages, so that the rate of each
+can be set independently.
+3

@@ -1,0 +1,83 @@
+{
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Ex. 3.1 Loading OS + one program without an MMU",
+      "points": 10,
+      "rendered_pages": [],
+      "source": "input/os_hw_3_problems.md (plain markdown, no rendered pages; text is the only channel and it carries the whole question)",
+      "anchor_text": "Ex. 3.1 | (10pts) The CPU (most of them) assumes that programs are running from address 0",
+      "input_files": [],
+      "subparts": [
+        "explain how to lay out OS + single application so the CPU's 'program starts at 0, contiguous' assumption holds with no MMU",
+        "draw the memory map"
+      ],
+      "needs": ["plain", "diagram"],
+      "grouped_with_reason": null
+    },
+    {
+      "id": "p2",
+      "title": "Ex. 3.2 Would one giant fastest-material memory remove the hierarchy?",
+      "points": 10,
+      "rendered_pages": [],
+      "source": "input/os_hw_3_problems.md",
+      "anchor_text": "Ex. 3.2 | (10 pts) Memory hierarchy is given by the speed of memory devices and the size of the devices",
+      "input_files": [],
+      "subparts": ["answer yes/no and justify"],
+      "needs": ["plain"],
+      "grouped_with_reason": null
+    },
+    {
+      "id": "p3",
+      "title": "Ex. 3.3-3.8 Page faults, instruction restart, and page replacement algorithms",
+      "points": 40,
+      "rendered_pages": [],
+      "source": "input/os_hw_3_problems.md",
+      "anchor_text": "Ex. 3.3 | (5 pts) What does OS have to do when all page frames are being used ... Ex. 3.8 | (10 pts, 2pts for each algorithm) Describe page replacement algorithms including FIFO, First-in Last-out (FILO), NRU, LRU, NFU?",
+      "input_files": [],
+      "subparts": [
+        "Ex. 3.3 (5 pts) what the OS does when all frames are full and a page must be brought in",
+        "Ex. 3.4 (5 pts) why NFU over LRU",
+        "Ex. 3.5 (5 pts) why NFU with aging over NFU or LRU",
+        "Ex. 3.6 (5 pts) what the two-handed clock algorithm is useful for",
+        "Ex. 3.7 (10 pts) why the instruction must be backed up after page-fault handling, and which instruction",
+        "Ex. 3.8 (10 pts, 2 each) describe FIFO, FILO, NRU, LRU, NFU"
+      ],
+      "needs": ["plain"],
+      "grouped_with_reason": "These six questions are one dependent cluster, not six independent questions. 3.8 supplies the definitions of FIFO/NRU/LRU/NFU that 3.4, 3.5 and 3.6 argue about; 3.3 is the question that page replacement answers and so must name the same victim-selection step that 3.4-3.6 and 3.8 elaborate; 3.7 is the other half of the same page-fault service routine 3.3 describes (what the handler does before it returns). Splitting them would have two workers define LRU, NFU and aging independently and the answers would disagree on, e.g., whether NFU's counter is shifted or merely incremented. They are also adjacent in the assignment, so keeping them together preserves document order. Each sub-answer is still a separate short answer under its own Ex. heading."
+    },
+    {
+      "id": "p4",
+      "title": "Ex. 3.9 Summarize and critique three Memory Management papers from the paper list",
+      "points": 20,
+      "rendered_pages": [3, 5],
+      "source": "input/PaperList.xlsx -> ingest/csv/PaperList.csv (authoritative) and ingest/pages/PaperList/page_003.png, page_005.png",
+      "anchor_text": "Ex. 3.9 | (20pts) Pick three papers from 'Memory Management' in the paper list. Read, summarize, and critically judge them.",
+      "input_files": ["/home/xing/project/auto_hw_complete/playground/hw_20261008_5ae5f8/ingest/csv/PaperList.csv"],
+      "subparts": [
+        "pick three of the seven Memory Management papers (IDs 3-1 .. 3-7)",
+        "summarize each (>= 1/3 page)",
+        "critically judge each"
+      ],
+      "needs": ["plain"],
+      "grouped_with_reason": null
+    },
+    {
+      "id": "p5",
+      "title": "Ex. 3.10 Find, summarize and critique three Memory Management papers NOT on the list",
+      "points": 20,
+      "rendered_pages": [],
+      "source": "input/os_hw_3_problems.md",
+      "anchor_text": "Ex. 3.10 | (20pts) Search for three papers on the topic of 'Memory Management'. Read, summarize, and critically judge them.",
+      "input_files": ["/home/xing/project/auto_hw_complete/playground/hw_20261008_5ae5f8/ingest/csv/PaperList.csv"],
+      "subparts": [
+        "search for three Memory Management papers that are NOT the ones used in Ex. 3.9 and are not on the course paper list",
+        "summarize each (>= 1/3 page)",
+        "critically judge each"
+      ],
+      "needs": ["plain"],
+      "grouped_with_reason": null
+    }
+  ],
+  "uncovered": []
+}

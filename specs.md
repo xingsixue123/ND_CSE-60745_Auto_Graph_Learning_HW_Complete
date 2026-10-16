@@ -12,10 +12,8 @@ short -- see examples/specs.md, which is the entire specification the HW1 run wa
 given.
 -->
 
-we are working on hw2, instructions here: `/home/xing/project/auto_hw_complete/input/hw2_instruction.md`
+we are working on os hw3, instructions here: `/home/xing/project/auto_hw_complete/input/os_hw_3_problems.md`
 
-
-we have a refference of how er complete hw1: `/home/xing/project/auto_hw_complete/input/hw1_example.md`
 
 ---
 

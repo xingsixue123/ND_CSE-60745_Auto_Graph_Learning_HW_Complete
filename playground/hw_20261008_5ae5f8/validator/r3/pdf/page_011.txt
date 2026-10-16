@@ -1,0 +1,4 @@
+the margin and the monitor mitigates at most half of them. What the rest lose is unbounded,
+with Finding 3 reporting some workloads down 30–35% once a fifth of their memory spills.
+Pond bounds how many VMs miss the margin, not by how much.
+11

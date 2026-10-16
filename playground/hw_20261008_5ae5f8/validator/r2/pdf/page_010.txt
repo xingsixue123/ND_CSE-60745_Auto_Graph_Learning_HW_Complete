@@ -1,0 +1,51 @@
+is wrong, and until that is settled the sum denotes nothing. The second problem is that TMO’s
+advertised advantage over g-swap, that Senpai “does not require offline application profiling”,
+is weaker than stated.
+The two constants above were “iteratively arrived at” by studying
+production workloads, and they are global. Section 3.3 asserts that “TMO’s effectiveness is not
+very sensitive to these parameters”, and then Section 4.4 shows the opposite: Config B saves
+more memory than Config A at the cost of “significant RPS regression, violating our design
+goal”. The authors do flag automated tuning as future work, so the defect is the insensitivity
+claim rather than a missing plan. Last, PSI’s IO component treats any wait on block IO as a
+stall, because the hardware cannot separate oversubscription from a device’s expected latency;
+this reads as pressure exactly where SSDs are cheapest, and the paper’s only answer is that it
+“has worked well for us in production”.
+3. CXL memory pooling at Microsoft
+Huaicheng Li, Daniel S. Berger, Lisa Hsu, Daniel Ernst, Pantea Zardoshti, Stanko
+Novakovic, Monish Shah, Samir Rajadnya, Scott Lee, Ishwar Agarwal, Mark D.
+Hill, Marcus Fontoura and Ricardo Bianchini, “Pond: CXL-Based Memory Pooling Sys-
+tems for Cloud Platforms”, Proc. 28th ACM Int. Conf. on Architectural Support for Program-
+ming Languages and Operating Systems (ASPLOS ’23), Volume 2, Vancouver, BC, March 2023,
+pp. 574–587. Chosen because it moves the problem out of the kernel’s reclaim path entirely and
+into hardware the other two papers could only wish for.
+Summary.
+In a public cloud the waste is not cold pages but stranded ones: traces from 100
+Azure clusters show that when all cores of a server are rented, leftover memory cannot be rented
+— 3–27% of it at the 95th percentile, depending on the cluster. Pooling would fix this, but
+cloud VMs pin their whole address space so that virtualisation accelerators work, which rules
+out the page-fault-based schemes of the two papers above. Pond uses Compute Express Link
+instead, giving cacheable load/store access to an external memory controller shared by 8–16
+sockets, a size chosen because wider pools add switches and retimers for diminishing benefit: 8–
+16 sockets add 70–90 ns over NUMA-local DRAM, rack-scale pooling more than 180 ns. Latency
+still matters: of 158 workloads under a 182% latency increase, 43% stay within 5% of local-
+memory performance while 21% lose more than 25%. Two ideas rescue it. Half of all VMs never
+touch half their rented memory, and that memory can be exposed as a zNUMA node, memory
+but no cores, which the guest’s own NUMA policy avoids; measured traffic to it is 0.06–0.38%.
+Second, two models, a random forest over hardware counters for latency insensitivity and a
+gradient-boosted quantile regression over VM metadata for untouched memory, predict how
+much pool memory each VM can take, with a monitor that migrates mispredicted VMs back
+to local DRAM. The result is 7% less DRAM at a 16-socket pool, or 3.5% of server cost.
+Critique.
+No CXL hardware is involved: the external memory controller is a paper design, its
+latency is emulated by disabling a second socket’s cores, and the savings come from a capacity-
+only simulator. That is stated plainly, but one consequence is structural: a real 16-socket pool
+has sixteen hosts contending for one controller’s DDR5 channels, whereas the emulation puts a
+single host on the remote socket, so interference inside the pool is never measured; the paper’s
+answer is that more controllers can be attached. Section 7 does raise gaming, replying that “any
+individual customer’s behavior will have a small impact” across millions of customers. But the
+untouched-memory model’s most important feature is percentiles of untouched memory from
+that customer’s own VMs last week, so a customer who touches everything moves their own
+prediction and nobody else’s; the aggregate reply misses the mechanism, and the section’s other
+answer, discounting under-used resources, is a clause the paper never implements or evaluates.
+The quoted 1–5% degradation likewise holds only inside the configured tail: 2% of VMs exceed
+10

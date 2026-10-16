@@ -1,0 +1,49 @@
+fragments memory, the contiguity-aware daemon lets FFTW reach a 55% speedup in two runs,
+where a cache-only scheme obtains no superpage at all.
+Critique.
+The results are tied to one machine, in both directions. The Alpha’s four page
+sizes are what the incremental design exploits, and Table 2 shows what survives with only the
+largest: C4 falls from 1.36 to 0.98, SP from 1.19 to 0.98, mcf from 1.68 to 1.22. Section 2.2
+names the i386 family as offering exactly two sizes and never returns to what that implies for
+the era’s dominant platform. Conversely the overheads are inflated by Alpha PTE replication,
+charged with 7.2 of the adversary’s 8.9 percentage points.
+The abstract’s “these benefits are sustained even under stressful workload scenarios” is
+likewise broader than the evidence: the long-term case replays one web access log and runs
+one benchmark four times, and the concurrent experiment substitutes a dummy allocator and
+disables promotion altogether, measuring contiguity restored rather than speedup sustained.
+Demoting on write is a frank retreat and the authors say so, that it “may deny the benefits
+of superpages to processes that do not write to all of the base pages”. The weaker move is the
+alternative they discard: hashing base pages to find which were really modified was rejected on
+preliminary microbenchmarks costing up to 15%, and 60% on a saturated sequential read, yet
+the same paragraph lists two optimisations, hashing only partially dirty superpages and moving
+the work into the idle loop, that attack exactly that cost and are left to future work. An option
+dismissed on its least optimised form has not been evaluated.
+Ex. 3.10
+(20 pts) — three papers found by search
+The three papers below come from Google, Meta and Microsoft, and each answers a question
+the 1968–2002 literature never faced: DRAM is now the largest single line in server cost, so
+which pages leave it, and on what evidence? The first two report fleet-wide deployments; the
+third is a design study on emulated hardware. They also disagree with one another.
+1. Software-defined far memory at Google
+Andres Lagar-Cavilla, Junwhan Ahn, Suleiman Souhlal, Neha Agarwal, Radoslaw
+Burny, Shakeel Butt, Jichuan Chang, Ashwin Chaugule, Nan Deng, Junaid Shahid,
+Greg Thelen, Kamil Adam Yurtsever, Yu Zhao and Parthasarathy Ranganathan,
+“Software-Defined Far Memory in Warehouse-Scale Computers”, Proc. 24th Int. Conf. on Archi-
+tectural Support for Programming Languages and Operating Systems (ASPLOS ’19), Providence,
+RI, April 2019, pp. 317–330. Chosen because it is the first end-to-end report of a cold-page
+policy running on a whole fleet rather than a testbed.
+Summary.
+A cheap, slow memory tier below DRAM only pays if cold pages can be found
+without slowing anything down, and a fleet measurement shows why fixed hardware will not do
+it: at a cold-age threshold of T = 120 s, 32% of memory is cold on average but the per-machine
+figure ranges from 1% to 52% within a single cluster, so any provisioned far-memory capacity
+would be stranded on some machines and exhausted on others. The authors therefore build
+the tier in software, from zswap, which keeps compressed pages in DRAM. Upstream zswap
+fires only on direct reclaim, making its cost unbounded and bursty, so the contribution is a
+control plane that compresses proactively instead. A kernel daemon kstaled sweeps page-table
+accessed bits every 120 s and keeps an 8-bit age per page inside struct page; a second daemon
+kreclaimd compresses pages older than a per-job threshold. The threshold is chosen against
+a service-level objective expressed in an application-agnostic indicator: the promotion rate,
+or swap-ins per minute, held below 0.2% of the job’s working set per minute. A node agent
+recomputes the smallest threshold meeting that objective each minute and applies the Kth
+8

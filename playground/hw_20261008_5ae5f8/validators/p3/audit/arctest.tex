@@ -1,0 +1,14 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+  \draw[gray,dashed] (0,0) circle (1.95);
+  \node at (0,0) {\tiny CENTER};
+  \node at (0:2.3) {\tiny 0deg(E)}; \node at (90:2.3) {\tiny 90deg(N)};
+  \node at (180:2.3) {\tiny 180(W)}; \node at (270:2.3) {\tiny 270(S)};
+  % EXACT line from the worker's figure:
+  \draw[->,black!65,very thick] (205:1.95) arc (205:245:1.95);
+  \node[red] at (205:1.6) {\tiny START};
+  \node[red] at (245:1.6) {\tiny HEAD};
+\end{tikzpicture}
+\end{document}

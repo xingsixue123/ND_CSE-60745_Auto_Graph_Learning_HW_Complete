@@ -1,0 +1,50 @@
+Operating Systems — Homework 3
+Ex. 3.1
+(10 pts) — loading the OS and one program without
+an MMU
+The constraint.
+With no MMU there is no translation step: the address the CPU puts on
+the bus is the physical address. The program is linked to begin at 0 and to run over a contiguous
+range, so physical address 0 and the bytes above it must belong to the application, and the OS
+cannot have them.
+The layout.
+Load the OS at the high end of RAM, growing downward from the physical top,
+and the application at physical 0, growing upward: text, then data and bss, then the heap,
+with the stack at the top of the user region growing down (Figure 1). The program owns the
+whole of [0, F), where F is the bottom of the OS, so both of the CPU’s assumptions hold with
+no translation and no relocation: the loader copies the executable to address 0 byte for byte.
+Running a different program overwrites [0, F); the OS never moves.
+operating system:
+kernel code, data,
+drivers, I/O buffers
+trap / interrupt
+vector table
+stack ↓
+free
+heap ↑
+program data + bss
+program text
+(entry point)
+0x03FF_FFFF
+0x0380_0000 = F
+0x037F_FFFF
+0x0000_0000
+OS: loaded from the top
+downward. The vector base
+register is set to F, so
+the vectors live here and
+not at address 0.
+One application program:
+linked at 0, loaded
+verbatim, contiguous. The
+fence register holds F; a
+user-mode address that is
+not below F traps.
+Figure 1: Memory map for a single-program system with no MMU. Physical memory is 64 MiB
+and the OS occupies the top 8 MiB. Addresses increase upward.
+Address 0 is not usually free.
+Most CPUs fetch trap and interrupt vectors from fixed low
+addresses: the 68000’s table at 0x000–0x3FF, x86 real mode’s IVT at 0x00000–0x003FF, ARM’s
+vectors at 0. That collides with the layout, so I require a CPU with a vector base register (68010
+VBR, ARM VBAR, RISC-V mtvec) and set it to F. Such a register is consulted only when an
+1

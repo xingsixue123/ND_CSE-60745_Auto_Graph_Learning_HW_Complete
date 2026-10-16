@@ -1,0 +1,49 @@
+every fault detected before any register is altered, with the faulting address kept in a dedicated
+register, as RISC machines do.
+Ex. 3.8
+(10 pts, 2 pts each) — five page replacement algorithms
+FIFO. Keep the resident pages on a queue in load order; evict the one at the head, which has
+been resident longest, and append the arrival at the tail. One pointer, no hardware support,
+and no usage information at all — so a page in constant use is discarded simply for being old.
+FIFO is not a stack algorithm and can show Belady’s anomaly, where giving it more frames
+increases the number of faults.
+FILO (first-in last-out). The complement, as the name is used here: the resident pages
+form a stack and the victim is the most recently loaded one, so arrivals keep reusing the same
+frame. As cheap as FIFO and far worse, because the newest page is precisely the one the current
+locality has just demanded; it is thrown out at once while the rest of memory never turns over.
+NRU (not recently used). Sort pages by their (R, M) bits into four classes, numbered 0
+to 3 for (0, 0), (0, 1), (1, 0), (1, 1), and evict an arbitrary page from the lowest-numbered non-
+empty class. R is cleared on every clock tick, so it means “referenced since the last tick”, while
+M is left alone. Cheap, and it prefers a clean unreferenced page, which needs no write-back.
+LRU. Evict the page that has gone unreferenced longest, on the assumption that recent
+use predicts imminent use. Exact implementation needs work on every reference: a timestamp
+written into the page-table entry at each access, a list reordered at each access, or an n × n
+matrix of bits. LRU is a stack algorithm and so is immune to Belady’s anomaly; its cost is why
+the approximations exist.
+NFU (not frequently used). One software counter per page. At each clock tick the OS
+adds that page’s R bit to its counter and clears R, and the page with the smallest counter is
+evicted. It needs only the reference bit, but it measures frequency over a page’s entire lifetime
+and never forgets, so a page that was busy early keeps a high score after going cold — the flaw
+that aging removes (Ex. 3.5).
+Ex. 3.9
+(20 pts) — three papers from ‘Memory Management’
+I read papers 3-1, 3-6 and 3-4, chosen because between them they follow one idea through three
+eras: the behavioural model that told an OS what to keep resident, the kernel structure that
+made paging portable, and the hardware pressure now reshaping both. (The list truncates 3-6’s
+title and mistypes 3-2’s; the citations below are the published ones.)
+1. The working set model (paper 3-1)
+Peter J. Denning, “The Working Set Model for Program Behavior”, Communications of the
+ACM 11(5):323–333, May 1968. First presented at the ACM Symposium on Operating System
+Principles, Gatlinburg, TN, October 1967.
+Summary.
+Resource allocation had no theory, Denning argues, because program behaviour
+had no model, and the model cannot come from outside the program: users cannot cost shared,
+data-dependent code, and compilers cannot see across separately compiled modules. The system
+must measure behaviour itself.
+He defines the working set W(t, τ) as the pages a process referenced during the process-
+time interval (t −τ, t), with size ω(t, τ).
+It is monotone increasing and concave in τ, with
+ω(t, 2τ) ≤2ω(t, τ) on average; W(t, τ) predicts W(t + α, τ) for α small against τ but not for
+α ≫τ; and from the distribution Fx of the interval between successive references to a page,
+pages re-enter the working set at rate λ(τ) = [1−Fx(τ)]/¯x, an estimate of page traffic. Setting τ
+5

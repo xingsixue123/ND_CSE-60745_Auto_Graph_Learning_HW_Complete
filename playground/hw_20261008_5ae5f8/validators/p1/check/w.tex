@@ -1,0 +1,14 @@
+\documentclass{article}\usepackage{tikz}\usetikzlibrary{decorations.pathreplacing}
+\newsavebox\B
+\begin{document}
+\sbox\B{\begin{tikzpicture}[x=1cm,y=1cm,font=\footnotesize]
+  \def\XL{0}\def\XR{4.8}
+  \draw[thick] (\XL,0) rectangle (\XR,9.2);
+  \node[anchor=east] at (-0.15,9.20) {\texttt{0x03FF\_FFFF}};
+  \node[anchor=east] at (-0.15,6.12) {\texttt{0x0380\_0000} $= F$};
+  \draw[decorate,decoration={brace,amplitude=5pt}] (\XR+0.15,9.2) -- (\XR+0.15,5.9);
+  \node[anchor=west,align=left,text width=4.1cm] at (\XR+0.45,7.55){One application program: linked at 0, loaded verbatim, contiguous.};
+\end{tikzpicture}}
+\typeout{FIGWIDTH=\the\wd\B}
+\typeout{TEXTWIDTH=\the\textwidth}
+\end{document}

@@ -1,0 +1,34 @@
+\subsection*{Ex.~3.2 (10 pts)}
+
+No. The hierarchy would survive, because the premise of the question fails: a
+device's access time is set by its material \emph{and} its size, and at terabyte
+scale it is size that dominates.
+
+Every read must physically cross the array: the address propagates through the
+decoder to a word line, and the data returns along a bit line through a sense
+amplifier. That time is bounded below by the time needed to cross the array, whose
+linear dimension grows as $\sqrt{C}$ in the capacity $C$. Take the fastest cell
+actually manufacturable, a high-density 6T SRAM bit at $0.021\,\mu\mathrm{m}^2$: one
+terabyte is $8\times10^{12}$ cells covering $1.68\times10^{5}\,\mathrm{mm}^2$, about
+2.4 whole 300\,mm wafers and some $0.41\,\mathrm{m}$ on a side. Crossing that and
+returning takes at least $2.7\,\mathrm{ns}$ \emph{in vacuum}, eleven clock cycles at
+4\,GHz, before a single transistor switches; real on-chip wires are several times
+slower than $c$. A terabyte of the fastest material is thus nowhere near as fast as
+a kilobyte of it, and no choice of material moves that floor.
+
+The penalty is already visible within one technology. L1, L2 and L3 on a modern CPU
+are all SRAM, on the same die at the same process node, yet they answer in roughly
+4, 14 and 40 cycles. Only capacity differs: longer word and bit lines carry more RC
+delay, deeper decoders add stages, and larger bit-line capacitance makes sense
+amplifiers resolve more slowly. So the hierarchy is not an artifact of mixing cheap
+slow memory with expensive fast memory. It reappears with the material held fixed.
+
+Power says the same thing. The fastest cells are the leakiest, six transistors per
+bit with static current in each and no idle state as cheap as a DRAM capacitor's. A
+terabyte of them could not be powered or cooled as one block, and spreading it out
+to cool it pays the propagation delay back again.
+
+The right use of such a device would therefore be to put a small fast array in front
+of it to absorb the references that locality makes predictable: to build the
+hierarchy inside it. Cost per bit would stop being the motive; the device's own
+size--speed trade-off would supply one.

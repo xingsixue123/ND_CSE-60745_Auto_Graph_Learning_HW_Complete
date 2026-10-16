@@ -1,0 +1,51 @@
+percentile of recent history. The two remaining parameters are tuned offline by replaying the
+per-job histograms through a model of the whole fleet and searching with a Gaussian Process
+Bandit. In production since 2016, the system compresses pages 3× at the median with 6.4 µs
+decompression, raises cold-memory coverage from 15% to 20%, and saves 4–5% of DRAM total
+cost of ownership.
+Critique.
+The paper’s own motivation sets the bar its evidence cannot quite clear: slowdowns
+“of even a few percentage points” would “offset all potential TCO savings”, yet the strongest
+quantitative performance result is that Bigtable’s IPC difference under A/B test is “within
+noise” — noise the authors immediately say is expected to be large in a warehouse-scale A/B.
+Fleet-wide application metrics are reported as showing no statistically meaningful difference,
+but no resolution is given for that null result, and the resolution is precisely what the 4–5%
+argument depends on. The accounting is similarly uneven. The quoted CPU overhead, 0.01%
+and 0.09% of job cycles, covers compression and decompression only; kstaled’s continuous
+scan is reported separately as “less than 11% of a single logical CPU core”, in units that never
+enter the TCO arithmetic. Finally, K and S are never given numeric values anywhere in the
+paper. The 30% autotuner gain is checkable in itself, being 15% coverage hand-tuned against
+20% tuned, but without the two configurations there is no way to tell whether the hand-tuned
+baseline was a fair opponent, or to reproduce either setting.
+2. Transparent memory offloading at Meta
+Johannes Weiner, Niket Agarwal, Dan Schatzberg, Leon Yang, Hao Wang, Blaise
+Sanouillet, Bikash Sharma, Tejun Heo, Mayank Jain, Chunqiang Tang and Dim-
+itrios Skarlatos, “TMO: Transparent Memory Offloading in Datacenters”, Proc. 27th ACM
+Int. Conf. on Architectural Support for Programming Languages and Operating Systems (AS-
+PLOS ’22), Lausanne, Switzerland, February–March 2022, pp. 609–621.
+Chosen because it
+attacks the previous paper directly, with a measurement rather than an argument, and because
+its mechanisms are upstream in Linux.
+Summary.
+TMO’s target is the same cost, but it rejects Google’s control signal. The claim is
+empirical: on the Web application, the host with the faster SSD backend shows a higher promo-
+tion rate and simultaneously serves more requests per second, so swap-in rate is not monotone
+in application harm, because it ignores both the speed of the backend and the benefit of the
+memory freed. In its place TMO introduces Pressure Stall Information, a kernel mechanism that
+measures lost work directly by timing how long processes are stalled on a resource, reported per
+container as some (at least one process stalled) and full (all of them). A userspace agent, Sen-
+pai, applies the control law reclaim_mem = current_mem×r×max(0, 1−PSIsome/PSIthresh)
+every six seconds with r = 0.0005 and PSIthresh = 0.1%, so reclaim slows as pressure approaches
+the target and stops above it. Two kernel changes make the pages available: shadow entries
+record a page’s reuse distance so genuine refaults can be distinguished from first touches, and
+reclaim is rebalanced to swap anonymous memory as soon as the file cache working set starts
+refaulting, instead of treating swap as emergency overflow. TMO also offloads the “memory
+tax” of logging, routing and other sidecars, whose service-level agreements are looser. Across
+millions of servers it reports 20–32% of total memory saved, with either SSD or zswap as the
+backend.
+Critique.
+That headline is not a measured quantity. It adds the 7–19% of Figure 9 to the 13%
+of Figure 10, and the paper gives two incompatible accounts of what the first is a fraction of:
+the caption says “normalized to their resident memory size”, per application, while Section 4.1
+says “7-19% of the total memory”, which is Figure 10’s per-server denominator. One of the two
+9

@@ -1,0 +1,12 @@
+Windows Azure Storage: A Highly Available Cloud Storage Service with Strong Consistency
+BlueSky: A Cloud-Backed File System for the Enterprise
+Cumulus: Filesystem Backup to the Cloud
+Differential RAID: Rethinking RAID for SSD Reliability
+The Distributed V Kernel and its Performance for Diskless Workstations
+The Sprite Network Operating System
+The LOCUS Distributed Operating System
+Experiences with the Amoeba Distributed Operating System
+DieCast: Testing Distributed Systems with an Accurate Scale Model
+LegoOS: A Disseminated, Distributed OS for Hardware Resource Disaggregation
+Medusa: An Experiment in  Distributed Operating System Structure
+The V Distributed System

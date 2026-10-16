@@ -1,0 +1,46 @@
+With one hand the same pointer does both jobs, so how fast it turns is set entirely by the
+eviction rate. On a machine with a lot of memory a revolution takes so long that by the time
+the hand returns nearly every page has been touched again; it finds R = 1 almost everywhere,
+clears bits and sweeps on, and the page it finally takes is chosen by position in the frame list
+rather than by recent use — FIFO behaviour. Driving it faster fails the other way, leaving pages
+too little time to set R so that nearly all of them look unreferenced.
+Two hands fix the window. The front hand clears R; the back hand, a fixed distance behind,
+releases any page whose R is still clear, so it went unreferenced while the gap was traversed.
+The gap is the test interval, a tunable parameter rather than a side effect of memory size and
+load.
+gap
+front hand:
+clears R
+back hand:
+evicts if R = 0
+sweep
+R = 1
+R = 0, evictable
+BSD’s pageout daemon uses this to keep a free-frame pool: woken periodically, it sweeps
+only as far as needed to restore lotsfree free frames, so a fault normally finds a clean frame
+waiting instead of paying for a scan and a write-back (Ex. 3.3).
+Ex. 3.7
+(10 pts) — backing up the instruction after a page
+fault
+Which instruction. The one that was executing when the fault was taken — the faulting
+instruction itself. It must be re-executed from its first byte, so the PC saved by the trap has to
+be backed up to the start of that instruction. Not the one before it, and not resumed from the
+middle.
+Why it has to be backed up. The memory access never happened. The instruction was
+abandoned at the operand reference that missed, so its effect was never produced; returning to
+the following instruction would silently skip a load or a store. Paging must be invisible to the
+program, and the only way to make the access occur is to execute the instruction again.
+The saved PC need not point at the start of it. On a variable-length CISC encoding the PC
+advances as the instruction is decoded, so when the fault is taken it may already be past the
+opcode and some operand bytes; on the 68000 it points just after the part that faulted. The
+handler cannot recover the start by scanning backwards, since with variable-length encodings
+there is no telling where the preceding instruction began, so the hardware must supply the
+address.
+Side effects may already be committed. Auto-increment and auto-decrement modes update
+their index register as a side effect, and a block move copies as it goes. A fault partway through
+leaves registers already stepped and part of the block written. Re-executing from the start
+applies those updates twice; resuming skips the transfer. Either way the program gets a wrong
+answer unless the partial effects are undone first.
+So machines either record enough internal state for microcode or the handler to unwind
+what was done and recompute the starting address, or define their instructions to be restartable:
+4

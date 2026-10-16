@@ -1,0 +1,44 @@
+Paper Title
+The Nucleus of a Multiprogramming System
+The UNIX Time-Sharing System
+Exokernel: An Operating System Architecture for Application-Level Resource Management
+HYDRA:The Kernel of a Multiprocessor Operating System
+The Performance of p-Kernel-Based Systems
+StarOS, a Nlultiprocessor Operating System for  the Support of Task Forces
+Application Performance and Hexibility on Exokernel Systems
+On -Kernel Construction
+𝜇
+seL4: Formal Veri cation of an OS Kernel
+The Structure of the "THE"-Multiprogramming System
+Unikernels: Library Operating Systems for the Cloud
+Rate Monotonic vs. EDF: Judgment Day
+Real-Time Dynamic Voltage Scaling for Low-Power Embedded Operating System
+Lottery Scheduling: Flexible Proportional-Share Resource Management
+Stride Scheduling: Deterministic Proportional-Share Resource Management
+Arachne: Core-Aware Thread Management
+Implementing Lottery Scheduling: Matching the Specializations in Traditional Schedulers
+Microservices The Journey So Far and Challenges Ahead
+The Working Set Model for Program Behavior
+WSCLoca - A Simple and Effective Algorithm for  Virtual Memory Management
+The Multics Virtual Memory: Concepts and Design
+Practical, transparent operating system support for superpages
+Implementing Global Memory Management in a Workstation Cluster
+Virtual Memory Management in the VAX/VMS Operating System
+Implementing Lightweight Threads
+Why Events Are A Bad Idea
+Monitors: An Operating System Structuring Concept
+Experience with Processes and Monitors in Mesa
+DTHREADS: Efficient Deterministic Multithreading
+RCU Usage In the Linux Kernel: Eighteen Years Later
+Read Copy Update
+Scheduler Activations: Effective Kernel Support for the User-Level  Management of Parallelism
+SEDA: An Architecture for WellConditioned, Scalable Internet Services
+Wait-Free Synchronization
+A Fast File System for UNIX
+F2FS: A New File System for Flash Storage
+Scale and Performance in a Distributed File System
+Ceph: A Scalable, High-Performance Distributed File System
+The Google File System
+The Hadoop Distributed File System
+Machine-Independent Virtual Memory Management for Paged Uniprocessor and Multiprocessor 
+Architect
