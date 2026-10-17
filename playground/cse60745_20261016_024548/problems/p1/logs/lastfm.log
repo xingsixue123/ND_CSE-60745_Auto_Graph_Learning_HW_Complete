@@ -1,0 +1,30 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/problems/p1/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+precomputing LapPE and SPD for the 7624-node LastFM graph ...
+  lap (7624, 8) torch.float32, spd (7624, 7624) torch.int16, 2.7s
+  spd histogram (-1 = unreachable, 8 = 8 or more hops): {-1: 0, 0: 7624, 1: 55612, 2: 725864, 3: 3691318, 4: 11441996, 5: 18990828, 6: 14707918, 7: 6198782, 8: 2305434}
+
+pairs per strategy on LastFM (full attention = 7624^2 = 58,125,376):
+  local                            63,236 pairs ( 0.109% of full),     8.3 per node, built in 0.0s
+  local+virtual                    78,485 pairs ( 0.135% of full),    10.3 per node, built in 0.0s
+  local+expander+virtual          108,965 pairs ( 0.187% of full),    14.3 per node, built in 0.0s
+  local+expander8+virtual         139,417 pairs ( 0.240% of full),    18.3 per node, built in 0.0s
+  2-hop ball+virtual              804,349 pairs ( 1.384% of full),   105.5 per node, built in 0.0s
+
+=== one training step, full vs. sparse (notebook cell 19) ===
+full: LapPE + SPD                  pairs attended   58,125,376 | one step   5.61s | peak GPU memory n/a on CPU
+sparse: local                      pairs attended       63,236 | one step   0.06s | peak GPU memory n/a on CPU
+sparse: local+virtual              pairs attended       78,485 | one step   0.06s | peak GPU memory n/a on CPU
+sparse: local+expander+virtual     pairs attended      108,965 | one step   0.08s | peak GPU memory n/a on CPU
+
+=== country classification, 200 epochs (notebook cell 19) ===
+sparse: LapPE + SPD                val micro-F1 0.6501 | test micro-F1 0.6384 | best epoch 172 | 0.13s/epoch
+
+done

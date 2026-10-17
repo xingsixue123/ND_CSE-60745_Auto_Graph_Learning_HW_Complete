@@ -1,0 +1,27 @@
+{
+ "local": {
+  "pairs": 73.0222,
+  "full": 556.8356,
+  "per_node": 3.1447138935003665
+ },
+ "local+virtual": {
+  "pairs": 120.355,
+  "full": 556.8356,
+  "per_node": 5.1897062395527245
+ },
+ "local+expander+virtual": {
+  "pairs": 200.1558,
+  "full": 556.8356,
+  "per_node": 8.612383548468523
+ },
+ "local+expander8+virtual": {
+  "pairs": 266.3538,
+  "full": 556.8356,
+  "per_node": 11.427363985762279
+ },
+ "2-hop ball+virtual": {
+  "pairs": 189.1828,
+  "full": 556.8356,
+  "per_node": 8.140446750710817
+ }
+}

@@ -1,0 +1,8 @@
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+  PASS  2-hop ball+virtual: identical pair sets on 251 graphs (including LastFM, 804,349 pairs)
+  PASS  local+expander+virtual: identical pair sets on 251 graphs (including LastFM, 108,965 pairs)
+all pair sets unchanged by the rename

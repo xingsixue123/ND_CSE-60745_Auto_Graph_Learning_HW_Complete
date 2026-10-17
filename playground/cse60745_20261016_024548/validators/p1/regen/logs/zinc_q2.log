@@ -1,0 +1,25 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/problems/p1/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+
+=== Q2: masking strategies, ZINC, 30 epochs ===
+pairs per graph, averaged over the 10000 training molecules (full attention = n^2):
+  local                          73.0 pairs/graph ( 13.1% of full),   3.1 per node
+  local+virtual                 120.4 pairs/graph ( 21.6% of full),   5.2 per node
+  local+expander+virtual        200.2 pairs/graph ( 35.9% of full),   8.6 per node
+  local+expander8+virtual       266.4 pairs/graph ( 47.8% of full),  11.4 per node
+  2-hop ball+virtual            189.2 pairs/graph ( 34.0% of full),   8.1 per node
+
+sparse: local                      val MAE 0.4918 | test MAE 0.5048 | best epoch  27 | 4.0s/epoch
+sparse: local+virtual              val MAE 0.4791 | test MAE 0.5047 | best epoch  29 | 4.5s/epoch
+sparse: local+expander+virtual     val MAE 0.5179 | test MAE 0.5551 | best epoch  24 | 5.8s/epoch
+sparse: local+expander8+virtual    val MAE 0.5213 | test MAE 0.5554 | best epoch  30 | 6.9s/epoch
+sparse: 2-hop ball+virtual         val MAE 0.4293 | test MAE 0.4677 | best epoch  30 | 5.7s/epoch
+
+done

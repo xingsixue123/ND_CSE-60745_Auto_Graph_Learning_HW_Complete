@@ -1,0 +1,11 @@
+  warnings.warn(
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+ZINC 12000 graphs: n from 9 to 37; connected components per graph: [1]
+LAP_K = 8; smallest graph has 8 non-trivial eigenvectors available
+LastFM n=7624, components=1
+LastFM LapPE: scaled channel RMS 1.0000, unscaled 0.01145 (1/sqrt(n) = 0.01145)

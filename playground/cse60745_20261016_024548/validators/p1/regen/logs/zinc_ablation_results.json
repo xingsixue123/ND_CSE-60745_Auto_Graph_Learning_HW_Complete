@@ -1,0 +1,14 @@
+{
+ "ablation: no sqrt(n) scaling": {
+  "val": 0.5224502563476563,
+  "test": 0.5449359130859375,
+  "epoch": 30,
+  "s_per_epoch": 7.4444495916366575
+ },
+ "ablation: no sign flip": {
+  "val": 0.5660198669433594,
+  "test": 0.5998612823486328,
+  "epoch": 18,
+  "s_per_epoch": 7.301738437016805
+ }
+}

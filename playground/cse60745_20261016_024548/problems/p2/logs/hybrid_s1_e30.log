@@ -1,0 +1,12 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/problems/p2/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+### experiment=hybrid seed=1 epochs=30 label='hybrid GT' params_active=211589 params_allocated=211589
+hybrid GT                          val MAE 0.3501 | test MAE 0.3672 | best epoch  30 | 26.9s/epoch
+### result hybrid seed=1 epochs=30 val=0.3501 test=0.3672 epoch=30 params=211589

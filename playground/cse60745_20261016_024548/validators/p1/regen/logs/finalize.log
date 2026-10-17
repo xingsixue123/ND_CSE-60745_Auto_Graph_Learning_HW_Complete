@@ -1,0 +1,34 @@
+### 1. switch the submitted pair set + conditional sign flip
+SparseSPDAttention now attends: the 2-hop ball + one global virtual node
+sign flip is now conditional on a multi-graph batch
+### 2. the pair sets measured in Table 2 are unchanged by the rename
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+  PASS  2-hop ball+virtual: identical pair sets on 251 graphs (including LastFM, 804,349 pairs)
+  PASS  local+expander+virtual: identical pair sets on 251 graphs (including LastFM, 108,965 pairs)
+all pair sets unchanged by the rename
+### 3. the full test suite, against the final solution.py
+checks passed: 26
+all checks passed
+### 4. clean timings on an idle machine (Table 3)
+full: LapPE + SPD                  pairs attended   58,125,376 | one step  11.19s | peak GPU memory n/a on CPU
+sparse: local                      pairs attended       63,236 | one step   4.74s | peak GPU memory n/a on CPU
+sparse: local+virtual              pairs attended       78,485 | one step   4.98s | peak GPU memory n/a on CPU
+sparse: local+expander+virtual     pairs attended      108,965 | one step   4.84s | peak GPU memory n/a on CPU
+sparse: local+expander8+virtual    pairs attended      139,417 | one step   4.93s | peak GPU memory n/a on CPU
+sparse: 2-hop ball+virtual         pairs attended      804,349 | one step   5.07s | peak GPU memory n/a on CPU
+### 5. LastFM with the final code, and ZINC cell 18, in parallel
+### done
+sparse: local                      val micro-F1 0.8152 | test micro-F1 0.7893 | best epoch 140 | 1.30s/epoch
+sparse: local+virtual              val micro-F1 0.8073 | test micro-F1 0.7826 | best epoch 100 | 0.84s/epoch
+sparse: local+expander+virtual     val micro-F1 0.7929 | test micro-F1 0.7678 | best epoch 166 | 0.09s/epoch
+sparse: local+expander8+virtual    val micro-F1 0.7733 | test micro-F1 0.7607 | best epoch  79 | 0.11s/epoch
+sparse: 2-hop ball+virtual         val micro-F1 0.8100 | test micro-F1 0.7827 | best epoch 147 | 0.57s/epoch
+ablation: sign flip forced on      val micro-F1 0.6815 | test micro-F1 0.6546 | best epoch 156 | 0.56s/epoch
+ablation: no sqrt(n) scaling       val micro-F1 0.7418 | test micro-F1 0.7319 | best epoch 196 | 0.56s/epoch
+sparse: LapPE + SPD                val MAE 0.4290 | test MAE 0.4662 | best epoch  30 | 18.4s/epoch
+reference row 'sparse: local+virtual' from run_zinc_q2.py: val 0.4791 | test 0.5047
+DIFFERENT -- investigate

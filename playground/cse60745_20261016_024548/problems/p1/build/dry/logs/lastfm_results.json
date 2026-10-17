@@ -1,0 +1,7 @@
+{
+ "run_node_task sparse: LapPE + SPD": {
+  "val": 0.6500655307994757,
+  "test": 0.6384060347654968,
+  "epoch": 172
+ }
+}

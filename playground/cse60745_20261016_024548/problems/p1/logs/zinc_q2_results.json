@@ -1,0 +1,32 @@
+{
+ "sparse: local": {
+  "val": 0.49184877014160155,
+  "test": 0.5048086242675781,
+  "epoch": 27,
+  "s_per_epoch": 4.335757454236348
+ },
+ "sparse: local+virtual": {
+  "val": 0.4790888900756836,
+  "test": 0.5046694793701172,
+  "epoch": 29,
+  "s_per_epoch": 4.616006811459859
+ },
+ "sparse: local+expander+virtual": {
+  "val": 0.5179059829711914,
+  "test": 0.5551488876342774,
+  "epoch": 24,
+  "s_per_epoch": 5.855513556798299
+ },
+ "sparse: local+expander8+virtual": {
+  "val": 0.5212634811401368,
+  "test": 0.5553711318969726,
+  "epoch": 30,
+  "s_per_epoch": 6.960017355283101
+ },
+ "sparse: 2-hop ball+virtual": {
+  "val": 0.42934651947021485,
+  "test": 0.467713020324707,
+  "epoch": 30,
+  "s_per_epoch": 5.861994504928589
+ }
+}

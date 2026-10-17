@@ -1,0 +1,32 @@
+\section{Q3: Hybrid Graph Transformer}
+
+\subsection*{Design}
+
+\texttt{HybridGTLayer} follows GraphGPS (Ramp\'a\v{s}ek et al., NeurIPS~2022;
+reference~[4]): a message-passing branch and a self-attention branch read the \emph{same}
+input states, and their outputs are added (Figure~\ref{p2:fig:layer}).
+
+\paragraph{Local branch --- GINE message passing.}
+Each directed edge $(j,i)$ carries $\mathrm{ReLU}(x_j + e_{ij})$, with $e_{ij}$ a learnable
+bond-type embedding; a node sums its incoming messages and a two-layer MLP maps
+$(1+\epsilon)\,x_i + \sum_{j \in \mathcal{N}(i)} \mathrm{ReLU}(x_j + e_{ij})$ to the new
+state. The aggregation is a sum, as in GIN: mean and max collapse neighbourhood
+multisets that a sum keeps apart. Bond
+types enter here and nowhere else, as in GraphGPS, where ``the edge features are only passed
+to the MPNN layer''.
+
+\paragraph{Global branch --- attention inside one molecule.}
+Ordinary multi-head attention. The states arrive concatenated over the batch, so the branch
+densifies them with \texttt{to\_dense\_batch} and masks the padding: a node attends only
+within its own molecule. No structural bias is added inside the attention.
+
+\paragraph{Combination --- parallel sum.}
+Each branch gets its own residual connection and LayerNorm, the two streams are added, and a
+residual two-layer MLP follows: GraphGPS Eqs.~(9)--(11) of Appendix~D.1, with LayerNorm for
+BatchNorm so that a node's update cannot depend on which molecules share its batch, and with
+dropout at zero. The alternative is to stack the branches, letting attention read the MPNN's
+output. GraphGPS's objection is aimed at the strong form of this, GraphTrans's block of MPNN
+layers before the transformer, where ``these layers could irreparably fail to keep some
+information in the early stage''; interleaving them inside one layer is the mild form, which
+the paper does not rule out; I measured it. Summing still gives each branch a gradient path
+to the input that bypasses the other, so a layer can down-weight either one.

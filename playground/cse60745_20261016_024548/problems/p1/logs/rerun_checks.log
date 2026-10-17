@@ -1,0 +1,16 @@
+### timings (8 threads, best of 7), nothing else of mine running
+=== one training step on LastFM, best of 7, 8 threads ===
+full: LapPE + SPD                  pairs attended   58,125,376 | one step   5.23s | peak GPU memory n/a on CPU
+sparse: local                      pairs attended       63,236 | one step   0.03s | peak GPU memory n/a on CPU
+sparse: local+virtual              pairs attended       78,485 | one step   0.04s | peak GPU memory n/a on CPU
+sparse: local+expander+virtual     pairs attended      108,965 | one step   0.05s | peak GPU memory n/a on CPU
+sparse: local+expander8+virtual    pairs attended      139,417 | one step   0.06s | peak GPU memory n/a on CPU
+sparse: 2-hop ball+virtual         pairs attended      804,349 | one step   0.33s | peak GPU memory n/a on CPU
+=== the framework's own benchmark_step, single step, as cell 19 calls it ===
+full: LapPE + SPD                  pairs attended   58,125,376 | one step   5.24s | peak GPU memory n/a on CPU
+sparse: LapPE + SPD                pairs attended      804,349 | one step   0.33s | peak GPU memory n/a on CPU
+### cell 18 at the same 8 threads run_zinc_q2.py used
+sparse: LapPE + SPD                val MAE 0.4418 | test MAE 0.4766 | best epoch  28 | 4.2s/epoch
+reference row 'sparse: 2-hop ball+virtual' from run_zinc_q2.py (measured before the rename and the sign-flip change): val 0.4293 | test 0.4677
+largest difference 0.012413 -- DIFFERENT, investigate
+### done

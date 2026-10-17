@@ -1,0 +1,37 @@
+{
+ "local": {
+  "val": 0.8152031454783748,
+  "test": 0.7892751721876025,
+  "epoch": 140
+ },
+ "local+virtual": {
+  "val": 0.8073394495412844,
+  "test": 0.7825516562807477,
+  "epoch": 100
+ },
+ "local+expander+virtual": {
+  "val": 0.7929226736566186,
+  "test": 0.7677927189242375,
+  "epoch": 166
+ },
+ "local+expander8+virtual": {
+  "val": 0.7732634338138925,
+  "test": 0.7607412266316825,
+  "epoch": 79
+ },
+ "2-hop ball+virtual": {
+  "val": 0.8099606815203145,
+  "test": 0.7827156444735979,
+  "epoch": 147
+ },
+ "ablation: sign flip forced on": {
+  "val": 0.6815203145478375,
+  "test": 0.6546408658576582,
+  "epoch": 156
+ },
+ "ablation: no sqrt(n) scaling": {
+  "val": 0.7418086500655308,
+  "test": 0.7318793046900623,
+  "epoch": 196
+ }
+}

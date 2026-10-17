@@ -1,0 +1,38 @@
+{
+ "full attention": {
+  "val": 0.5367196807861329,
+  "test": 0.5696325225830078,
+  "epoch": 30,
+  "s_per_epoch": 6.9426538387934364
+ },
+ "sparse: local": {
+  "val": 0.4831753845214844,
+  "test": 0.5072663116455078,
+  "epoch": 30,
+  "s_per_epoch": 4.237079016367594
+ },
+ "sparse: local+virtual": {
+  "val": 0.49980169677734376,
+  "test": 0.5181095809936523,
+  "epoch": 28,
+  "s_per_epoch": 4.466087945302328
+ },
+ "sparse: local+expander+virtual": {
+  "val": 0.5363264694213867,
+  "test": 0.5761476669311524,
+  "epoch": 28,
+  "s_per_epoch": 5.6550134738286335
+ },
+ "sparse: local+expander8+virtual": {
+  "val": 0.5318613815307617,
+  "test": 0.562029037475586,
+  "epoch": 30,
+  "s_per_epoch": 6.437376300493876
+ },
+ "sparse: 2-hop ball+virtual": {
+  "val": 0.46251563262939455,
+  "test": 0.5098336105346679,
+  "epoch": 30,
+  "s_per_epoch": 5.155123813947042
+ }
+}

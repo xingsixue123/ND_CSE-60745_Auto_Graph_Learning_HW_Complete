@@ -1,0 +1,36 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/validators/p1/work/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+threads: 8
+VAL cell18 repeat 1                val MAE 0.4451 | test MAE 0.4792 | best epoch  30 | 4.1s/epoch
+VAL cell18 repeat 2                val MAE 0.4418 | test MAE 0.4766 | best epoch  28 | 4.0s/epoch
+VAL local+virtual                  val MAE 0.4770 | test MAE 0.4941 | best epoch  30 | 3.6s/epoch
+VAL local                          val MAE 0.4862 | test MAE 0.5036 | best epoch  30 | 3.0s/epoch
+{
+ "cell18 repeat 1": {
+  "val": 0.44509546661376953,
+  "test": 0.4792180404663086,
+  "epoch": 30
+ },
+ "cell18 repeat 2": {
+  "val": 0.44175981140136716,
+  "test": 0.47659683990478513,
+  "epoch": 28
+ },
+ "local+virtual": {
+  "val": 0.47699659729003907,
+  "test": 0.49412203979492186,
+  "epoch": 30
+ },
+ "local": {
+  "val": 0.4862371063232422,
+  "test": 0.5035941162109375,
+  "epoch": 30
+ }
+}

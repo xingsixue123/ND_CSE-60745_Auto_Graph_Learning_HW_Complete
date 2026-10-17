@@ -1,0 +1,219 @@
+# Master decision log — job cse60745_20261016_024548
+
+## Round 0 — reading the assignment
+
+[1] Ingest read through all three channels.
+    - text: ingest/pages/CSE 60745_Fall 2026_HW3(B)/alltext.txt (2 rendered pages)
+    - page images: page_001.png (cover page), page_002.png (all three questions)
+    - figures: manifest.json lists `figures: []` for both pages. Each page has
+      n_images=1; I read both page PNGs and confirmed the single image on each page is
+      the Notre Dame monogram in the running header, not assignment content. There is
+      no figure a question depends on, so there is nothing for a worker to read from a
+      figure file. Text and page image agree verbatim on every question.
+    - The page-2 footer prints "Page 1 of 3"; pdfinfo reports 2 pages and the doc ends
+      after Q3. That is a stale Word field, not a missing page. Rendered page indices
+      (1, 2) are what I cite.
+[2] Second input document: input/task6_graph_transformer-1.ipynb, 22 cells, no stored
+    outputs and no attachments/images (checked the ipynb JSON directly), so its text
+    channel is complete. ingest/pages/task6_graph_transformer-1/alltext.txt is the
+    whole notebook.
+[3] The .doc is a 3-paragraph pointer; the notebook is the actual assignment. Q1 =
+    cells 12-14, Q2 = cells 15-19, Q3 = cells 20-22.
+
+## Round 0 — environment setup (master-level, shared by both workers)
+
+[4] No GPU (nvidia-smi fails: no driver). 32 CPUs, 125 GB RAM. CPU-only it is.
+[5] Built PLAYGROUND/.venv-gt with torch 2.14.1+cpu, torch_geometric 2.8.1, pandas,
+    scipy, scikit-learn. Verified the exact import line of notebook cell 3 works.
+[6] FINDING, important for the briefs: the Q2 docstring says "You may use
+    torch_geometric.utils.segment_attention". That function does not exist in PyG
+    2.8.1 (hasattr -> False). What cell 3 actually imports is
+    `from torch_geometric.utils import ... softmax as segment_softmax ...`. Workers
+    must be told, or they will burn a round on an ImportError.
+[7] Pre-fetched ZINC (subset) and the three LastFM CSVs into PLAYGROUND/shared/data so
+    workers copy rather than re-download.
+[8] Extracted the notebook's framework cells verbatim into PLAYGROUND/shared/gt_framework.py
+    (cells 3, 5, 7, 8, 9; the two demo classes of cell 11; PAIR_TYPES/pair_types from
+    cell 16). No TODO cell is included, so it contains no answer. Rationale: both
+    workers need the identical harness; extracting it once stops them diverging on
+    what the given code is.
+[9] Smoke-tested the harness end to end: the demo (CentralityTransformer + CNAttention)
+    trains at 4.5 s/epoch on ZINC, so a full 30-epoch run is ~2.5 min. Real experiments
+    are affordable; both briefs therefore require measured numbers, not claims.
+[10] Dataset facts measured for the briefs: ZINC n in [9, 37], every graph connected,
+     atom ids 0..20, bond ids {1,2,3}, max degree 4. LastFM is one connected component,
+     7624 nodes, max degree 216. n_min = 9 = LAP_K + 1, so 8 non-trivial eigenvectors
+     exist for every ZINC graph (exactly, for the smallest).
+
+## Round 0 — cutting the assignment
+
+[11] Two problems, not three.
+     - p1 = Q1 + Q2 (40 pts). Merged, deliberately. Cell 16 defines
+       `class SparseSPDAttention(SPDAttention)` and cell 18 runs it inside
+       `LapPETransformer`. Q2 literally inherits Q1's parameters and precompute. Split
+       across two workers, the second would have to reimplement SPDAttention and the
+       two answers would disagree about what SPD bias the model uses.
+     - p2 = Q3 (30 pts). Independent: HybridGTLayer is written from scratch, is driven
+       by HybridGT (cell 22) which uses the *demo's* CentralityTransformer.precompute,
+       and touches none of Q1/Q2's classes.
+[12] Nothing is left uncovered. 20 + 20 + 30 = 70 pts, the total the assignment states.
+
+## Round 0 — briefs written
+
+[13] problems.json written: p1 (Q1+Q2, 40 pts), p2 (Q3, 30 pts), uncovered = [].
+[14] problems/p1/problem.md and problems/p2/problem.md written. Each carries: the
+     assignment text transcribed verbatim from rendered page 2; the relevant notebook
+     cells verbatim (p1: cells 12-19, p2: cells 20-22); the explicit statement that the
+     document has no content figures and why; absolute paths to the shared venv, the
+     shared gt_framework.py and the pre-fetched data; the measured 4.5 s/epoch timing;
+     the segment_attention trap from [6]; measured dataset facts; an explicit scope
+     boundary telling each worker not to touch the other's classes; and the "Rules for
+     workers" section of specs.md copied verbatim.
+[15] Both briefs require every reported number to come from a run the worker actually
+     performed, with the console log kept in the worker playground and named in
+     submission.md. The environment makes this cheap (2.5 min per 30-epoch run), so
+     there is no excuse for an unmeasured table.
+[16] R8 reading recorded in both briefs: the word targets apply to prose, not to the
+     code listings, which are the deliverable the course asked for. p1 is budgeted ~300
+     prose words per question, p2 ~400. Stated explicitly so the worker validator does
+     not score a code listing as padding, or let padding through as code.
+[17] Spawning p1 now. Workers run one at a time; p2 follows.
+
+## Round 0 — p1, first launch stopped and relaunched
+
+[18] 20:20 `fw spawn-worker p1` launched. My Bash tool moved it to a background task with
+     a 30-minute cap (the tool's default), which is far short of a worker round: by minute
+     14 the worker had written solution.py, tests and an experiment driver and was only
+     just starting its first ZINC run.
+[19] Rather than let it be killed mid-round at minute 30, I stopped it at minute 15 and
+     relaunched with an explicit 2-hour background budget, which is the longest a single
+     Bash call can hold. Verified afterwards that no fw/claude process from the stopped
+     run survived (only my own master process remains), so there is no second worker
+     writing into problems/p1.
+[20] fw restarts a respawned problem at round 1 with a fresh agent session, so the new
+     worker will find the stopped attempt's files in its playground with no memory of
+     writing them. I appended section 6 to problems/p1/problem.md saying exactly that:
+     the files are reusable but unvalidated, the interrupted run produced no trustworthy
+     numbers, and it should re-run every experiment itself.
+[21] Cost of the restart: ~15 minutes of wall clock. Worth it against a near-certain kill
+     at minute 30, which would have landed in the middle of the first training run.
+
+## p1 — converged
+
+[22] 20:32 worker round 1 started. r1 finished 21:44 (72 min, $35.47), validator r1 FAIL
+     at 22:00 with 7 defects, one major: the SparseSPDAttention docstring spliced into the
+     listing claimed the submitted pair set had "the highest validation micro-F1 on
+     LastFM" when the measured LastFM ranking put it second (0.8100 vs 0.8152), and the
+     answer's own prose two pages earlier said "second of five". The other six were minor
+     (an unreproduced val number in a table, a loose O(log n) claim, a metric mixed into a
+     "3 of 3 seeds" clause, an unreferenced label, R8 prose overage of 21-28%, and two
+     inconsistencies inside submission.md).
+[23] Worker round 2 finished 22:06 (6 min, $42.12); validator round 2 -> PASS at 22:09.
+     p1 DONE after 2 rounds. `lint_output.py --worker` clean: answer.tex + preamble.txt
+     only.
+[24] The validator reproduced the worker's experiments itself rather than reading its
+     logs (validators/p1/logs/val_rerun.log) and confirmed the Q2 ranking held under its
+     own runs. That is the standard I wanted; I am accepting the PASS.
+[25] Spawning p2 (Q3) next, with the same 2-hour background budget.
+
+## p2 — converged, and the session was interrupted
+
+[26] 22:16 p2 worker round 1 started, finished 22:58 (42 min, $19.60); validator round 1
+     -> PASS at 23:09. p2 DONE after 1 round. Deliverable: answer.tex, preamble.txt and
+     fig_p2_layer.pdf (a block diagram of the hybrid layer).
+[27] My own session was interrupted at 23:14 and resumed at 01:07 with both problems
+     already done and 0/5 master submissions used. Nothing was lost: both workers had
+     converged before the interruption, and the only master work in flight was the final
+     assembly, which I rebuilt from the fragments on disk.
+
+## Assembly
+
+[28] build/assemble.sh builds output/<job>/final from the two fragments. It compiles in
+     PLAYGROUND/build/compile, not in OUTPUT, so no .aux/.log/.fls ever lands in the
+     deliverable (R4), and copies back only main.tex, preamble.tex, p1.tex, p2.tex,
+     main.pdf and fig_p2_layer.pdf.
+[29] Three build decisions, each after a failed or noisy compile:
+     - `\usepackage[T1]{fontenc}` alone killed the compile: this TinyTeX has no cm-super
+       (`Font ecbx1000 at 600 not found`) and tlmgr cannot install into a read-only
+       ~/.TinyTeX. Added `\usepackage{lmodern}`, which ships T1 Latin Modern and is
+       present. Recorded here as the substitution env.md asks for.
+     - hyperref loaded before the workers' `float` gave "destination with the same
+       identifier (name{table.N}) has been already used" for every [H] float. Moving
+       hyperref to the end of the merged preamble clears all of them.
+     - `\setcounter{secnumdepth}{0}`: the sections are already named Q1/Q2/Q3, so LaTeX
+       numbering them 1/2/3 on top of that read badly.
+[30] The cover page is reproduced in main.tex because the assignment requires it ("as a
+     PDF or Word file including the cover page"). Its three fields are left blank, exactly
+     as the handout's form has them -- I do not know the student's name or the assignment
+     date, and inventing either would be worse than leaving the form to be filled in.
+[31] On the handout's "submit only your implemented code file": this pipeline's deliverable
+     is a PDF (R4/R5), and the same paragraph of the handout asks for a PDF including the
+     cover page. The reconciliation is that both fragments carry the final implementation
+     verbatim in listings, so the PDF contains the code file's content. Both briefs said so
+     and both workers complied.
+[32] Compile: 9 pages, 0 undefined references, 0 duplicate destinations, one 2.56pt
+     overfull hbox in p1's Table 2 (under 1 mm -- not worth touching a passed fragment for).
+     `lint_output.py --final` OK. `crosscheck.py` OK: 5 labels, 0 collisions, preamble
+     merged to 7 distinct lines. Its one warning is that 70 + 0 uncovered != 100; the
+     assignment itself states "This assignment contains 70 points", which I verified in
+     both channels of rendered page 2, so the warning is the tool's default assumption and
+     not a gap in coverage.
+[33] Submitting round 1.
+
+## Submission round 1 -> FAIL, four defects, all fixed
+
+[34] 01:24 master validator round 1 -> FAIL. It re-ran cells 14, 18, 19 and 22 itself,
+     reproduced Table 1's bolded row exactly (val 0.5160 / test 0.5496 / epoch 30), every
+     pair count in Tables 2 and 3, every params figure and every Table 4 mean, and read
+     past both GraphGPS quotations in the paper. It found no wrong answer, no missing
+     sub-part and no compile problem. Four defects, all located precisely:
+     - [D1.1] major: p2's \lstdefinestyle{p2python} lacked `columns=fullflexible` (and
+       `breakindent`), so the Q3 listing typeset as `class HybridGTLayer ( nn . Module ) :`
+       while Q1/Q2 under p1py typeset cleanly -- the same document setting code two ways,
+       in an assignment whose deliverable is the code.
+     - [D1.2] minor: "moves it by 0.0119, inside the $\pm$0.0100 seed half-range" -- 0.0119
+       is outside a half-range of 0.0100.
+     - [D1.3] minor: Table 1 and Table 4 report the same two baselines (0.7013/0.4957 and
+       0.693/0.495) with nothing saying they are separate measurements.
+     - [D1.4] minor: "the constant eigenvector $D^{1/2}\mathbf{1}$" -- that vector is
+       constant only on a regular graph, and ZINC molecules are not.
+[35] I fixed all four myself in the workers' answer.tex rather than respawning: each is a
+     one-line edit the validator specified exactly, and respawning a passed worker to
+     reword a clause risks churning answers that have already been reproduced. Backups of
+     both fragments are in build/p1_answer.bak and build/p2_answer.bak.
+     - D1.1: added `breakindent=2em, columns=fullflexible` to p2python.
+     - D1.2: "inside the 0.0200 seed spread of the full-attention row of Table 2" -- the
+       spread, which 0.0119 really is inside, so the conclusion stands on a true premise.
+     - D1.3: one clause in Table 4's caption saying the baselines were measured again for
+       that table rather than copied, and that the gaps (0.0083 and 0.0007) are inside the
+       0.009 run-to-run noise the same paragraph already quotes. I checked both arithmetic
+       claims before writing them.
+     - D1.4: "constant" -> "trivial", which is what the rest of the fragment already calls it.
+[36] Rebuilt: 9 pages, no undefined references, no duplicate destinations, the same single
+     2.56pt overfull box. Both worker dirs and the final dir lint clean.
+[37] Verified the D1.1 fix rather than assuming it: the Q3 listing lifted out of the PDF
+     with `pdftotext -layout` now parses as Python (52 lines), and all 207 listing lines
+     across both fragments appear verbatim in the PDF text once typographic quotes are
+     normalised. (pdftotext's -layout grid mis-quantises \scriptsize indentation and
+     pymupdf's default mode drops leading spaces altogether -- both are extractor
+     artefacts, not document defects; Q3 at \footnotesize comes out exact under -layout.)
+[38] Submitting round 2.
+
+## Submission round 2 -> PASS. Job done.
+
+[39] 01:31 master validator round 2 -> PASS. It diffed my round-1 backups against the
+     shipped fragments and confirmed the change set is exactly the four fixes and nothing
+     else; re-checked each premise I had written (0.5496/0.5651/0.5696 spread = 0.0200;
+     the two caption subtractions; the 0.009 noise figure against logs_det/); lifted the
+     Q3 listing back out of the shipped PDF and parsed it as Python; image-diffed all nine
+     pages; confirmed all 207 listing lines still verbatim and md5-matched its own build
+     against the shipped main.pdf. No regressions.
+[40] Two things it named and deliberately did not charge: Table 3 orders its rows
+     differently from Table 2, and p1's em-dash density sits at R8's symptom threshold
+     without the length that symptom predicts. I am shipping as-is rather than editing
+     after a PASS -- both are cosmetic, and an edit now would mean submitting a document
+     nobody has validated.
+[41] Final state: output/<job>/final untouched since 01:25:20, which is before the 01:27:56
+     submission that passed. 9 pages, lint clean, cross-check clean (its 70 != 100 warning
+     is the tool's default assumption; the assignment itself states 70 points). 2 of 5
+     submission rounds used. Job cost $139.94.

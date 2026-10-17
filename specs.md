@@ -12,10 +12,12 @@ short -- see examples/specs.md, which is the entire specification the HW1 run wa
 given.
 -->
 
-we are working on hw2, instructions here: `/home/xing/project/auto_hw_complete/input/hw2_instruction.md`
+we are working on hw3, instructions here: `/home/xing/project/auto_hw_complete/input/CSE 60745_Fall 2026_HW3(B).doc`
 
 
-we have a refference of how er complete hw1: `/home/xing/project/auto_hw_complete/input/hw1_example.md`
+jupyter: `/home/xing/project/auto_hw_complete/input/task6_graph_transformer-1.ipynb`
+
+free to use cpu gpu
 
 ---
 

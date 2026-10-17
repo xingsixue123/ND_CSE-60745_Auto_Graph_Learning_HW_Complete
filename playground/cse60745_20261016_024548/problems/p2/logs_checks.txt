@@ -1,0 +1,19 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/problems/p2/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+[1] perturb graph 0  -> max|delta| on other graphs 0.000e+00 (want 0), on graph 0 4.673e+00 (want >0)
+[2] graph 3 alone vs. in a batch of 6 -> max|delta| 0.000e+00 (want ~0)
+[3] attention mass on padding 0.000e+00 (want 0); real rows sum to [1.000000, 1.000000] (want 1); dense N=29 = max graph size 29
+[4] local branch vs. explicit per-edge reference -> max|delta| 0.000e+00 (want ~0)
+[5] local branch with no edges differs from with edges: 2.321e+00 (want >0); global branch shape (147, 64)
+[6] sum(deg)=318 == directed edge count 318; batch['deg'] matches recomputed deg: True; max deg 4
+
+ALL CHECKS PASS
+[7] AblationGT(HybridGTLayer) vs HybridGT(): same param names True, max|param delta| 0.000e+00, max|output delta| 0.000e+00 (all want 0)
+CHECK 7 PASS

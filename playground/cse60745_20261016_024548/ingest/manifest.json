@@ -1,0 +1,52 @@
+{
+  "input_dir": "/home/xing/project/auto_hw_complete/input",
+  "entries": [
+    {
+      "source": "/home/xing/project/auto_hw_complete/input/CSE 60745_Fall 2026_HW3(B).doc",
+      "name": "CSE 60745_Fall 2026_HW3(B).doc",
+      "relative_path": "CSE 60745_Fall 2026_HW3(B).doc",
+      "role": "assignment",
+      "kind": "document",
+      "bytes": 76800,
+      "converted_pdf": "/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/ingest/pdf/CSE 60745_Fall 2026_HW3(B).pdf",
+      "rendered": true,
+      "pages": [
+        {
+          "rendered_page": 1,
+          "png": "page_001.png",
+          "txt": "page_001.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 214,
+          "n_images": 1,
+          "n_vector_drawings": 15,
+          "figures": []
+        },
+        {
+          "rendered_page": 2,
+          "png": "page_002.png",
+          "txt": "page_002.txt",
+          "width": 1654,
+          "height": 2339,
+          "n_chars": 2391,
+          "n_images": 1,
+          "n_vector_drawings": 21,
+          "figures": []
+        }
+      ],
+      "pages_dir": "/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/ingest/pages/CSE 60745_Fall 2026_HW3(B)",
+      "n_pages": 2
+    },
+    {
+      "source": "/home/xing/project/auto_hw_complete/input/task6_graph_transformer-1.ipynb",
+      "name": "task6_graph_transformer-1.ipynb",
+      "relative_path": "task6_graph_transformer-1.ipynb",
+      "role": "assignment",
+      "kind": "text_document",
+      "bytes": 43664,
+      "n_cells": 22,
+      "pages_dir": "/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/ingest/pages/task6_graph_transformer-1",
+      "n_chars": 34382
+    }
+  ]
+}

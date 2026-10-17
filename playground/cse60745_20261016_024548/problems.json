@@ -1,0 +1,45 @@
+{
+  "problems": [
+    {
+      "id": "p1",
+      "title": "Q1 Structural Encoding + Q2 Efficient Graph Transformer",
+      "points": 40,
+      "rendered_pages": [2],
+      "anchor_text": "Q1: Structural Encoding in Graph Transformer (20 pts) ... Q2: Efficient Graph Transformer (20 pts)",
+      "input_files": [
+        "/home/xing/project/auto_hw_complete/input/CSE 60745_Fall 2026_HW3(B).doc",
+        "/home/xing/project/auto_hw_complete/input/task6_graph_transformer-1.ipynb"
+      ],
+      "subparts": [
+        "Q1: implement LapPETransformer.precompute and .inject_absolute (Laplacian eigenvector absolute structural encoding)",
+        "Q1: implement SPDAttention.precompute and .forward (shortest-path-distance relative structural encoding, one learnable bias per head)",
+        "Q1: run notebook cell 14 -- run_graph_task('LapPE + SPD', LapPETransformer(attention_cls=SPDAttention)) on ZINC",
+        "Q2: implement SparseSPDAttention.attention_pairs (choose the attended node pairs, optionally with virtual nodes)",
+        "Q2: implement SparseSPDAttention.forward (sparse attention over those pairs only)",
+        "Q2: run notebook cells 18 and 19 -- sparse model on ZINC, full-vs-sparse benchmark_step on LastFM, and run_node_task on LastFM",
+        "Q2: test more than one masking strategy, as the question encourages"
+      ],
+      "needs": ["code", "plain"],
+      "grouped_with_reason": "Q2 is defined in the notebook as `class SparseSPDAttention(SPDAttention)` (cell 16) and is run as `LapPETransformer(attention_cls=SparseSPDAttention)` (cell 18): it inherits Q1's parameters, Q1's precompute and Q1's absolute encoding. Splitting them would force the Q2 worker to reimplement Q1's SPDAttention, and the two fragments would describe two different SPD biases."
+    },
+    {
+      "id": "p2",
+      "title": "Q3 Hybrid Graph Transformer",
+      "points": 30,
+      "rendered_pages": [2],
+      "anchor_text": "Q3: Hybrid Graph Transformer (30 pts)",
+      "input_files": [
+        "/home/xing/project/auto_hw_complete/input/CSE 60745_Fall 2026_HW3(B).doc",
+        "/home/xing/project/auto_hw_complete/input/task6_graph_transformer-1.ipynb"
+      ],
+      "subparts": [
+        "Implement HybridGTLayer.__init__(dim, heads) and .forward(x, edge_index, edge_attr, batch) from scratch: a local MPNN branch, a global attention branch, and how they are combined",
+        "Run notebook cell 22 -- run_graph_task('hybrid GT', HybridGT()) on ZINC",
+        "Report the result against the baselines the notebook already provides"
+      ],
+      "needs": ["code", "plain"],
+      "grouped_with_reason": "Not grouped. HybridGTLayer is written from scratch and is driven by HybridGT (cell 22), which uses the demo's CentralityTransformer.precompute for its absolute encoding and never touches LapPETransformer, SPDAttention or SparseSPDAttention. It shares only the dataset and the run_graph_task harness with p1."
+    }
+  ],
+  "uncovered": []
+}

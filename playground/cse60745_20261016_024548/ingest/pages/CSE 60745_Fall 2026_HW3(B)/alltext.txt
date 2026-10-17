@@ -1,0 +1,77 @@
+
+===== rendered page 1 =====
+CSE 60745 (Fall 202
+ 
+ 6  ) – HW3-Part(B)
+ 
+  
+University of Notre Dame
+Department of Computer Science and 
+Engineering 
+CSE 60745 
+Graph Learning: Techn & Apps
+ 
+Assignment Date:
+ 
+Sumission Date:
+ 
+Student Name:
+
+===== rendered page 2 =====
+CSE 60745 (Fall 202
+ 
+ 6  ) – HW3-Part(B)
+ 
+  
+* This assignment contains 70 points. You are encouraged to finish independently. Any submitted 
+work that it copied from any source or too similar to be an independent write-up will not be given 
+credit. Please submit this homework (as a PDF or Word file including the cover page) to ND 
+Canvas by 11:59pm on 
+ 
+ Mon
+ 
+ day, 
+ 
+ 10/26/202
+ 
+ 6  . 
+In this assignment, you will practice the implementation of basic graph transformers. Please use 
+Google Colab for experiments and submit
+ 
+  only
+ 
+  your
+ 
+  implemented
+ 
+  code
+ 
+  file
+ 
+ . Useful papers for 
+this assignment are listed as follows:
+[1] Chen, Dexiong, Leslie O’Bray, and Karsten Borgwardt. "Structure-aware transformer for graph 
+representation learning." In ICML 2022.
+[2] Ying, Chengxuan, Tianle Cai, Shengjie Luo, Shuxin Zheng, Guolin Ke, Di He, Yanming Shen, 
+and Tie-Yan Liu. "Do transformers really perform badly for graph representation?." In NeurIPS 
+2021.
+[3] Shirzad, Hamed, Ameya Velingker, Balaji Venkatachalam, Danica J. Sutherland, and Ali Kemal 
+Sinop. "Exphormer: Sparse transformers for graphs." In ICML 2023.
+[4] Rampášek, Ladislav, Michael Galkin, Vijay Prakash Dwivedi, Anh Tuan Luu, Guy Wolf, and 
+Dominique Beaini. "Recipe for a general, powerful, scalable graph transformer." In NeurIPS 2022.
+[5] Wu, Qitian, Wentao Zhao, Chenxiao Yang, Hengrui Zhang, Fan Nie, Haitian Jiang, Yatao Bian, 
+and Junchi Yan. "Sgformer: Simplifying and empowering transformers for large-graph 
+representations." In NeurIPS 2023.
+Q1: Structural Encoding in Graph Transformer (20 pts)
+Complete LapPETransformer() and SPDAttention() to implement graph Laplacian absolute 
+structural encoding and shortest path distance-based relative structural encoding in graph 
+transformer. You may refer to the demo in Section 4 for implementation ideas.
+Q2: Efficient Graph Transformer (20 pts)
+Complete SparseSPDAttention() to implement attention mask for sparse graph attention. You only 
+need to specify the node pairs used for attention in your implementation. It is encouraged to test 
+different masking strategies. 
+Q3: Hybrid Graph Transformer (30 pts)
+Complete HybridGTLayer() to implement a hybrid graph transformer composed of both MPNN-
+based local attention and transformer-based global attention. You can implement GraphGPS or 
+design your own hybrid structures.
+Page 1 of 3

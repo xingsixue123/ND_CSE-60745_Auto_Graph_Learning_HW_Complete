@@ -1,0 +1,65 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/validators/p1/work2/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+1. hop_distances vs scipy.sparse.csgraph.shortest_path
+  PASS  30 random ZINC graphs, exact distances  max abs diff 0
+  PASS  disconnected graph with an isolated node (n=7)  
+[[ 0  1  2 -1 -1 -1 -1]
+ [ 1  0  1 -1 -1 -1 -1]
+ [ 2  1  0 -1 -1 -1 -1]
+ [-1 -1 -1  0 -1 -1 -1]
+ [-1 -1 -1 -1  0  1 -1]
+ [-1 -1 -1 -1  1  0 -1]
+ [-1 -1 -1 -1 -1 -1  0]]
+  PASS  cap=1 on a 29-node ZINC graph
+  PASS  cap=3 on a 29-node ZINC graph
+  PASS  cap=8 on a 29-node ZINC graph
+  PASS  cap=1 keeps unreachable at -1 on a disconnected graph  
+[[ 0  1  1 -1 -1 -1 -1]
+ [ 1  0  1 -1 -1 -1 -1]
+ [ 1  1  0 -1 -1 -1 -1]
+ [-1 -1 -1  0 -1 -1 -1]
+ [-1 -1 -1 -1  0  1 -1]
+ [-1 -1 -1 -1  1  0 -1]
+ [-1 -1 -1 -1 -1 -1  0]]
+2. LastFM sparse branch vs per-source BFS
+  PASS  12 random LastFM sources match scipy BFS  mismatches 0
+  PASS  LastFM distances symmetric
+3. laplacian_eigvecs: subspace and eigenvalues
+  PASS  n=28: Rayleigh quotients == eigenvalues 1..8  max diff 3.97e-08
+  PASS  n=28: orthonormal, orthogonal to the trivial eigenvector
+  PASS  n=28: columns 8..8 are zero padding
+  PASS  n=21: Rayleigh quotients == eigenvalues 1..8  max diff 6.25e-08
+  PASS  n=21: orthonormal, orthogonal to the trivial eigenvector
+  PASS  n=21: columns 8..8 are zero padding
+  PASS  n=12: Rayleigh quotients == eigenvalues 1..8  max diff 1.07e-07
+  PASS  n=12: orthonormal, orthogonal to the trivial eigenvector
+  PASS  n=12: columns 8..8 are zero padding
+  PASS  n=23: Rayleigh quotients == eigenvalues 1..8  max diff 4.52e-08
+  PASS  n=23: orthonormal, orthogonal to the trivial eigenvector
+  PASS  n=23: columns 8..8 are zero padding
+  PASS  n=31: Rayleigh quotients == eigenvalues 1..8  max diff 3.06e-08
+  PASS  n=31: orthonormal, orthogonal to the trivial eigenvector
+  PASS  n=31: columns 8..8 are zero padding
+4. SparseSPDAttention.attention_pairs == {d(i,j)<=2} + one virtual node
+  PASS  20 ZINC graphs: pair set is exactly the 2-hop ball + virtual node
+5. sparse forward vs an independently written dense reference (real pair set)
+  PASS  sparse forward matches the hand-built dense reference  max abs diff 1.19e-07
+  PASS  enc['spd'] == D[querier, attended] for every pair
+6. dense SPDAttention forward vs a hand-built reference
+  PASS  dense forward matches  max abs diff 0.00e+00
+7. pair counts
+  2-hop ball+virtual: 189.1828 pairs/graph, full n^2 556.8356, 33.97% -> table says 189 / 557 / 34%
+  PASS  pairs/graph 189.2
+  PASS  n^2 556.8
+  LastFM: 804,349 pairs -> table says 804,349 (1.384%)
+  PASS  LastFM 804,349 pairs
+  PASS  LastFM n^2 = 58,125,376
+
+ALL OK

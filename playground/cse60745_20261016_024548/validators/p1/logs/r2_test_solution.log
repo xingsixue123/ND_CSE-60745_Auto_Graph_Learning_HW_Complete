@@ -1,0 +1,47 @@
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/.venv-gt/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+torch 2.14.1+cpu | torch_geometric 2.8.1 | device cpu
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/validators/p1/work2/gt_framework.py:74: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:213.)
+  masks = {f"{s}_mask": torch.from_numpy((split == s).to_numpy()) for s in ("train", "val", "test")}
+ZINC train  10000 graphs, 23.2 nodes on average
+ZINC val     1000 graphs, 23.1 nodes on average
+ZINC test    1000 graphs, 23.1 nodes on average
+LastFM      7624 nodes, 27806 edges, 18 countries, train/val/test users 763/763/6098
+1. hop_distances vs. a plain BFS
+  PASS  exact distances n=9, 10 edges, 0 unreachable pairs
+  PASS  capped at 3, n=9
+  PASS  exact distances n=23, 33 edges, 0 unreachable pairs
+  PASS  capped at 3, n=23
+  PASS  exact distances n=37, 58 edges, 210 unreachable pairs
+  PASS  capped at 3, n=37
+  PASS  exact distances n=60, 62 edges, 1626 unreachable pairs
+  PASS  capped at 3, n=60
+2. hop_distances large-graph (sparse) branch agrees with the dense branch
+  PASS  sparse block BFS, n=1224, cap=8
+3. laplacian_eigvecs
+  PASS  n=9: eigenvalues match the dense spectrum[1:9]
+  PASS  n=9: columns orthonormal (before the sqrt(n) scaling)
+  PASS  n=9: residual ||L v - lambda v|| small
+  PASS  n=30: eigenvalues match the dense spectrum[1:9]
+  PASS  n=30: columns orthonormal (before the sqrt(n) scaling)
+  PASS  n=30: residual ||L v - lambda v|| small
+  PASS  sparse eigsh branch n=1224 matches dense eigh
+  PASS  sqrt(n) scaling gives channels of RMS 1
+4. padding when the graph has fewer than LAP_K non-trivial eigenvectors
+  PASS  n=5 -> 4 eigenvectors + 4 zero columns
+5. sparse attention == dense attention when the pair set is complete
+/home/xing/project/auto_hw_complete/playground/cse60745_20261016_024548/validators/p1/work2/test_solution.py:111: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  check(f"max |dense - sparse| = {float((out_dense - out_sparse).abs().max()):.2e}",
+  PASS  max |dense - sparse| = 7.45e-08
+6. pair_set structure
+  PASS  pair types {'self': 40, 'edge': 148, 'virtual': 81, 'other': 136}
+  PASS  every node (and the virtual node) is a querier
+  PASS  deterministic across calls
+  PASS  pairs are unique
+7. end-to-end on a handful of ZINC graphs
+  PASS  dense model output (8, 1)
+  PASS  sparse model output (8, 1), 1593 pairs vs 4841 full
+  PASS  spd_table, type_table, lap_proj and the virtual start state all get gradient
+
+all checks passed
