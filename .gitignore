@@ -49,3 +49,14 @@ playground/*.pid
 **/.venv/
 *.pt
 *.pth
+
+# Workers name their environment whatever they like -- this run used `.venv-gt`, so
+# the exact-name rules above missed 22,089 files. Match any name that starts venv.
+**/.venv*/
+**/venv*/
+**/.pipcache/
+**/__pycache__/
+
+# Datasets the notebook's own setup cell downloads. This run fetched ZINC three
+# times over, 384 MB per copy, into every agent's playground.
+playground/**/data/
